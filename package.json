@@ -31,6 +31,19 @@
           "when": "resourceExtname == .json",
           "group": "navigation"
         }
+      ],
+      "view/title": [
+        {
+          "command": "automa.refreshHistory",
+          "when": "view == automa.historyView",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "automa.viewLog",
+          "when": "view == automa.historyView"
+        }
       ]
     },
     "commands": [
@@ -43,8 +56,36 @@
         "command": "automa.runWorkflow",
         "title": "Automa: Run Workflow",
         "icon": "$(play)"
+      },
+      {
+        "command": "automa.refreshHistory",
+        "title": "Refresh History",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "automa.viewLog",
+        "title": "View Execution Log",
+        "icon": "$(output)"
       }
-    ]
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "automa-explorer",
+          "title": "Automa",
+          "icon": "$(zap)"
+        }
+      ]
+    },
+    "views": {
+      "automa-explorer": [
+        {
+          "id": "automa.historyView",
+          "name": "Execution History",
+          "icon": "$(history)"
+        }
+      ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "pnpm run package",
