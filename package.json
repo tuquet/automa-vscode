@@ -48,11 +48,6 @@
     },
     "commands": [
       {
-        "command": "automa.openStudio",
-        "title": "Automa: Open Studio",
-        "icon": "$(browser)"
-      },
-      {
         "command": "automa.runWorkflow",
         "title": "Automa: Run Workflow",
         "icon": "$(play)"

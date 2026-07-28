@@ -1,8 +1,5 @@
-import { exec } from "node:child_process";
-import { promisify } from "node:util";
 import * as vscode from "vscode";
-
-const execAsync = promisify(exec);
+import { AutomaClient } from "../core/AutomaClient";
 
 export class JobItem extends vscode.TreeItem {
 	constructor(
@@ -67,13 +64,11 @@ export class HistoryTreeProvider implements vscode.TreeDataProvider<JobItem> {
 
 	private async fetchJobs(): Promise<JobItem[]> {
 		try {
-			const { stdout } = await execAsync("npx automa history --json", {
-				cwd: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath,
-			});
-			const jobs = JSON.parse(stdout.trim());
-
-			if (jobs.error) {
-				vscode.window.showErrorMessage(`Automa History Error: ${jobs.error}`);
+			const jobs = await AutomaClient.getHistory();
+			if (!Array.isArray(jobs)) {
+				if (jobs && "error" in jobs) {
+					vscode.window.showErrorMessage(`Automa History Error: ${jobs.error}`);
+				}
 				return [];
 			}
 
