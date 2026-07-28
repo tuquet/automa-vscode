@@ -103,9 +103,9 @@
   },
   "scripts": {
     "vscode:prepublish": "pnpm run package",
-    "compile": "tsup src/extension.ts --format cjs --external vscode",
-    "watch": "tsup src/extension.ts --format cjs --external vscode --watch",
-    "package": "tsup src/extension.ts --format cjs --external vscode --minify",
+    "compile": "tsup src/extension.ts --format cjs --external vscode --sourcemap",
+    "watch": "tsup src/extension.ts --format cjs --external vscode --watch --sourcemap",
+    "package": "tsup src/extension.ts --format cjs --external vscode --minify --sourcemap",
     "lint": "biome lint ./src",
     "format": "biome format --write ./src",
     "check": "biome check --write ./src"
