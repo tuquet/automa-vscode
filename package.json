@@ -1,0 +1,61 @@
+{
+  "name": "automa-vscode",
+  "publisher": "NguyenDinhTu",
+  "displayName": "Automa CLI Toolkit",
+  "description": "VS Code integration for the Automa Ecosystem CLI",
+  "version": "0.0.1",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tuquet/automa-vscode.git"
+  },
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "menus": {
+      "explorer/context": [
+        {
+          "command": "automa.runWorkflow",
+          "when": "resourceExtname == .json",
+          "group": "navigation"
+        }
+      ],
+      "editor/title/run": [
+        {
+          "command": "automa.runWorkflow",
+          "when": "resourceExtname == .json",
+          "group": "navigation"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "automa.openStudio",
+        "title": "Automa: Open Studio",
+        "icon": "$(browser)"
+      },
+      {
+        "command": "automa.runWorkflow",
+        "title": "Automa: Run Workflow",
+        "icon": "$(play)"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "pnpm run package",
+    "compile": "tsup src/extension.ts --format cjs --external vscode",
+    "watch": "tsup src/extension.ts --format cjs --external vscode --watch",
+    "package": "tsup src/extension.ts --format cjs --external vscode --minify"
+  },
+  "devDependencies": {
+    "@types/node": "18.x",
+    "@types/vscode": "^1.80.0",
+    "tsup": "^8.0.2",
+    "typescript": "^5.3.3"
+  }
+}
