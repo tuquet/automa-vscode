@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import type { HistoryTreeProvider } from "../providers/HistoryTreeProvider";
+import { previewWorkflowCommand } from "./previewWorkflow";
 import { refreshHistoryCommand } from "./refreshHistory";
 import { runWorkflowCommand } from "./runWorkflow";
 import { viewLogCommand } from "./viewLog";
@@ -9,6 +10,10 @@ export function registerCommands(
 	historyProvider: HistoryTreeProvider,
 ) {
 	const commands = [
+		vscode.commands.registerCommand(
+			"automa.previewWorkflow",
+			previewWorkflowCommand(context),
+		),
 		vscode.commands.registerCommand("automa.runWorkflow", runWorkflowCommand),
 		vscode.commands.registerCommand("automa.refreshHistory", () =>
 			refreshHistoryCommand(historyProvider),

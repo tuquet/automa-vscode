@@ -32,6 +32,20 @@
           "group": "navigation"
         }
       ],
+      "editor/title": [
+        {
+          "command": "automa.previewWorkflow",
+          "when": "resourceExtname == .json",
+          "group": "navigation"
+        }
+      ],
+      "editor/title/context": [
+        {
+          "command": "automa.previewWorkflow",
+          "when": "resourceExtname == .json",
+          "group": "navigation"
+        }
+      ],
       "view/title": [
         {
           "command": "automa.refreshHistory",
@@ -47,6 +61,11 @@
       ]
     },
     "commands": [
+      {
+        "command": "automa.previewWorkflow",
+        "title": "Automa: Preview Workflow",
+        "icon": "$(preview)"
+      },
       {
         "command": "automa.runWorkflow",
         "title": "Automa: Run Workflow",
