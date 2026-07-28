@@ -48,9 +48,14 @@
       ],
       "view/title": [
         {
+          "command": "automa.filterHistory",
+          "when": "view == automa.historyView",
+          "group": "navigation@1"
+        },
+        {
           "command": "automa.refreshHistory",
           "when": "view == automa.historyView",
-          "group": "navigation"
+          "group": "navigation@2"
         }
       ],
       "view/item/context": [
@@ -75,6 +80,11 @@
         "command": "automa.refreshHistory",
         "title": "Refresh History",
         "icon": "$(refresh)"
+      },
+      {
+        "command": "automa.filterHistory",
+        "title": "Filter History",
+        "icon": "$(filter)"
       },
       {
         "command": "automa.viewLog",

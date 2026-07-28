@@ -7,7 +7,18 @@ export class JobItem extends vscode.TreeItem {
 		public readonly collapsibleState: vscode.TreeItemCollapsibleState,
 	) {
 		super(job.id, collapsibleState);
-		this.tooltip = `Status: ${job.status}\nCreated: ${job.created_at}`;
+		
+		let localDateStr = job.created_at;
+		try {
+			// Ensure we parse it as UTC if it lacks 'Z'
+			const dateStr = job.created_at.includes('Z') ? job.created_at : job.created_at + 'Z';
+			const date = new Date(dateStr);
+			if (!isNaN(date.getTime())) {
+				localDateStr = date.toLocaleString();
+			}
+		} catch (e) {}
+
+		this.tooltip = `Status: ${job.status}\nCreated: ${localDateStr}`;
 
 		let iconPath = new vscode.ThemeIcon("circle-outline");
 		if (job.status === "completed") {
@@ -28,7 +39,7 @@ export class JobItem extends vscode.TreeItem {
 		}
 
 		this.iconPath = iconPath;
-		this.description = `${job.status} - ${job.created_at}`;
+		this.description = `${job.status} - ${localDateStr}`;
 		this.contextValue = "jobItem";
 
 		this.command = {
@@ -46,8 +57,15 @@ export class HistoryTreeProvider implements vscode.TreeDataProvider<JobItem> {
 	readonly onDidChangeTreeData: vscode.Event<JobItem | undefined | undefined> =
 		this._onDidChangeTreeData.event;
 
+	public filterStatus: string = "all";
+
 	refresh(): void {
 		this._onDidChangeTreeData.fire();
+	}
+
+	setFilter(status: string): void {
+		this.filterStatus = status;
+		this.refresh();
 	}
 
 	getTreeItem(element: JobItem): vscode.TreeItem {
@@ -72,7 +90,18 @@ export class HistoryTreeProvider implements vscode.TreeDataProvider<JobItem> {
 				return [];
 			}
 
-			return jobs.map(
+			let filteredJobs = jobs;
+			if (this.filterStatus !== "all") {
+				filteredJobs = jobs.filter((j) => j.status === this.filterStatus);
+			}
+
+			filteredJobs.sort((a, b) => {
+				const dateA = new Date(a.created_at.includes('Z') ? a.created_at : a.created_at + 'Z').getTime();
+				const dateB = new Date(b.created_at.includes('Z') ? b.created_at : b.created_at + 'Z').getTime();
+				return dateB - dateA;
+			});
+
+			return filteredJobs.map(
 				(job: any) => new JobItem(job, vscode.TreeItemCollapsibleState.None),
 			);
 		} catch (error: any) {
