@@ -1,28 +1,33 @@
 import * as vscode from "vscode";
-import type { HistoryTreeProvider } from "../providers/HistoryTreeProvider";
-import { previewWorkflowCommand } from "./previewWorkflow";
-import { refreshHistoryCommand } from "./refreshHistory";
-import { filterHistoryCommand } from "./filterHistory";
 import { runWorkflowCommand } from "./runWorkflow";
-import { viewLogCommand } from "./viewLog";
+import { openInStudioCommand } from "./openInStudio";
 
-export function registerCommands(
-	context: vscode.ExtensionContext,
-	historyProvider: HistoryTreeProvider,
-) {
+export function registerCommands(context: vscode.ExtensionContext) {
 	const commands = [
-		vscode.commands.registerCommand(
-			"automa.previewWorkflow",
-			previewWorkflowCommand(context),
-		),
+		vscode.commands.registerCommand("automa.showWorkflowSource", (uri: vscode.Uri) => {
+			if (uri) {
+				vscode.commands.executeCommand("vscode.openWith", uri, "default");
+			}
+		}),
+		vscode.commands.registerCommand("automa.showWorkflowPreview", (uri: vscode.Uri) => {
+			if (uri) {
+				vscode.commands.executeCommand("vscode.openWith", uri, "automa.workflowPreview");
+			}
+		}),
 		vscode.commands.registerCommand("automa.runWorkflow", runWorkflowCommand),
-		vscode.commands.registerCommand("automa.refreshHistory", () =>
-			refreshHistoryCommand(historyProvider),
-		),
-		vscode.commands.registerCommand("automa.filterHistory", () =>
-			filterHistoryCommand(historyProvider),
-		),
-		vscode.commands.registerCommand("automa.viewLog", viewLogCommand),
+		vscode.commands.registerCommand("automa.showLogSource", (uri: vscode.Uri) => {
+			if (uri) {
+				vscode.commands.executeCommand("vscode.openWith", uri, "default");
+			} else {
+				vscode.commands.executeCommand("workbench.action.reopenTextEditor");
+			}
+		}),
+		vscode.commands.registerCommand("automa.showLogPreview", (uri: vscode.Uri) => {
+			if (uri) {
+				vscode.commands.executeCommand("vscode.openWith", uri, "automa.logEditor");
+			}
+		}),
+		vscode.commands.registerCommand("automa.openInStudio", openInStudioCommand),
 	];
 
 	context.subscriptions.push(...commands);

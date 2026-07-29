@@ -21,54 +21,56 @@
       "explorer/context": [
         {
           "command": "automa.runWorkflow",
-          "when": "resourceExtname == .json",
-          "group": "navigation"
+          "when": "resourceExtname == .json && resourceFilename =~ /^(?!.*automa-log).*$/",
+          "group": "automa@1"
         }
       ],
       "editor/title/run": [
         {
           "command": "automa.runWorkflow",
-          "when": "resourceExtname == .json",
+          "when": "resourceExtname == .json && resourceFilename =~ /^(?!.*automa-log).*$/",
           "group": "navigation"
         }
       ],
       "editor/title": [
         {
-          "command": "automa.previewWorkflow",
-          "when": "resourceExtname == .json",
+          "command": "automa.showWorkflowSource",
+          "when": "activeCustomEditorId == 'automa.workflowPreview'",
+          "group": "navigation"
+        },
+        {
+          "command": "automa.showWorkflowPreview",
+          "when": "resourceFilename =~ /automa.json/ && activeCustomEditorId != 'automa.workflowPreview'",
+          "group": "navigation"
+        },
+        {
+          "command": "automa.showLogSource",
+          "when": "activeCustomEditorId == 'automa.logEditor'",
+          "group": "navigation"
+        },
+        {
+          "command": "automa.showLogPreview",
+          "when": "resourceFilename =~ /automa-log.json/ && activeCustomEditorId != 'automa.logEditor'",
           "group": "navigation"
         }
       ],
       "editor/title/context": [
         {
-          "command": "automa.previewWorkflow",
-          "when": "resourceExtname == .json",
+          "command": "automa.showWorkflowPreview",
+          "when": "resourceFilename =~ /automa.json/ && activeCustomEditorId != 'automa.workflowPreview'",
           "group": "navigation"
-        }
-      ],
-      "view/title": [
-        {
-          "command": "automa.filterHistory",
-          "when": "view == automa.historyView",
-          "group": "navigation@1"
-        },
-        {
-          "command": "automa.refreshHistory",
-          "when": "view == automa.historyView",
-          "group": "navigation@2"
-        }
-      ],
-      "view/item/context": [
-        {
-          "command": "automa.viewLog",
-          "when": "view == automa.historyView"
         }
       ]
     },
     "commands": [
       {
-        "command": "automa.previewWorkflow",
-        "title": "Automa: Preview Workflow",
+        "command": "automa.showWorkflowSource",
+        "title": "Show Workflow Source",
+        "icon": "$(code)"
+      },
+      {
+        "command": "automa.showWorkflowPreview",
+        "title": "Preview Workflow",
         "icon": "$(preview)"
       },
       {
@@ -77,38 +79,76 @@
         "icon": "$(play)"
       },
       {
-        "command": "automa.refreshHistory",
-        "title": "Refresh History",
-        "icon": "$(refresh)"
+        "command": "automa.showLogSource",
+        "title": "Show Source",
+        "icon": "$(code)"
       },
       {
-        "command": "automa.filterHistory",
-        "title": "Filter History",
-        "icon": "$(filter)"
+        "command": "automa.showLogPreview",
+        "title": "Open Preview",
+        "icon": "$(preview)"
       },
       {
-        "command": "automa.viewLog",
-        "title": "View Execution Log",
-        "icon": "$(output)"
+        "command": "automa.openInStudio",
+        "title": "Open in Studio",
+        "icon": "$(link-external)"
       }
     ],
-    "viewsContainers": {
-      "activitybar": [
-        {
-          "id": "automa-explorer",
-          "title": "Automa",
-          "icon": "$(zap)"
+    "customEditors": [
+      {
+        "viewType": "automa.logEditor",
+        "displayName": "Automa Execution Log",
+        "selector": [
+          {
+            "filenamePattern": "*.automa-log.json"
+          }
+        ]
+      },
+      {
+        "viewType": "automa.workflowPreview",
+        "displayName": "Automa Workflow Preview",
+        "selector": [
+          {
+            "filenamePattern": "*.automa.json"
+          }
+        ]
+      }
+    ],
+    "configuration": {
+      "title": "Automa",
+      "properties": {
+        "automa.run.useDefaultParameters": {
+          "type": "boolean",
+          "default": false,
+          "description": "Skip interactive prompts for workflow trigger parameters and always use default values."
+        },
+        "automa.preview.defaultOnClick": {
+          "type": "boolean",
+          "default": true,
+          "description": "Set Automa Workflow Preview as the default editor when clicking on *.automa.json files."
+        },
+        "automa.vault.run.defaultBrowser": {
+          "type": "string",
+          "enum": ["chrome", "edge", "firefox", "brave", "active-tab"],
+          "default": "chrome",
+          "description": "Default browser to use when running a workflow in the Vault."
+        },
+        "automa.vault.run.headless": {
+          "type": "boolean",
+          "default": false,
+          "description": "Run the browser in headless mode."
+        },
+        "automa.vault.run.closeBrowserOnFinish": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically close the browser when the workflow finishes."
+        },
+        "automa.vault.run.globalVariables": {
+          "type": "object",
+          "default": {},
+          "description": "Global variables (JSON object) appended to the workflow run parameters."
         }
-      ]
-    },
-    "views": {
-      "automa-explorer": [
-        {
-          "id": "automa.historyView",
-          "name": "Execution History",
-          "icon": "$(history)"
-        }
-      ]
+      }
     }
   },
   "scripts": {
