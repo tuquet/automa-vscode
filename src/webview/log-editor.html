@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Automa Logs</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              vsc: {
+                bg: 'var(--vscode-editor-background)',
+                fg: 'var(--vscode-editor-foreground)',
+                widget: 'var(--vscode-editorWidget-background)',
+                border: 'var(--vscode-panel-border)',
+                borderLight: 'var(--vscode-widget-border)',
+                hoverBg: 'var(--vscode-list-hoverBackground)',
+                hoverFg: 'var(--vscode-list-hoverForeground)',
+                activeBg: 'var(--vscode-list-activeSelectionBackground)',
+                activeFg: 'var(--vscode-list-activeSelectionForeground)',
+                inputBg: 'var(--vscode-input-background)',
+                inputFg: 'var(--vscode-input-foreground)',
+                inputBorder: 'var(--vscode-input-border)',
+                link: 'var(--vscode-textLink-foreground)',
+                success: 'var(--vscode-testing-iconPassed)',
+                error: 'var(--vscode-testing-iconFailed)',
+                warning: 'var(--vscode-testing-iconQueued)',
+                muted: 'var(--vscode-descriptionForeground)'
+              }
+            }
+          }
+        }
+      }
+    </script>
+    <!-- Vue 3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <!-- Remix Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet" />
+    <!-- Highlight.js for JSON -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+
+    <style>
+        body {
+            background-color: var(--vscode-editor-background);
+            color: var(--vscode-editor-foreground);
+            font-family: var(--vscode-font-family), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .bg-box-transparent {
+            background-color: var(--vscode-list-activeSelectionBackground);
+            color: var(--vscode-list-activeSelectionForeground);
+        }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--vscode-scrollbarSlider-background);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--vscode-scrollbarSlider-hoverBackground);
+        }
+        ::-webkit-scrollbar-thumb:active {
+            background: var(--vscode-scrollbarSlider-activeBackground);
+        }
+
+        .line-clamp {
+            display: -webkit-box;
+            -webkit-line-clamp: 1;
+            -webkit-box-orient: vertical;  
+            overflow: hidden;
+        }
+
+        pre code.hljs {
+            border-radius: 6px;
+            padding: 12px;
+            font-size: 13px;
+            font-family: var(--vscode-editor-font-family), "Consolas", "Courier New", monospace;
+            background: transparent;
+        }
+    </style>
+</head>
+<body class="flex h-screen flex-col bg-vsc-bg text-vsc-fg font-sans m-0 overflow-hidden">
+    <div id="app" class="flex flex-col h-full w-full">
+        <!-- Header -->
+        <div class="flex items-center px-6 py-4 border-b border-vsc-border">
+            <div>
+                <h1 class="text-2xl font-semibold text-vsc-fg truncate max-w-lg" title="{{JOB_NAME}}">{{JOB_NAME}}</h1>
+                <p class="text-sm text-vsc-muted mt-1 flex items-center gap-2">
+                    Status: <span class="uppercase text-xs font-bold px-2 py-0.5 rounded border border-vsc-borderLight bg-vsc-widget {{JOB_STATUS_COLOR}}">{{JOB_STATUS}}</span> 
+                    | {{JOB_CREATED_AT}}
+                </p>
+            </div>
+        </div>
+
+        <!-- Main Tabs Navigation -->
+        <div class="flex border-b border-vsc-border px-6 mt-2">
+            <button v-for="tab in mainTabs" :key="tab.id"
+                @click="mainTab = tab.id"
+                :class="[
+                    'px-4 py-2 border-b-2 font-medium',
+                    mainTab === tab.id ? 'border-vsc-link text-vsc-link' : 'border-transparent text-vsc-muted hover:text-vsc-fg'
+                ]">
+                {{ tab.label }}
+            </button>
+        </div>
+
+        <!-- Content Area -->
+        <div class="flex-1 overflow-hidden relative">
+            
+            <!-- LOGS TAB -->
+            <div v-show="mainTab === 'logs'" class="absolute inset-0 flex">
+                <!-- Left Panel: History List -->
+                <div class="w-1/2 flex flex-col border-r border-vsc-border bg-vsc-widget">
+                    <!-- Search Box -->
+                    <div class="p-4 border-b border-vsc-border">
+                        <div class="relative">
+                            <i class="ri-search-2-line absolute left-3 top-1/2 -translate-y-1/2 text-vsc-muted"></i>
+                            <input type="text" v-model="searchQuery" placeholder="Search logs..." 
+                                class="w-full bg-vsc-inputBg text-sm text-vsc-inputFg placeholder-vsc-muted rounded-md py-1.5 pl-9 pr-3 focus:outline-none focus:ring-1 focus:ring-vsc-link transition-shadow border border-vsc-inputBorder">
+                        </div>
+                    </div>
+                    <!-- Logs List -->
+                    <div class="flex-1 overflow-y-auto p-2 space-y-1">
+                        <div v-if="filteredLogs.length === 0" class="text-center text-vsc-muted mt-10">No logs match your search.</div>
+                        <div v-for="(log, index) in filteredLogs" :key="index"
+                            @click="selectLog(log.originalIndex)"
+                            :class="[
+                                'group flex w-full cursor-pointer items-start rounded-md px-2 py-1.5 text-left focus:outline-none hover:bg-vsc-hoverBg hover:text-vsc-hoverFg transition-colors',
+                                activeLogId === log.originalIndex ? 'bg-box-transparent text-vsc-activeFg' : 'text-vsc-fg'
+                            ]">
+                            
+                            <div class="mr-4 shrink-0 text-vsc-muted w-32" :title="log.timestamp">
+                                {{ log.timeStr }} {{ log.duration ? `(${log.duration}ms)` : '' }}
+                            </div>
+                            <span :class="['w-2/12 shrink-0 truncate flex items-center gap-1', log.color]" :title="log.type || log.status || 'success'">
+                                <i :class="[log.icon, 'text-lg']"></i>
+                                {{ log.name }}
+                            </span>
+                            <span class="ml-2 w-2/12 shrink-0 text-vsc-muted truncate" :title="log.description">
+                                {{ log.description }}
+                            </span>
+                            <p class="line-clamp ml-2 flex-1 text-vsc-muted" :title="log.message">
+                                {{ log.message }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Panel: Log Details -->
+                <div class="w-1/2 flex flex-col bg-vsc-bg">
+                    <div v-if="activeLog" class="flex flex-col h-full p-6 overflow-y-auto">
+                        <h2 class="text-lg font-semibold text-vsc-fg mb-4">Log Details</h2>
+                        
+                        <table class="w-full text-sm mb-6">
+                            <tbody>
+                                <tr>
+                                    <td class="w-1/3 text-vsc-muted">Name</td>
+                                    <td class="text-vsc-fg font-medium">{{ activeLog.name }}</td>
+                                </tr>
+                                <tr v-if="activeLog.description">
+                                    <td class="text-vsc-muted">Description</td>
+                                    <td class="text-vsc-fg">{{ activeLog.description }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-vsc-muted">Status</td>
+                                    <td class="text-vsc-fg">{{ (activeLog.status || activeLog.type || 'Success').toUpperCase() }}</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-vsc-muted">Time</td>
+                                    <td class="text-vsc-fg">{{ activeLog.timeStr }} <template v-if="activeLog.duration"> / {{activeLog.duration}}ms</template></td>
+                                </tr>
+                                <tr v-if="activeLog.message">
+                                    <td class="text-vsc-muted align-top">Message</td>
+                                    <td class="text-vsc-error break-words">{{ activeLog.message }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <div class="flex items-center mb-2">
+                            <p class="font-semibold text-vsc-fg">Log data (ctxData)</p>
+                        </div>
+                        
+                        <div class="flex-1 bg-[#1e1e1e] rounded-md border border-vsc-borderLight overflow-hidden flex flex-col" style="max-height: 460px;">
+                            <pre class="m-0 flex-1 overflow-auto"><code ref="jsonViewer" class="language-json w-full h-full block"></code></pre>
+                        </div>
+                    </div>
+                    <div v-else class="flex flex-col items-center justify-center h-full text-vsc-muted">
+                        <i class="ri-file-list-3-line text-4xl mb-2"></i>
+                        <p>Select a log to view details</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TABLE TAB -->
+            <div v-show="mainTab === 'table'" class="absolute inset-0 flex-col p-6 overflow-auto bg-vsc-bg">
+                <div v-if="jobTable.length === 0" class="flex flex-col items-center justify-center text-vsc-muted mt-20">
+                    <i class="ri-folder-open-line text-6xl mb-4"></i>
+                    <p class="text-xl font-semibold">No Data</p>
+                </div>
+                <template v-else>
+                    <div class="flex items-center mb-4">
+                        <div class="flex bg-vsc-widget rounded-md p-1 border border-vsc-borderLight">
+                            <button @click="tableTab = 'grid'" :class="['px-3 py-1 rounded text-sm font-medium transition-colors', tableTab === 'grid' ? 'bg-vsc-bg text-vsc-fg' : 'text-vsc-muted hover:text-vsc-fg']">Table</button>
+                            <button @click="tableTab = 'raw'" :class="['px-3 py-1 rounded text-sm font-medium transition-colors', tableTab === 'raw' ? 'bg-vsc-bg text-vsc-fg' : 'text-vsc-muted hover:text-vsc-fg']">Raw</button>
+                        </div>
+                        <div class="grow"></div>
+                        <div v-show="tableTab === 'grid'" class="relative">
+                            <i class="ri-search-2-line absolute left-3 top-1/2 -translate-y-1/2 text-vsc-muted"></i>
+                            <input type="text" v-model="tableSearchQuery" placeholder="Search..." 
+                                class="w-48 bg-vsc-inputBg text-sm text-vsc-inputFg placeholder-vsc-muted rounded-md py-1.5 pl-9 pr-3 focus:outline-none focus:ring-1 focus:ring-vsc-link transition-shadow border border-vsc-inputBorder">
+                        </div>
+                    </div>
+                    
+                    <!-- Table Grid -->
+                    <div v-show="tableTab === 'grid'" class="flex-1 overflow-x-auto bg-vsc-widget rounded-md border border-vsc-borderLight">
+                        <table class="w-full text-left text-sm whitespace-nowrap">
+                            <thead class="bg-vsc-bg text-vsc-muted">
+                                <tr>
+                                    <th class="px-4 py-2 border-b border-vsc-border font-semibold w-16">id</th>
+                                    <th v-for="h in tableHeaders" :key="h" class="px-4 py-2 border-b border-vsc-border font-semibold">{{ h }}</th>
+                                </tr>
+                            </thead>
+                            <tbody class="text-vsc-fg">
+                                <tr v-for="(row, idx) in filteredTable" :key="idx" class="hover:bg-vsc-hoverBg hover:text-vsc-hoverFg transition-colors">
+                                    <td class="px-4 py-2 border-b border-vsc-border text-vsc-muted">{{ idx + 1 }}</td>
+                                    <td v-for="h in tableHeaders" :key="h" class="px-4 py-2 border-b border-vsc-border">
+                                        {{ formatTableCell(row[h]) }}
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Table Raw -->
+                    <div v-show="tableTab === 'raw'" class="flex-1 bg-[#1e1e1e] rounded-md border border-vsc-borderLight overflow-hidden flex-col">
+                        <pre class="m-0 flex-1 overflow-auto p-4"><code ref="tableRawCode" class="language-json w-full h-full block"></code></pre>
+                    </div>
+                </template>
+            </div>
+
+            <!-- VARIABLES TAB -->
+            <div v-show="mainTab === 'variables'" class="absolute inset-0 flex-col p-6 overflow-auto bg-vsc-bg">
+                <div v-if="Object.keys(jobVars).length === 0" class="flex flex-col items-center justify-center text-vsc-muted mt-20 max-w-4xl">
+                    <i class="ri-folder-open-line text-6xl mb-4"></i>
+                    <p class="text-xl font-semibold">No Data</p>
+                </div>
+                <template v-else>
+                    <div class="flex items-center mb-4 w-full max-w-4xl">
+                        <div class="flex bg-vsc-widget rounded-md p-1 border border-vsc-borderLight">
+                            <button @click="varsTab = 'gui'" :class="['px-3 py-1 rounded text-sm font-medium transition-colors', varsTab === 'gui' ? 'bg-vsc-bg text-vsc-fg' : 'text-vsc-muted hover:text-vsc-fg']">GUI</button>
+                            <button @click="varsTab = 'raw'" :class="['px-3 py-1 rounded text-sm font-medium transition-colors', varsTab === 'raw' ? 'bg-vsc-bg text-vsc-fg' : 'text-vsc-muted hover:text-vsc-fg']">Raw</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Vars GUI -->
+                    <div v-show="varsTab === 'gui'" class="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div v-for="(val, key) in jobVars" :key="key" class="flex items-center space-x-2 rounded-lg border-2 border-vsc-borderLight bg-vsc-widget px-2 pb-2 pt-1">
+                            <div class="w-full">
+                                <label class="text-xs text-vsc-muted font-semibold uppercase tracking-wider mb-1 block">Name</label>
+                                <input type="text" readonly :value="key" class="w-full bg-vsc-inputBg border border-vsc-inputBorder rounded px-2 py-1.5 text-sm text-vsc-inputFg focus:outline-none">
+                            </div>
+                            <div class="w-full">
+                                <label class="text-xs text-vsc-muted font-semibold uppercase tracking-wider mb-1 block">Value</label>
+                                <input type="text" readonly :value="formatVarCell(val)" class="w-full bg-vsc-inputBg border border-vsc-inputBorder rounded px-2 py-1.5 text-sm text-vsc-inputFg focus:outline-none">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Vars Raw -->
+                    <div v-show="varsTab === 'raw'" class="max-w-4xl flex-1 bg-[#1e1e1e] rounded-md border border-vsc-borderLight overflow-hidden flex flex-col" style="min-height: 400px;">
+                        <pre class="m-0 flex-1 overflow-auto p-4"><code ref="varsRawCode" class="language-json w-full h-full block"></code></pre>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        {{INJECT_LOGS_DATA}}
+        {{INJECT_JOB_DATA}}
+        
+        const { createApp, ref, computed, onMounted, nextTick, watch } = Vue;
+
+        createApp({
+            setup() {
+                // Main State
+                const mainTab = ref('logs');
+                const mainTabs = [
+                    { id: 'logs', label: 'Logs' },
+                    { id: 'table', label: 'Table' },
+                    { id: 'variables', label: 'Variables' }
+                ];
+                
+                // Data
+                const results = jobData.results || { table: [], variables: {} };
+                const jobTable = ref(results.table || []);
+                const jobVars = ref(results.variables || {});
+                
+                // --- Logs Tab ---
+                const activeLogId = ref(null);
+                const searchQuery = ref('');
+                const jsonViewer = ref(null);
+
+                function formatTime(isoString) {
+                    if (!isoString) return '';
+                    const date = new Date(isoString);
+                    const hh = String(date.getHours()).padStart(2, '0');
+                    const mm = String(date.getMinutes()).padStart(2, '0');
+                    const ss = String(date.getSeconds()).padStart(2, '0');
+                    return `${hh}:${mm}:${ss}`;
+                }
+
+                function getIconAndColor(status, type) {
+                    const state = status || type || 'success';
+                    if (state === 'error') {
+                        return { icon: 'ri-error-warning-line', color: 'text-vsc-error' };
+                    }
+                    if (state === 'stop' || state === 'stopped') {
+                        return { icon: 'ri-stop-line', color: 'text-vsc-warning' };
+                    }
+                    return { icon: 'ri-check-line', color: 'text-vsc-success' };
+                }
+
+                const parsedLogs = computed(() => {
+                    return logsData.map((log, index) => {
+                        const msg = log; // Flat format
+                        const timestamp = msg.timestamp || log.created_at;
+                        const { icon, color } = getIconAndColor(msg.status, msg.type);
+                        
+                        return {
+                            originalIndex: index,
+                            msg: msg,
+                            timestamp,
+                            timeStr: formatTime(timestamp),
+                            duration: msg.duration,
+                            icon,
+                            color,
+                            name: msg.name || msg.blockId || 'unknown',
+                            description: msg.description || '',
+                            message: msg.message || '',
+                            status: msg.status,
+                            type: msg.type,
+                            ctxData: msg.ctxData || msg
+                        };
+                    });
+                });
+
+                const filteredLogs = computed(() => {
+                    const q = searchQuery.value.toLowerCase();
+                    if (!q) return parsedLogs.value;
+                    return parsedLogs.value.filter(log => {
+                        return log.name.toLowerCase().includes(q) || 
+                               log.description.toLowerCase().includes(q) || 
+                               log.message.toLowerCase().includes(q);
+                    });
+                });
+
+                const activeLog = computed(() => {
+                    if (activeLogId.value === null) return null;
+                    return parsedLogs.value[activeLogId.value];
+                });
+
+                const selectLog = (index) => {
+                    activeLogId.value = index;
+                    nextTick(() => {
+                        if (jsonViewer.value && activeLog.value) {
+                            jsonViewer.value.textContent = JSON.stringify(activeLog.value.ctxData, null, 2);
+                            jsonViewer.value.removeAttribute('data-highlighted');
+                            hljs.highlightElement(jsonViewer.value);
+                        }
+                    });
+                };
+
+                // --- Table Tab ---
+                const tableTab = ref('grid');
+                const tableSearchQuery = ref('');
+                const tableRawCode = ref(null);
+                
+                const tableHeaders = computed(() => {
+                    return Array.from(new Set(jobTable.value.reduce((acc, row) => acc.concat(Object.keys(row)), [])));
+                });
+
+                const filteredTable = computed(() => {
+                    const q = tableSearchQuery.value.toLowerCase();
+                    if (!q) return jobTable.value;
+                    return jobTable.value.filter(row => {
+                        return Object.values(row).some(v => String(v).toLowerCase().includes(q));
+                    });
+                });
+
+                const formatTableCell = (val) => {
+                    if (val === undefined) return '';
+                    if (typeof val === 'object') return JSON.stringify(val);
+                    return val;
+                };
+
+                watch(tableTab, (newVal) => {
+                    if (newVal === 'raw') {
+                        nextTick(() => {
+                            if (tableRawCode.value) {
+                                tableRawCode.value.textContent = JSON.stringify(jobTable.value, null, 2);
+                                tableRawCode.value.removeAttribute('data-highlighted');
+                                hljs.highlightElement(tableRawCode.value);
+                            }
+                        });
+                    }
+                });
+
+                // --- Variables Tab ---
+                const varsTab = ref('gui');
+                const varsRawCode = ref(null);
+
+                const formatVarCell = (val) => {
+                    if (typeof val === 'string') return val;
+                    return JSON.stringify(val);
+                };
+
+                watch(varsTab, (newVal) => {
+                    if (newVal === 'raw') {
+                        nextTick(() => {
+                            if (varsRawCode.value) {
+                                varsRawCode.value.textContent = JSON.stringify(jobVars.value, null, 2);
+                                varsRawCode.value.removeAttribute('data-highlighted');
+                                hljs.highlightElement(varsRawCode.value);
+                            }
+                        });
+                    }
+                });
+
+                return {
+                    mainTab,
+                    mainTabs,
+                    jobTable,
+                    jobVars,
+                    
+                    searchQuery,
+                    filteredLogs,
+                    activeLogId,
+                    activeLog,
+                    selectLog,
+                    jsonViewer,
+                    
+                    tableTab,
+                    tableSearchQuery,
+                    tableHeaders,
+                    filteredTable,
+                    formatTableCell,
+                    tableRawCode,
+                    
+                    varsTab,
+                    formatVarCell,
+                    varsRawCode
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

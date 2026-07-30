@@ -1,23 +1,25 @@
 import * as path from "node:path";
+import * as fs from "node:fs";
 import * as vscode from "vscode";
+import { DaemonManager } from "../core/DaemonManager";
+
+let automaOutputChannel: vscode.OutputChannel;
 
 export async function runWorkflowCommand(nodeOrUri?: any, params?: any) {
 	let targetPath = "";
 	let displayName = "";
+	let workflowData: any = null;
 
 	if (nodeOrUri?.fsPath) {
-		// Local file triggered from VS Code Explorer or Editor
 		targetPath = nodeOrUri.fsPath;
 		displayName = path.basename(nodeOrUri.fsPath);
 	} else if (nodeOrUri?.fullPath) {
-		// Local file triggered from Automa TreeView
 		targetPath = nodeOrUri.fullPath;
 		displayName = nodeOrUri.label;
 	} else {
-		// Manual input
 		const input = await vscode.window.showInputBox({
-			prompt: "Enter absolute path to workflow JSON or Workflow ID (if cloud)",
-			placeHolder: "e.g. C:\\path\\to\\workflow.json or daily-checkin",
+			prompt: "Enter absolute path to workflow JSON",
+			placeHolder: "e.g. C:\\path\\to\\workflow.json",
 		});
 		if (!input) return;
 
@@ -25,69 +27,132 @@ export async function runWorkflowCommand(nodeOrUri?: any, params?: any) {
 		displayName = input;
 	}
 
-	const args = ["automa", "run"];
-	if (targetPath.endsWith(".json")) {
-		args.push(targetPath);
-	} else {
-		args.push("--id", targetPath);
+	if (!targetPath.endsWith(".json")) {
+		vscode.window.showErrorMessage("Cloud workflows are not supported yet via API.");
+		return;
 	}
 
-	let finalParams = params ? { ...params } : {};
-
-	if (Object.keys(finalParams).length > 0) {
-		args.push("-v");
-		args.push(JSON.stringify(finalParams));
+	try {
+		const fileContent = fs.readFileSync(targetPath, "utf-8");
+		workflowData = JSON.parse(fileContent);
+	} catch (e: any) {
+		vscode.window.showErrorMessage(`Failed to read workflow file: ${e.message}`);
+		return;
 	}
 
 	const config = vscode.workspace.getConfiguration("automa");
-	const logPath = config.get<string>("vault.run.logPath");
-	if (logPath && logPath.trim() !== "") {
-		// Assuming automa-cli accepts --log-path or similar
-		args.push("--log-path", logPath);
-	}
-
-	const isDebug = config.get<boolean>("vault.run.debug");
-	if (isDebug) {
-		args.push("--debug");
-	}
-
-	// Removed --yes flag since automa-cli run command doesn't define or require it
-	// when a workflow path is explicitly provided.
-
-	vscode.window.showInformationMessage(`Running workflow: ${displayName}`);
 	
-	const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
-	statusBarItem.text = `$(sync~spin) Automa: Running ${displayName}`;
-	statusBarItem.show();
-
-	const isWin = process.platform === "win32";
-	const command = isWin ? "npx.cmd" : "npx";
-
-	const task = new vscode.Task(
-		{ type: "automa", id: displayName },
-		vscode.workspace.workspaceFolders?.[0] || vscode.TaskScope.Workspace,
-		`Run ${displayName}`,
-		"Automa",
-		new vscode.ProcessExecution(command, args)
-	);
-
-	task.presentationOptions = {
-		reveal: vscode.TaskRevealKind.Always,
-		panel: vscode.TaskPanelKind.Shared
+	const options: any = {
+		useDefaultParameters: config.get<boolean>("run.useDefaultParameters"),
+		headless: config.get<boolean>("vault.run.headless"),
+		keepBrowserOpen: !config.get<boolean>("vault.run.closeBrowserOnFinish", true),
+		defaultBrowser: config.get<string>("vault.run.defaultBrowser"),
+		logPath: config.get<string>("vault.run.logPath"),
+		debug: config.get<boolean>("vault.run.debug"),
+		variables: params ? params : undefined
 	};
 
-	vscode.tasks.executeTask(task);
+	vscode.window.withProgress({
+		location: vscode.ProgressLocation.Notification,
+		title: `Automa: Running ${displayName}...`,
+		cancellable: false
+	}, async (progress) => {
+		if (!automaOutputChannel) {
+			automaOutputChannel = vscode.window.createOutputChannel("Automa Execution");
+		}
+		automaOutputChannel.show(true);
+		automaOutputChannel.appendLine(`\n--- Starting Workflow: ${displayName} [${new Date().toLocaleTimeString()}] ---`);
 
-	const disposable = vscode.tasks.onDidEndTaskProcess((e) => {
-		if (e.execution.task === task) {
-			statusBarItem.hide();
-			statusBarItem.dispose();
-			disposable.dispose();
-			if (e.exitCode === 0) {
-				vscode.window.showInformationMessage(`Workflow finished successfully: ${displayName}`);
-			} else {
-				vscode.window.showErrorMessage(`Workflow execution failed: ${displayName} (Exit code ${e.exitCode})`);
+		progress.report({ increment: 0, message: "Starting via daemon..." });
+		
+		try {
+			// Ensure daemon is started and get the current port
+			await DaemonManager.getInstance().start();
+			const port = DaemonManager.getInstance().getPort();
+			
+			// Trigger run
+			const runRes = await fetch(`http://localhost:${port}/api/jobs/run`, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ workflowData, options })
+			});
+
+			if (!runRes.ok) {
+				const err = await runRes.json() as any;
+				throw new Error(err.error || "Unknown error starting job");
 			}
+
+			const runData = await runRes.json() as any;
+			const jobId = runData.jobId;
+
+			progress.report({ increment: 20, message: "Executing..." });
+
+			// Poll for status (Request Stacking protection via async while loop)
+			return new Promise<void>((resolve, reject) => {
+				let isPolling = true;
+				let isTimedOut = false;
+
+				// Safety timeout: 10 minutes
+				const timeoutTimer = setTimeout(() => {
+					isTimedOut = true;
+					isPolling = false;
+					reject(new Error("Workflow execution timed out waiting for status."));
+				}, 10 * 60 * 1000);
+
+				const pollStatus = async () => {
+					let lastLogIndex = 0;
+
+					const fetchLogs = async () => {
+						try {
+							const logsRes = await fetch(`http://localhost:${port}/api/jobs/${jobId}/logs`);
+							if (logsRes.ok) {
+								const logsData = await logsRes.json() as any;
+								const logs = logsData.logs || [];
+								for (let i = lastLogIndex; i < logs.length; i++) {
+									automaOutputChannel.appendLine(`[${logs[i].type.toUpperCase()}] ${logs[i].message}`);
+								}
+								lastLogIndex = logs.length;
+							}
+						} catch (e) { }
+					};
+
+					while (isPolling) {
+						await fetchLogs();
+
+						try {
+							const statusRes = await fetch(`http://localhost:${port}/api/jobs/${jobId}/status`);
+							if (statusRes.ok) {
+								const statusData = await statusRes.json() as any;
+								if (statusData.status === "completed" || statusData.status === "failed" || statusData.status === "error") {
+									isPolling = false;
+									clearTimeout(timeoutTimer);
+									await fetchLogs(); // Final log fetch
+
+									if (statusData.status === "completed") {
+										automaOutputChannel.appendLine(`--- Workflow Finished Successfully ---`);
+										vscode.window.showInformationMessage(`Workflow finished successfully: ${displayName}`);
+										resolve();
+									} else {
+										automaOutputChannel.appendLine(`--- Workflow Failed ---`);
+										vscode.window.showErrorMessage(`Workflow execution failed: ${displayName}`);
+										reject(new Error("Workflow failed"));
+									}
+									return;
+								}
+							}
+						} catch (e) {
+							// Polling error (e.g. server restarting), ignore and keep trying
+						}
+						// Wait 1 second BEFORE sending the next request
+						await new Promise(r => setTimeout(r, 1000));
+					}
+				};
+
+				pollStatus();
+			});
+
+		} catch (err: any) {
+			vscode.window.showErrorMessage(`Automa Daemon Error: ${err.message}`);
 		}
 	});
 }

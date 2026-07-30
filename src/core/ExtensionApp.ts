@@ -1,0 +1,98 @@
+import * as vscode from "vscode";
+import { Logger } from "./Logger";
+import { CommandManager } from "../commands/CommandManager";
+import { ProviderManager } from "../providers/ProviderManager";
+import { activateLintDiagnostics } from "../commands/lintCheck";
+import { DaemonManager } from "./DaemonManager";
+
+export class ExtensionApp {
+	private static instance: ExtensionApp;
+	private context!: vscode.ExtensionContext;
+	private commandManager!: CommandManager;
+	private providerManager!: ProviderManager;
+
+	private constructor() {}
+
+	public static getInstance(): ExtensionApp {
+		if (!ExtensionApp.instance) {
+			ExtensionApp.instance = new ExtensionApp();
+		}
+		return ExtensionApp.instance;
+	}
+
+	public activate(context: vscode.ExtensionContext) {
+		this.context = context;
+
+		// Initialize Logger
+		Logger.initialize(context);
+		Logger.info("Automa VS Code Extension is now active!");
+
+		// Initialize Diagnostics
+		activateLintDiagnostics(context);
+
+		// Show welcome popup only once
+		this.showWelcomePopupOnce();
+
+		// Initialize Managers
+		this.providerManager = new ProviderManager(context);
+		this.commandManager = new CommandManager(context);
+
+		// Register Providers & Commands
+		this.providerManager.registerAll();
+		this.commandManager.registerAll();
+
+		// Sync preview setting
+		this.initializeSettingsSync();
+
+		// Start Backend Daemon
+		DaemonManager.getInstance().start();
+	}
+
+	public deactivate() {
+		// Cleanup resources if needed
+		DaemonManager.getInstance().stop();
+	}
+
+	private showWelcomePopupOnce() {
+		const hasShownWelcome = this.context.globalState.get<boolean>("automa.hasShownWelcome");
+		if (!hasShownWelcome) {
+			vscode.window.showInformationMessage("Automa VS Code Extension is now active!");
+			this.context.globalState.update("automa.hasShownWelcome", true);
+		}
+	}
+
+	private initializeSettingsSync() {
+		this.syncPreviewSetting();
+
+		this.context.subscriptions.push(
+			vscode.workspace.onDidChangeConfiguration(e => {
+				if (e.affectsConfiguration("automa.preview.defaultOnClick")) {
+					this.syncPreviewSetting();
+				}
+			})
+		);
+	}
+
+	private syncPreviewSetting() {
+		const config = vscode.workspace.getConfiguration("automa");
+		const defaultOnClick = config.get<boolean>("preview.defaultOnClick", true);
+		
+		const workbenchConfig = vscode.workspace.getConfiguration("workbench");
+		let editorAssociations: Record<string, string> = workbenchConfig.get("editorAssociations") || {};
+		
+		const currentAssoc = editorAssociations["*.automa.json"];
+		let updated = false;
+
+		if (defaultOnClick && currentAssoc !== "automa.workflowPreview") {
+			editorAssociations["*.automa.json"] = "automa.workflowPreview";
+			updated = true;
+		} else if (!defaultOnClick && currentAssoc === "automa.workflowPreview") {
+			editorAssociations["*.automa.json"] = "default";
+			updated = true;
+		}
+
+		if (updated) {
+			workbenchConfig.update("editorAssociations", editorAssociations, vscode.ConfigurationTarget.Global);
+		}
+	}
+}
