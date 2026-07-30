@@ -42,14 +42,18 @@ export async function runWorkflowCommand(nodeOrUri?: any, params?: any) {
 
 	const config = vscode.workspace.getConfiguration("automa");
 	
+	const keepBrowserOpen = !config.get<boolean>("vault.run.closeBrowserOnFinish", true);
+
 	const options: any = {
 		useDefaultParameters: config.get<boolean>("run.useDefaultParameters"),
-		headless: config.get<boolean>("vault.run.headless"),
-		keepBrowserOpen: !config.get<boolean>("vault.run.closeBrowserOnFinish", true),
-		defaultBrowser: config.get<string>("vault.run.defaultBrowser"),
 		logPath: config.get<string>("vault.run.logPath"),
 		debug: config.get<boolean>("vault.run.debug"),
-		variables: params ? params : undefined
+		variables: params ? params : undefined,
+		browserSettings: {
+			headless: config.get<boolean>("vault.run.headless"),
+			closeBrowserOnFinish: !keepBrowserOpen,
+			defaultBrowser: config.get<string>("vault.run.defaultBrowser"),
+		}
 	};
 
 	vscode.window.withProgress({

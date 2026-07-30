@@ -108,8 +108,28 @@ export class DaemonManager {
 			this.daemonProcess = spawn(cmd, args, {
 				shell: true,
 				detached: false, 
-				stdio: "ignore" 
+				stdio: "pipe" 
 			});
+
+			if (this.daemonProcess.stdout) {
+				this.daemonProcess.stdout.on("data", (data) => {
+					const msg = data.toString().trim();
+					if (msg) {
+						// Stream CLI stdout to VS Code OutputChannel
+						Logger.info(`[CLI Daemon] ${msg}`);
+					}
+				});
+			}
+
+			if (this.daemonProcess.stderr) {
+				this.daemonProcess.stderr.on("data", (data) => {
+					const msg = data.toString().trim();
+					if (msg) {
+						// Stream CLI stderr to VS Code OutputChannel
+						Logger.error(`[CLI Daemon] ${msg}`);
+					}
+				});
+			}
 
 			this.daemonProcess.on("error", (err) => {
 				Logger.error(`Failed to start Automa daemon: ${err.message}`);
