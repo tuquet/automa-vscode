@@ -1,6 +1,5 @@
 import * as path from "node:path";
 import * as vscode from "vscode";
-import { TerminalManager } from "../core/TerminalManager";
 
 export async function runWorkflowCommand(nodeOrUri?: any, params?: any) {
 	let targetPath = "";
@@ -34,26 +33,26 @@ export async function runWorkflowCommand(nodeOrUri?: any, params?: any) {
 	}
 
 	let finalParams = params ? { ...params } : {};
-	
-	const uri = targetPath ? vscode.Uri.file(targetPath) : undefined;
-	const config = vscode.workspace.getConfiguration("automa", uri);
-	
-	const globalVariables = config.get<any>("vault.run.globalVariables", {});
-	if (globalVariables && typeof globalVariables === 'object') {
-		finalParams = { ...globalVariables, ...finalParams };
-	}
 
 	if (Object.keys(finalParams).length > 0) {
 		args.push("-v");
 		args.push(JSON.stringify(finalParams));
 	}
 
-	const useDefaults = config.get<boolean>("run.useDefaultParameters", false);
-	// Nếu chạy từ màn hình UI Form (params !== undefined), ta coi như Form đã thay thế 
-	// bước nhập liệu của CLI, do đó tự động truyền --yes để CLI bỏ qua interactive prompt.
-	if (useDefaults || params !== undefined) {
-		args.push("--yes");
+	const config = vscode.workspace.getConfiguration("automa");
+	const logPath = config.get<string>("vault.run.logPath");
+	if (logPath && logPath.trim() !== "") {
+		// Assuming automa-cli accepts --log-path or similar
+		args.push("--log-path", logPath);
 	}
+
+	const isDebug = config.get<boolean>("vault.run.debug");
+	if (isDebug) {
+		args.push("--debug");
+	}
+
+	// Removed --yes flag since automa-cli run command doesn't define or require it
+	// when a workflow path is explicitly provided.
 
 	vscode.window.showInformationMessage(`Running workflow: ${displayName}`);
 	

@@ -1,15 +1,26 @@
 import * as vscode from "vscode";
 import { registerCommands } from "./commands";
 import { TerminalManager } from "./core/TerminalManager";
+import { Logger } from "./core/Logger";
 import { LogCustomEditorProvider } from "./providers/LogCustomEditorProvider";
 import { WorkflowPreviewEditorProvider } from "./providers/WorkflowPreviewEditorProvider";
 
-export function activate(context: vscode.ExtensionContext) {
-	console.log("Automa VS Code Extension is now active!");
+import { activateLintDiagnostics } from "./commands/lintCheck";
 
-	// Initialize Output Channel (managed by TerminalManager)
-	const logOutputChannel = TerminalManager.getOutputChannel();
-	context.subscriptions.push(logOutputChannel);
+export function activate(context: vscode.ExtensionContext) {
+	// Initialize Logger
+	Logger.initialize(context);
+	Logger.info("Automa VS Code Extension is now active!");
+
+	// Initialize Diagnostics
+	activateLintDiagnostics(context);
+
+	// Show welcome popup only once
+	const hasShownWelcome = context.globalState.get<boolean>("automa.hasShownWelcome");
+	if (!hasShownWelcome) {
+		vscode.window.showInformationMessage("Automa VS Code Extension is now active!");
+		context.globalState.update("automa.hasShownWelcome", true);
+	}
 
 	// Register Custom Editor Provider for .automa-log.json
 	context.subscriptions.push(

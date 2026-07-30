@@ -23,12 +23,32 @@
           "command": "automa.runWorkflow",
           "when": "resourceExtname == .json && resourceFilename =~ /^(?!.*automa-log).*$/",
           "group": "automa@1"
+        },
+        {
+          "command": "automa.runFleet",
+          "when": "resourceExtname == .json && resourceFilename =~ /.*\\.fleets\\.json$/",
+          "group": "automa@2"
+        },
+        {
+          "command": "automa.fixWorkflowId",
+          "when": "resourceExtname == .json && resourceFilename =~ /^(?!.*automa-log).*$/",
+          "group": "automa@3"
+        },
+        {
+          "command": "automa.lintCheck",
+          "when": "resourceExtname == .json && resourceFilename =~ /^(?!.*automa-log).*$/",
+          "group": "automa@4"
         }
       ],
       "editor/title/run": [
         {
           "command": "automa.runWorkflow",
           "when": "resourceExtname == .json && resourceFilename =~ /^(?!.*automa-log).*$/",
+          "group": "navigation"
+        },
+        {
+          "command": "automa.runFleet",
+          "when": "resourceExtname == .json && resourceFilename =~ /.*\\.fleets\\.json$/",
           "group": "navigation"
         }
       ],
@@ -62,6 +82,20 @@
         }
       ]
     },
+    "languages": [
+      {
+        "id": "json",
+        "extensions": [
+          ".automa.json",
+          ".automa-var.json",
+          ".automa-table.json",
+          ".automa-rows.json",
+          ".automa-cred.json",
+          ".automa-folder.json",
+          ".fleets.json"
+        ]
+      }
+    ],
     "commands": [
       {
         "command": "automa.showWorkflowSource",
@@ -77,6 +111,21 @@
         "command": "automa.runWorkflow",
         "title": "Automa: Run Workflow",
         "icon": "$(play)"
+      },
+      {
+        "command": "automa.runFleet",
+        "title": "Automa: Run Fleet",
+        "icon": "$(play)"
+      },
+      {
+        "command": "automa.fixWorkflowId",
+        "title": "Automa: Auto-Fix Workflow ID",
+        "icon": "$(wrench)"
+      },
+      {
+        "command": "automa.lintCheck",
+        "title": "Automa: Lint Check Workflow",
+        "icon": "$(checklist)"
       },
       {
         "command": "automa.showLogSource",
@@ -129,7 +178,13 @@
         },
         "automa.vault.run.defaultBrowser": {
           "type": "string",
-          "enum": ["chrome", "edge", "firefox", "brave", "active-tab"],
+          "enum": [
+            "chrome",
+            "edge",
+            "firefox",
+            "brave",
+            "active-tab"
+          ],
           "default": "chrome",
           "description": "Default browser to use when running a workflow in the Vault."
         },
@@ -147,6 +202,16 @@
           "type": "object",
           "default": {},
           "description": "Global variables (JSON object) appended to the workflow run parameters."
+        },
+        "automa.vault.run.logPath": {
+          "type": "string",
+          "default": "",
+          "description": "Absolute path to store workflow execution logs. If left empty, logs will use the default path."
+        },
+        "automa.vault.run.debug": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable verbose debug logging for CLI execution"
         }
       }
     }

@@ -1,20 +1,26 @@
 import * as vscode from "vscode";
 import { runWorkflowCommand } from "./runWorkflow";
+import { runFleetCommand } from "./runFleet";
 import { openInStudioCommand } from "./openInStudio";
+import { fixWorkflowIdCommand } from "./fixWorkflowId";
+import { lintCheckCommand } from "./lintCheck";
 
 export function registerCommands(context: vscode.ExtensionContext) {
 	const commands = [
-		vscode.commands.registerCommand("automa.showWorkflowSource", (uri: vscode.Uri) => {
+		vscode.commands.registerCommand("automa.showWorkflowSource", async (uri: vscode.Uri) => {
 			if (uri) {
+				await vscode.workspace.getConfiguration("automa").update("preview.defaultOnClick", false, vscode.ConfigurationTarget.Global);
 				vscode.commands.executeCommand("vscode.openWith", uri, "default");
 			}
 		}),
-		vscode.commands.registerCommand("automa.showWorkflowPreview", (uri: vscode.Uri) => {
+		vscode.commands.registerCommand("automa.showWorkflowPreview", async (uri: vscode.Uri) => {
 			if (uri) {
+				await vscode.workspace.getConfiguration("automa").update("preview.defaultOnClick", true, vscode.ConfigurationTarget.Global);
 				vscode.commands.executeCommand("vscode.openWith", uri, "automa.workflowPreview");
 			}
 		}),
 		vscode.commands.registerCommand("automa.runWorkflow", runWorkflowCommand),
+		vscode.commands.registerCommand("automa.runFleet", runFleetCommand),
 		vscode.commands.registerCommand("automa.showLogSource", (uri: vscode.Uri) => {
 			if (uri) {
 				vscode.commands.executeCommand("vscode.openWith", uri, "default");
@@ -28,6 +34,8 @@ export function registerCommands(context: vscode.ExtensionContext) {
 			}
 		}),
 		vscode.commands.registerCommand("automa.openInStudio", openInStudioCommand),
+		vscode.commands.registerCommand("automa.fixWorkflowId", fixWorkflowIdCommand),
+		vscode.commands.registerCommand("automa.lintCheck", lintCheckCommand),
 	];
 
 	context.subscriptions.push(...commands);

@@ -53,15 +53,20 @@ export class LogCustomEditorProvider implements vscode.CustomReadonlyEditorProvi
 
 		// Watch the file for real-time updates
 		try {
-			const watcher = fsSync.watch(document.uri.fsPath, (eventType) => {
-				if (eventType === 'change') {
-					// Small delay to allow file write to finish
-					setTimeout(() => updateWebview(false), 50);
-				}
-			});
+			const watcher = vscode.workspace.createFileSystemWatcher(document.uri.fsPath);
+			
+			const handleChange = () => {
+				// Small delay to allow file write to finish
+				setTimeout(() => updateWebview(false), 50);
+			};
+
+			const changeDisposable = watcher.onDidChange(handleChange);
+			const createDisposable = watcher.onDidCreate(handleChange);
 
 			webviewPanel.onDidDispose(() => {
-				watcher.close();
+				changeDisposable.dispose();
+				createDisposable.dispose();
+				watcher.dispose();
 			});
 		} catch (watchErr) {
 			console.warn("Failed to watch log file for real-time updates:", watchErr);
