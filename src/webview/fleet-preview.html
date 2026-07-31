@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fleet Preview</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --vsc-bg: var(--vscode-editor-background);
+            --vsc-fg: var(--vscode-editor-foreground);
+            --vsc-muted: var(--vscode-descriptionForeground);
+            --vsc-border: var(--vscode-panel-border);
+            --vsc-widget: var(--vscode-editorWidget-background);
+            --vsc-button-bg: var(--vscode-button-background);
+            --vsc-button-fg: var(--vscode-button-foreground);
+            --vsc-button-hover: var(--vscode-button-hoverBackground);
+            --vsc-input-bg: var(--vscode-input-background);
+            --vsc-input-fg: var(--vscode-input-foreground);
+            --vsc-input-border: var(--vscode-input-border);
+            --vsc-link: var(--vscode-textLink-foreground);
+        }
+        body, html { 
+            margin: 0; padding: 0; width: 100%; height: 100%; 
+            background-color: var(--vsc-bg);
+            color: var(--vsc-fg);
+            font-family: var(--vscode-font-family), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+        
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--vscode-scrollbarSlider-background); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--vscode-scrollbarSlider-hoverBackground); }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        vsc: {
+                            bg: 'var(--vsc-bg)',
+                            fg: 'var(--vsc-fg)',
+                            muted: 'var(--vsc-muted)',
+                            border: 'var(--vsc-border)',
+                            widget: 'var(--vsc-widget)',
+                            button: 'var(--vsc-button-bg)',
+                            buttonHover: 'var(--vsc-button-hover)',
+                            buttonText: 'var(--vsc-button-fg)',
+                            input: 'var(--vsc-input-bg)',
+                            inputText: 'var(--vsc-input-fg)',
+                            inputBorder: 'var(--vsc-input-border)',
+                            link: 'var(--vsc-link)',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet" />
+</head>
+<body class="flex flex-col bg-vsc-bg text-vsc-fg font-sans m-0 h-screen overflow-hidden">
+    <div id="app" class="flex flex-col h-full w-full">
+        <!-- Header -->
+        <div class="flex items-center justify-between px-6 py-4 border-b border-vsc-border bg-vsc-widget">
+            <div>
+                <h1 class="text-2xl font-semibold text-vsc-fg flex items-center gap-2">
+                    <i class="ri-ship-line"></i> {{ fleetName }}
+                </h1>
+                <div class="flex items-center gap-2 mt-2 text-sm text-vsc-muted">
+                    <span>Concurrency Mode:</span>
+                    <select v-if="fleetData && fleetData.settings" v-model="fleetData.settings.concurrency_mode" @change="markModified" class="bg-vsc-input text-vsc-inputText border border-vsc-inputBorder rounded px-1 py-0.5 text-xs font-mono focus:outline-none focus:border-vsc-link transition-colors">
+                        <option value="queue">queue</option>
+                        <option value="parallel">parallel</option>
+                        <option value="skip">skip</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="flex gap-3">
+                <button v-if="isModified" @click="saveChanges" class="px-6 py-2 bg-vsc-button hover:bg-vsc-buttonHover text-vsc-buttonText font-semibold rounded shadow transition-colors flex items-center gap-2 mr-2">
+                    <i class="ri-save-line"></i> Save Fleet Changes
+                </button>
+                <button @click="stopFleet" :disabled="!isRunning" 
+                    :class="['px-6 py-2 font-semibold rounded border transition-colors flex items-center gap-2', 
+                    isRunning ? 'bg-red-600 hover:bg-red-700 text-white border-transparent' : 'bg-vsc-bg text-vsc-muted border-vsc-border cursor-not-allowed']">
+                    <i class="ri-stop-circle-line"></i> Stop
+                </button>
+                <button @click="runFleet" :disabled="isRunning"
+                    :class="['px-6 py-2 font-semibold rounded shadow transition-colors flex items-center gap-2',
+                    isRunning ? 'bg-vsc-bg text-vsc-muted cursor-not-allowed border border-vsc-border' : 'bg-vsc-button hover:bg-vsc-buttonHover text-vsc-buttonText']">
+                    <i class="ri-play-circle-line"></i> Run
+                </button>
+            </div>
+        </div>
+
+        <!-- Content -->
+        <div class="flex-1 overflow-y-auto p-6">
+            <div v-if="!fleetData" class="text-center text-vsc-muted mt-10">
+                Loading Fleet Data...
+            </div>
+            <div v-else class="max-w-6xl mx-auto space-y-6">
+                <!-- Global Variables -->
+                <div v-if="hasGlobalVariables" class="border border-vsc-border rounded-lg bg-vsc-widget p-4">
+                    <div class="flex justify-between items-center mb-3">
+                        <h2 class="text-lg font-semibold flex items-center gap-2"><i class="ri-global-line"></i> Global Variables</h2>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div v-for="(val, key) in fleetData.global_variables" :key="key" class="bg-vsc-bg border border-vsc-border rounded p-3 flex flex-col gap-1">
+                            <span class="text-xs text-vsc-muted font-mono uppercase tracking-wider">{{ key }}</span>
+                            <input type="text" v-model="fleetData.global_variables[key]" @input="markModified" 
+                                class="bg-vsc-input text-vsc-inputText border border-vsc-inputBorder rounded px-2 py-1.5 text-sm font-mono focus:outline-none focus:border-vsc-link transition-colors w-full" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Members -->
+                <div class="space-y-4">
+                    <h2 class="text-lg font-semibold flex items-center gap-2"><i class="ri-group-line"></i> Browser Members ({{ members.length }})</h2>
+                    
+                    <div v-for="member in members" :key="member.browser_id" class="border border-vsc-border rounded-lg bg-vsc-widget overflow-hidden shadow-sm">
+                        <!-- Member Header -->
+                        <div @click="toggleMember(member.browser_id)" class="bg-vsc-bg px-4 py-3 border-b border-vsc-border flex justify-between items-center cursor-pointer hover:bg-vsc-widget transition-colors">
+                            <div class="flex items-center gap-3">
+                                <i class="ri-window-line text-xl text-vsc-link"></i>
+                                <div>
+                                    <h3 class="font-semibold text-lg flex items-center gap-2">
+                                        {{ member.browser_id }}
+                                        <span class="text-xs bg-vsc-widget px-2 py-0.5 rounded border border-vsc-border text-vsc-muted">{{ (member.tasks || []).length }} Tasks</span>
+                                    </h3>
+                                    <p class="text-xs text-vsc-muted">{{ member.description || 'No description' }}</p>
+                                </div>
+                            </div>
+                            <i :class="['ri-arrow-down-s-line text-xl text-vsc-muted transition-transform', isCollapsed(member.browser_id) ? '-rotate-90' : '']"></i>
+                        </div>
+                        
+                        <!-- Member Tasks -->
+                        <div v-show="!isCollapsed(member.browser_id)" class="p-4 bg-vsc-widget">
+                            <h4 class="text-sm font-semibold text-vsc-muted mb-3 uppercase tracking-wider">Tasks ({{ (member.tasks || []).length }})</h4>
+                            
+                            <div class="space-y-3 relative">
+                                <div v-if="!member.tasks || member.tasks.length === 0" class="text-sm text-vsc-muted italic">
+                                    No tasks assigned to this browser.
+                                </div>
+                                <div v-for="task in member.tasks" :key="task.task_id" class="relative pl-6">
+                                    <!-- Dependency Arrow Line -->
+                                    <div class="absolute left-2.5 top-0 bottom-0 border-l border-vsc-border border-dashed z-0" v-if="member.tasks.length > 1"></div>
+                                    <div class="absolute left-1 top-4 w-3 h-3 bg-vsc-border rounded-full z-10 border-2 border-vsc-widget"></div>
+
+                                    <div class="border border-vsc-border rounded bg-vsc-bg p-3 hover:border-vsc-link transition-colors z-20 relative">
+                                        <div class="flex justify-between items-start">
+                                            <div>
+                                                <h5 class="font-semibold text-base">{{ task.name || task.task_id }}</h5>
+                                                <div class="text-xs text-vsc-muted font-mono mt-1 flex flex-col gap-1">
+                                                    <span>Workflow: <strong class="text-vsc-fg">{{ getWorkflowName(task.workflow_id) }}</strong></span>
+                                                    <span class="opacity-75" title="Workflow ID">{{ task.workflow_id }}</span>
+                                                    <span class="opacity-75 mt-1" title="Task ID">Task ID: {{ task.task_id }}</span>
+                                                </div>
+                                            </div>
+                                            <!-- Schedule Editor -->
+                                            <div class="flex flex-col gap-2 items-end">
+                                                <span v-if="task.depends_on" class="text-xs bg-yellow-900/30 text-yellow-500 border border-yellow-900/50 px-2 py-1 rounded flex items-center gap-1" title="Depends on other tasks">
+                                                    <i class="ri-link"></i> Wait ({{ task.depends_on.length }})
+                                                </span>
+                                                <div class="flex items-center gap-1 bg-vsc-bg border border-vsc-border rounded px-1 py-1 focus-within:border-vsc-link transition-colors">
+                                                    <i :class="getScheduleIcon(task.schedule?.type) + ' text-vsc-muted ml-1'"></i>
+                                                    <select v-if="task.schedule" v-model="task.schedule.type" @change="markModified" class="bg-transparent text-vsc-fg border-none text-xs focus:outline-none cursor-pointer px-1">
+                                                        <option value="on-start">on-start</option>
+                                                        <option value="cron">cron</option>
+                                                        <option value="delay">delay</option>
+                                                        <option value="once">once</option>
+                                                    </select>
+                                                    <input v-if="task.schedule && task.schedule.type !== 'on-start'" type="text" v-model="task.schedule.value" @input="markModified" placeholder="Value..." 
+                                                        class="bg-vsc-input text-vsc-inputText border-none rounded-sm px-1.5 py-0.5 text-xs font-mono focus:outline-none focus:bg-vsc-widget transition-colors w-24" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const vscode = acquireVsCodeApi();
+
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                return {
+                    fleetData: null,
+                    workflowDict: {},
+                    isRunning: false,
+                    isModified: false,
+                    collapsedMembers: []
+                }
+            },
+            computed: {
+                fleetName() {
+                    return this.fleetData?.name || this.fleetData?.fleet_id || 'Unknown Fleet';
+                },
+                concurrencyMode() {
+                    return this.fleetData?.settings?.concurrency_mode || 'queue';
+                },
+                members() {
+                    return this.fleetData?.members || [];
+                },
+                hasGlobalVariables() {
+                    return this.fleetData?.global_variables && Object.keys(this.fleetData.global_variables).length > 0;
+                }
+            },
+            methods: {
+                runFleet() {
+                    this.isRunning = true;
+                    vscode.postMessage({ type: 'run-fleet' });
+                    // In a real implementation we would listen for a stop event or process end
+                    // For now, simulate it resetting after 3s if no real state sync is implemented
+                    setTimeout(() => { this.isRunning = false; }, 3000);
+                },
+                stopFleet() {
+                    this.isRunning = false;
+                    vscode.postMessage({ type: 'stop-fleet' });
+                },
+                getScheduleIcon(type) {
+                    switch(type) {
+                        case 'cron': return 'ri-calendar-event-line';
+                        case 'once': return 'ri-time-line';
+                        case 'delay': return 'ri-timer-line';
+                        case 'on-start': return 'ri-flashlight-line';
+                        default: return 'ri-question-line';
+                    }
+                },
+                getScheduleText(schedule) {
+                    if (!schedule) return 'No schedule';
+                    if (schedule.type === 'on-start') return 'On Start';
+                    return `${schedule.type}: ${schedule.value}`;
+                },
+                toggleMember(id) {
+                    const idx = this.collapsedMembers.indexOf(id);
+                    if (idx > -1) {
+                        this.collapsedMembers.splice(idx, 1);
+                    } else {
+                        this.collapsedMembers.push(id);
+                    }
+                },
+                isCollapsed(id) {
+                    return this.collapsedMembers.includes(id);
+                },
+                markModified() {
+                    this.isModified = true;
+                },
+                saveChanges() {
+                    this.isModified = false;
+                    vscode.postMessage({ 
+                        type: 'save-fleet', 
+                        data: JSON.stringify(this.fleetData, null, 2) 
+                    });
+                },
+                getWorkflowName(id) {
+                    return this.workflowDict[id] || 'Unknown Workflow';
+                }
+            },
+            mounted() {
+                window.addEventListener('message', event => {
+                    const message = event.data;
+                    switch (message.type) {
+                        case 'update':
+                            try {
+                                this.fleetData = JSON.parse(message.text);
+                                if (message.workflows) {
+                                    this.workflowDict = message.workflows;
+                                }
+                            } catch(e) {
+                                console.error("Failed to parse fleet data", e);
+                            }
+                            break;
+                    }
+                });
+                vscode.postMessage({ type: 'ready' });
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

@@ -64,6 +64,16 @@
           "group": "navigation"
         },
         {
+          "command": "automa.showFleetSource",
+          "when": "activeCustomEditorId == 'automa.fleetPreview'",
+          "group": "navigation"
+        },
+        {
+          "command": "automa.showFleetPreview",
+          "when": "resourceExtname == .json && resourceFilename =~ /.*\\.fleets\\.json$/ && activeCustomEditorId != 'automa.fleetPreview'",
+          "group": "navigation"
+        },
+        {
           "command": "automa.showLogSource",
           "when": "activeCustomEditorId == 'automa.logEditor'",
           "group": "navigation"
@@ -78,6 +88,11 @@
         {
           "command": "automa.showWorkflowPreview",
           "when": "resourceFilename =~ /automa.json/ && activeCustomEditorId != 'automa.workflowPreview'",
+          "group": "navigation"
+        },
+        {
+          "command": "automa.showFleetPreview",
+          "when": "resourceExtname == .json && resourceFilename =~ /.*\\.fleets\\.json$/ && activeCustomEditorId != 'automa.fleetPreview'",
           "group": "navigation"
         }
       ]
@@ -105,6 +120,16 @@
       {
         "command": "automa.showWorkflowPreview",
         "title": "Preview Workflow",
+        "icon": "$(preview)"
+      },
+      {
+        "command": "automa.showFleetSource",
+        "title": "Show Fleet Source",
+        "icon": "$(code)"
+      },
+      {
+        "command": "automa.showFleetPreview",
+        "title": "Preview Fleet",
         "icon": "$(preview)"
       },
       {
@@ -159,6 +184,15 @@
         "selector": [
           {
             "filenamePattern": "*.automa.json"
+          }
+        ]
+      },
+      {
+        "viewType": "automa.fleetPreview",
+        "displayName": "Automa Fleet Preview",
+        "selector": [
+          {
+            "filenamePattern": "*.fleets.json"
           }
         ]
       }

@@ -4,6 +4,7 @@ import { runFleetCommand } from "./runFleet";
 import { openInStudioCommand } from "./openInStudio";
 import { fixWorkflowIdCommand } from "./fixWorkflowId";
 import { lintCheckCommand } from "./lintCheck";
+import { stopFleetCommand } from "./stopFleet";
 
 export class CommandManager {
 	private readonly context: vscode.ExtensionContext;
@@ -26,8 +27,19 @@ export class CommandManager {
 					vscode.commands.executeCommand("vscode.openWith", uri, "automa.workflowPreview");
 				}
 			}),
+			vscode.commands.registerCommand("automa.showFleetSource", async (uri: vscode.Uri) => {
+				if (uri) {
+					vscode.commands.executeCommand("vscode.openWith", uri, "default");
+				}
+			}),
+			vscode.commands.registerCommand("automa.showFleetPreview", async (uri: vscode.Uri) => {
+				if (uri) {
+					vscode.commands.executeCommand("vscode.openWith", uri, "automa.fleetPreview");
+				}
+			}),
 			vscode.commands.registerCommand("automa.runWorkflow", runWorkflowCommand),
 			vscode.commands.registerCommand("automa.runFleet", runFleetCommand),
+			vscode.commands.registerCommand("automa.stopFleet", stopFleetCommand),
 			vscode.commands.registerCommand("automa.showLogSource", (uri: vscode.Uri) => {
 				if (uri) {
 					vscode.commands.executeCommand("vscode.openWith", uri, "default");

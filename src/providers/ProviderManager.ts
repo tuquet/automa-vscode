@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { LogCustomEditorProvider } from "./LogCustomEditorProvider";
 import { WorkflowPreviewEditorProvider } from "./WorkflowPreviewEditorProvider";
+import { FleetPreviewEditorProvider } from "./FleetPreviewEditorProvider";
 
 export class ProviderManager {
 	private readonly context: vscode.ExtensionContext;
@@ -29,6 +30,20 @@ export class ProviderManager {
 			vscode.window.registerCustomEditorProvider(
 				WorkflowPreviewEditorProvider.viewType,
 				new WorkflowPreviewEditorProvider(this.context),
+				{
+					webviewOptions: {
+						retainContextWhenHidden: true,
+					},
+					supportsMultipleEditorsPerDocument: false,
+				}
+			)
+		);
+
+		// Register Custom Editor Provider for .fleets.json
+		this.context.subscriptions.push(
+			vscode.window.registerCustomEditorProvider(
+				FleetPreviewEditorProvider.viewType,
+				new FleetPreviewEditorProvider(this.context),
 				{
 					webviewOptions: {
 						retainContextWhenHidden: true,

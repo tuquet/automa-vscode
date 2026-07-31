@@ -174,14 +174,16 @@ export class WorkflowPreviewEditorProvider implements vscode.CustomTextEditorPro
 				Updated At: ${updatedAtStr}
 			</p>` : '';
 
+			const safeString = (str: any) => str ? String(str).replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$\{/g, '\\${').replace(/<\/script>/gi, '<\\/script>') : '';
+
 			htmlContent = htmlContent.replace(/\{\{WORKFLOW_NAME\}\}/g, json.name || 'Untitled Workflow');
 			htmlContent = htmlContent.replace("{{UPDATED_AT_HTML}}", updatedAtHtml);
-			htmlContent = htmlContent.replace("{{JSON_ID}}", json.id || 'N/A');
-			htmlContent = htmlContent.replace("{{JSON_NAME}}", json.name || '');
-			htmlContent = htmlContent.replace("{{JSON_DESCRIPTION}}", json.description || '');
-			htmlContent = htmlContent.replace("{{JSON_VERSION}}", json.version || '');
-			htmlContent = htmlContent.replace("{{JSON_EXT_VERSION}}", json.extVersion || '');
-			htmlContent = htmlContent.replace("{{JSON_GLOBAL_DATA}}", json.globalData || '');
+			htmlContent = htmlContent.replace("{{JSON_ID}}", safeString(json.id) || 'N/A');
+			htmlContent = htmlContent.replace("{{JSON_NAME}}", safeString(json.name));
+			htmlContent = htmlContent.replace("{{JSON_DESCRIPTION}}", safeString(json.description));
+			htmlContent = htmlContent.replace("{{JSON_VERSION}}", safeString(json.version));
+			htmlContent = htmlContent.replace("{{JSON_EXT_VERSION}}", safeString(json.extVersion));
+			htmlContent = htmlContent.replace("{{JSON_GLOBAL_DATA}}", safeString(json.globalData));
 			htmlContent = htmlContent.replace("{{JSON_TABLE}}", jsonStringifySafe(json.table));
 			htmlContent = htmlContent.replace("{{JSON_SETTINGS}}", jsonStringifySafe(json.settings));
 			htmlContent = htmlContent.replace("{{JSON_INCLUDED_WORKFLOWS}}", jsonStringifySafe(json.includedWorkflows));
@@ -204,11 +206,13 @@ export class WorkflowPreviewEditorProvider implements vscode.CustomTextEditorPro
 				Updated At: ${updatedAtStr}
 			</p>` : '';
 
+			const safeString = (str: any) => str ? String(str).replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$\{/g, '\\${').replace(/<\/script>/gi, '<\\/script>') : '';
+
 			htmlContent = htmlContent.replace(/\{\{WORKFLOW_NAME\}\}/g, json.name || 'Untitled Package');
 			htmlContent = htmlContent.replace("{{UPDATED_AT_HTML}}", updatedAtHtml);
-			htmlContent = htmlContent.replace("{{JSON_ID}}", json.id || 'N/A');
-			htmlContent = htmlContent.replace("{{JSON_NAME}}", json.name || '');
-			htmlContent = htmlContent.replace("{{JSON_DESCRIPTION}}", json.description || '');
+			htmlContent = htmlContent.replace("{{JSON_ID}}", safeString(json.id) || 'N/A');
+			htmlContent = htmlContent.replace("{{JSON_NAME}}", safeString(json.name));
+			htmlContent = htmlContent.replace("{{JSON_DESCRIPTION}}", safeString(json.description));
 			htmlContent = htmlContent.replace("{{JSON_SETTINGS}}", jsonStringifySafe(json.settings));
 			htmlContent = htmlContent.replace("{{JSON_ICON}}", json.icon || 'riGlobalLine');
 			
@@ -227,7 +231,7 @@ export class WorkflowPreviewEditorProvider implements vscode.CustomTextEditorPro
 	}
 
 	private getHtmlContent(json: any, triggerParams: any[], updatedAt: number, isPackage: boolean = false, pkgInputs: any[] = [], pkgOutputs: any[] = [], pkgVars: any[] = []): string {
-		const jsonStringifySafe = (obj: any) => obj ? JSON.stringify(obj, null, 2).replace(/</g, '\\u003c').replace(/"/g, '&quot;') : '';
+		const jsonStringifySafe = (obj: any) => obj ? JSON.stringify(obj, null, 2).replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$\{/g, '\\${').replace(/<\/script>/gi, '<\\/script>') : '';
 		const updatedAtStr = updatedAt ? new Date(updatedAt).toLocaleString() : '';
 
 		if (isPackage) {
