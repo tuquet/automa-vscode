@@ -5,6 +5,7 @@ import { openInStudioCommand } from "./openInStudio";
 import { fixWorkflowIdCommand } from "./fixWorkflowId";
 import { lintCheckCommand } from "./lintCheck";
 import { stopFleetCommand } from "./stopFleet";
+import { DaemonManager } from "../core/DaemonManager";
 
 export class CommandManager {
 	private readonly context: vscode.ExtensionContext;
@@ -55,6 +56,14 @@ export class CommandManager {
 			vscode.commands.registerCommand("automa.openInStudio", openInStudioCommand),
 			vscode.commands.registerCommand("automa.fixWorkflowId", fixWorkflowIdCommand),
 			vscode.commands.registerCommand("automa.lintCheck", lintCheckCommand),
+			vscode.commands.registerCommand("automa.toggleDaemon", () => {
+				const daemon = (DaemonManager as any).getInstance();
+				if (daemon.daemonProcess) {
+					daemon.stop();
+				} else {
+					daemon.start();
+				}
+			}),
 		];
 
 		this.context.subscriptions.push(...commands);

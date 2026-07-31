@@ -10,8 +10,15 @@ export class DaemonManager {
 	private daemonProcess: ChildProcess | null = null;
 	private port = 8765;
 	private hasLoggedReuse = false;
+	private statusBarItem: vscode.StatusBarItem;
 
-	private constructor() {}
+	private constructor() {
+		this.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
+		this.statusBarItem.text = "$(circle-slash) Automa: Idle";
+		this.statusBarItem.tooltip = "Automa CLI Daemon is not running";
+		this.statusBarItem.command = "automa.toggleDaemon";
+		this.statusBarItem.show();
+	}
 
 	public static getInstance(): DaemonManager {
 		if (!DaemonManager.instance) {
@@ -64,6 +71,9 @@ export class DaemonManager {
 			Logger.info("Automa daemon is already running.");
 			return;
 		}
+		
+		this.statusBarItem.text = "$(sync~spin) Automa: Starting";
+		this.statusBarItem.tooltip = "Starting Automa CLI Daemon...";
 
 		try {
 			const config = vscode.workspace.getConfiguration("automa");
@@ -77,6 +87,10 @@ export class DaemonManager {
 					this.hasLoggedReuse = true;
 				}
 				this.port = basePort;
+				
+				this.statusBarItem.text = `$(check) Automa: :${this.port}`;
+				this.statusBarItem.tooltip = "Automa CLI Daemon is running externally (Click to ignore)";
+				
 				return;
 			}
 
@@ -134,21 +148,31 @@ export class DaemonManager {
 			this.daemonProcess.on("error", (err) => {
 				Logger.error(`Failed to start Automa daemon: ${err.message}`);
 				this.daemonProcess = null;
+				this.updateStatusStopped();
 			});
 
 			this.daemonProcess.on("exit", (code) => {
 				Logger.warn(`Automa daemon exited with code ${code}`);
 				this.daemonProcess = null;
 				this.hasLoggedReuse = false;
+				this.updateStatusStopped();
 			});
 			
 			// Wait a bit for server to start
 			await new Promise(resolve => setTimeout(resolve, 2000));
 			Logger.info("Automa background daemon started.");
 			this.hasLoggedReuse = false;
+			this.statusBarItem.text = `$(radio-tower) Automa: :${this.port}`;
+			this.statusBarItem.tooltip = "Automa CLI Daemon is running (Click to stop)";
 		} catch (e: any) {
 			Logger.error(`Failed to launch daemon: ${e.message}`);
+			this.updateStatusStopped();
 		}
+	}
+
+	private updateStatusStopped() {
+		this.statusBarItem.text = "$(circle-slash) Automa: Idle";
+		this.statusBarItem.tooltip = "Automa CLI Daemon is stopped";
 	}
 
 	public stop() {
@@ -158,5 +182,6 @@ export class DaemonManager {
 			Logger.info("Automa background daemon stopped.");
 		}
 		this.hasLoggedReuse = false;
+		this.updateStatusStopped();
 	}
 }
