@@ -5,7 +5,7 @@ import { DaemonManager } from "../core/DaemonManager";
 
 let automaOutputChannel: vscode.OutputChannel;
 
-export async function runWorkflowCommand(nodeOrUri?: any, params?: any) {
+export async function runWorkflowCommand(nodeOrUri?: any, params?: any, runOptions?: { keepBrowserOpen?: boolean }) {
 	let targetPath = "";
 	let displayName = "";
 	let workflowData: any = null;
@@ -42,7 +42,7 @@ export async function runWorkflowCommand(nodeOrUri?: any, params?: any) {
 
 	const config = vscode.workspace.getConfiguration("automa");
 	
-	const keepBrowserOpen = !config.get<boolean>("vault.run.closeBrowserOnFinish", true);
+	const keepBrowserOpen = runOptions?.keepBrowserOpen ?? !config.get<boolean>("vault.run.closeBrowserOnFinish", true);
 
 	const options: any = {
 		useDefaultParameters: config.get<boolean>("run.useDefaultParameters"),

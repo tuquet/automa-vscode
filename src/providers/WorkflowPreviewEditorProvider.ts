@@ -99,7 +99,7 @@ export class WorkflowPreviewEditorProvider implements vscode.CustomTextEditorPro
 		// Message Listener
 		const messageDisposable = webviewPanel.webview.onDidReceiveMessage(async (message) => {
 			if (message.command === 'runWorkflow') {
-				runWorkflowCommand(document.uri, message.parameters);
+				runWorkflowCommand(document.uri, message.parameters, { keepBrowserOpen: message.keepBrowserOpen });
 			} else if (message.command === 'saveWorkflow') {
 				try {
 					const content = document.getText();
@@ -176,6 +176,9 @@ export class WorkflowPreviewEditorProvider implements vscode.CustomTextEditorPro
 
 			const safeString = (str: any) => str ? String(str).replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$\{/g, '\\${').replace(/<\/script>/gi, '<\\/script>') : '';
 
+			const config = vscode.workspace.getConfiguration("automa");
+			const defaultKeepBrowserOpen = !config.get<boolean>("vault.run.closeBrowserOnFinish", true);
+
 			htmlContent = htmlContent.replace(/\{\{WORKFLOW_NAME\}\}/g, json.name || 'Untitled Workflow');
 			htmlContent = htmlContent.replace("{{UPDATED_AT_HTML}}", updatedAtHtml);
 			htmlContent = htmlContent.replace("{{JSON_ID}}", safeString(json.id) || 'N/A');
@@ -188,7 +191,7 @@ export class WorkflowPreviewEditorProvider implements vscode.CustomTextEditorPro
 			htmlContent = htmlContent.replace("{{JSON_SETTINGS}}", jsonStringifySafe(json.settings));
 			htmlContent = htmlContent.replace("{{JSON_INCLUDED_WORKFLOWS}}", jsonStringifySafe(json.includedWorkflows));
 			htmlContent = htmlContent.replace("{{JSON_ICON}}", json.icon || 'riGlobalLine');
-			htmlContent = htmlContent.replace("{{INJECT_PARAMS_DATA}}", `const tParams = ${JSON.stringify(triggerParams).replace(/</g, '\\u003c')};`);
+			htmlContent = htmlContent.replace("{{INJECT_PARAMS_DATA}}", `const tParams = ${JSON.stringify(triggerParams).replace(/</g, '\\u003c')};\nconst defaultKeepBrowserOpen = ${defaultKeepBrowserOpen};`);
 
 			return htmlContent;
 		} catch (error: any) {

@@ -74,7 +74,11 @@
                 {{UPDATED_AT_HTML}}
             </div>
             
-            <div class="flex gap-3 flex-shrink-0">
+            <div class="flex gap-3 flex-shrink-0 items-center">
+                <label class="flex items-center gap-2 text-sm text-vsc-muted cursor-pointer hover:text-vsc-fg transition-colors mr-2" title="Don't close the browser when workflow finishes">
+                    <input type="checkbox" v-model="keepBrowserOpen" class="w-4 h-4 rounded border-vsc-border bg-vsc-input text-vsc-button focus:ring-vsc-button accent-blue-500 cursor-pointer">
+                    Keep browser open
+                </label>
                 <button @click="openStudio" class="px-6 py-2 bg-vsc-bg hover:bg-vsc-border text-vsc-fg font-semibold rounded border border-vsc-border transition-colors flex items-center gap-2 shadow-sm" title="Open in Automa Studio (Browser Extension)">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M10 21V23H6C4.89543 23 4 22.1046 4 21V3C4 1.89543 4.89543 1 6 1H18C19.1046 1 20 1.89543 20 3V10H18V3H6V21H10ZM15.5355 12.4645C17.4882 10.5118 20.654 10.5118 22.6066 12.4645C24.5592 14.4171 24.5592 17.5829 22.6066 19.5355L21.1924 18.1213C22.3639 16.9497 22.3639 15.0503 21.1924 13.8787C20.0208 12.7071 18.1213 12.7071 16.9497 13.8787L15.5355 12.4645ZM18.4645 21.5355C16.5118 23.4882 13.346 23.4882 11.3934 21.5355C9.44078 19.5829 9.44078 16.4171 11.3934 14.4645L12.8076 15.8787C11.636 17.0503 11.636 18.9497 12.8076 20.1213C13.9792 21.2929 15.8787 21.2929 17.0503 20.1213L18.4645 21.5355ZM14.8284 14.8284L19.0711 19.0711L17.6569 20.4853L13.4142 16.2426L14.8284 14.8284Z"></path></svg>
                     Studio
@@ -236,6 +240,8 @@
                     paramValues[p.name] = p.defaultValue || '';
                 });
 
+                const keepBrowserOpen = ref(typeof defaultKeepBrowserOpen !== 'undefined' ? defaultKeepBrowserOpen : false);
+
                 const workflow = reactive({
                     name: `{{JSON_NAME}}`,
                     description: `{{JSON_DESCRIPTION}}`,
@@ -307,7 +313,8 @@
 
                     vscode.postMessage({
                         command: 'runWorkflow',
-                        parameters: params
+                        parameters: params,
+                        keepBrowserOpen: keepBrowserOpen.value
                     });
                 };
 
@@ -316,6 +323,7 @@
                     tabs,
                     triggerParams,
                     paramValues,
+                    keepBrowserOpen,
                     workflow,
                     iconsList,
                     iconClass,
