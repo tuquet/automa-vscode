@@ -22,7 +22,24 @@ export async function runFleetCommand(nodeOrUri?: any) {
 	if (!options) return;
 	const isRunNow = options.label.includes("Run Now");
 
-	const args = ["automa", "fleet", "start", targetPath];
+	const isWin = process.platform === "win32";
+	let cmd = isWin ? "npx.cmd" : "npx";
+	let args = ["-y", "tuquet-automa-cli@latest", "fleet", "start", targetPath];
+
+	const config = vscode.workspace.getConfiguration("automa");
+	const userCliPath = config.get<string>("cliPath");
+	if (userCliPath && fs.existsSync(userCliPath)) {
+		cmd = "node";
+		args = [userCliPath, "fleet", "start", targetPath];
+	} else if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
+		const workspaceRoot = vscode.workspace.workspaceFolders[0].uri.fsPath;
+		const localCliPath = path.join(workspaceRoot, "..", "automa-cli", "dist", "cli.js");
+		if (fs.existsSync(localCliPath)) {
+			cmd = "node";
+			args = [localCliPath, "fleet", "start", targetPath];
+		}
+	}
+
 	if (isRunNow) {
 		args.push("--run-now");
 	}
@@ -30,6 +47,7 @@ export async function runFleetCommand(nodeOrUri?: any) {
 	TaskRunner.runWithTelemetry({
 		id: `fleet-orchestrator-${Date.now()}`,
 		name: `Fleet: ${displayName}`,
+		command: cmd,
 		args: args,
 		startMessage: `Starting Fleet Orchestrator: ${displayName}`,
 		successMessage: `Fleet Orchestrator finished: ${displayName}`,
