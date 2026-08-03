@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import * as path from "node:path";
+import * as fs from "node:fs";
 import { TaskRunner } from "../core/TaskRunner";
 
 export async function runFleetCommand(nodeOrUri?: any) {
