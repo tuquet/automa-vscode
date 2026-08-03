@@ -73,7 +73,6 @@ export class TaskRunner {
 						vscode.window.showErrorMessage(`${options.errorMessage} (Exit code ${e.exitCode})`);
 					}
 				}
-				}
 			}
 		});
 	}

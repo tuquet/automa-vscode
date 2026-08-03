@@ -80,14 +80,25 @@ export class ExtensionApp {
 		const workbenchConfig = vscode.workspace.getConfiguration("workbench");
 		let editorAssociations: Record<string, string> = workbenchConfig.get("editorAssociations") || {};
 		
-		const currentAssoc = editorAssociations["*.automa.json"];
 		let updated = false;
 
-		if (defaultOnClick && currentAssoc !== "automa.workflowPreview") {
+		// Automate *.automa.json -> automa.workflowPreview
+		const currentWorkflowAssoc = editorAssociations["*.automa.json"];
+		if (defaultOnClick && currentWorkflowAssoc !== "automa.workflowPreview") {
 			editorAssociations["*.automa.json"] = "automa.workflowPreview";
 			updated = true;
-		} else if (!defaultOnClick && currentAssoc === "automa.workflowPreview") {
+		} else if (!defaultOnClick && currentWorkflowAssoc === "automa.workflowPreview") {
 			editorAssociations["*.automa.json"] = "default";
+			updated = true;
+		}
+
+		// Automate *.fleets.json -> automa.fleetPreview
+		const currentFleetAssoc = editorAssociations["*.fleets.json"];
+		if (defaultOnClick && currentFleetAssoc !== "automa.fleetPreview") {
+			editorAssociations["*.fleets.json"] = "automa.fleetPreview";
+			updated = true;
+		} else if (!defaultOnClick && currentFleetAssoc === "automa.fleetPreview") {
+			editorAssociations["*.fleets.json"] = "default";
 			updated = true;
 		}
 

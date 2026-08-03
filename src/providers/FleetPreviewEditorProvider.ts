@@ -22,10 +22,12 @@ export class FleetPreviewEditorProvider implements vscode.CustomTextEditorProvid
 
 		const updateWebview = async () => {
 			const workflows = await this.getWorkflowDictionary();
+			const profiles = await this.getProfileDictionary();
 			webviewPanel.webview.postMessage({
 				type: "update",
 				text: document.getText(),
-				workflows: workflows
+				workflows: workflows,
+				profiles: profiles
 			});
 		};
 
@@ -99,6 +101,27 @@ export class FleetPreviewEditorProvider implements vscode.CustomTextEditorProvid
 			}
 		} catch (e) {
 			console.error("Failed to scan workflows:", e);
+		}
+		return dict;
+	}
+
+	private async getProfileDictionary(): Promise<Record<string, string>> {
+		const dict: Record<string, string> = {};
+		try {
+			const files = await vscode.workspace.findFiles("**/*.{bprofile.json,profile.json}", "**/node_modules/**");
+			for (const file of files) {
+				try {
+					const content = await vscode.workspace.fs.readFile(file);
+					const json = JSON.parse(Buffer.from(content).toString("utf8"));
+					const id = json.id || path.basename(file.fsPath, path.extname(file.fsPath));
+					const name = json.name || id;
+					dict[id] = name;
+				} catch (e) {
+					// Ignore parse errors
+				}
+			}
+		} catch (e) {
+			console.error("Failed to scan profiles:", e);
 		}
 		return dict;
 	}

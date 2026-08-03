@@ -134,7 +134,12 @@
 
                 <!-- Members -->
                 <div class="space-y-4">
-                    <h2 class="text-lg font-semibold flex items-center gap-2"><i class="ri-group-line"></i> Browser Members ({{ members.length }})</h2>
+                    <div class="flex justify-between items-center">
+                        <h2 class="text-lg font-semibold flex items-center gap-2"><i class="ri-group-line"></i> Browser Members ({{ members.length }})</h2>
+                        <button @click="addMember" class="text-xs text-vsc-buttonText bg-vsc-button hover:bg-vsc-buttonHover px-2 py-1 rounded shadow-sm transition-colors flex items-center gap-1">
+                            <i class="ri-add-line"></i> Add Member
+                        </button>
+                    </div>
                     
                     <div v-for="member in members" :key="member.browser_id" class="border border-vsc-border rounded-lg bg-vsc-widget overflow-hidden shadow-sm">
                         <!-- Member Header -->
@@ -143,13 +148,19 @@
                                 <i class="ri-window-line text-xl text-vsc-link"></i>
                                 <div>
                                     <h3 class="font-semibold text-lg flex items-center gap-2">
-                                        {{ member.browser_id }}
+                                        <select v-model="member.browser_id" @change="markModified" @click.stop class="bg-vsc-input text-vsc-inputText border border-vsc-inputBorder rounded px-2 py-1 text-base font-semibold focus:outline-none focus:border-vsc-link transition-colors max-w-sm">
+                                            <option v-for="(name, id) in profileDict" :key="id" :value="id">{{ name }} ({{ id }})</option>
+                                            <option v-if="!profileDict[member.browser_id]" :value="member.browser_id">[Missing] {{ member.browser_id }}</option>
+                                        </select>
                                         <span class="text-xs bg-vsc-widget px-2 py-0.5 rounded border border-vsc-border text-vsc-muted">{{ (member.tasks || []).length }} Tasks</span>
                                     </h3>
-                                    <p class="text-xs text-vsc-muted">{{ member.description || 'No description' }}</p>
+                                    <input type="text" v-model="member.description" @input="markModified" @click.stop placeholder="Profile description..." class="bg-transparent border-none focus:outline-none text-xs text-vsc-muted w-full" />
                                 </div>
                             </div>
-                            <i :class="['ri-arrow-down-s-line text-xl text-vsc-muted transition-transform', isCollapsed(member.browser_id) ? '-rotate-90' : '']"></i>
+                            <div class="flex gap-2 items-center">
+                                <button @click.stop="removeMember(member)" class="text-vsc-muted hover:text-red-500 transition-colors px-1" title="Delete Member"><i class="ri-delete-bin-line text-lg"></i></button>
+                                <i :class="['ri-arrow-down-s-line text-xl text-vsc-muted transition-transform', isCollapsed(member.browser_id) ? '-rotate-90' : '']"></i>
+                            </div>
                         </div>
                         
                         <!-- Member Tasks -->
@@ -165,21 +176,30 @@
                                     <div class="absolute left-2.5 top-0 bottom-0 border-l border-vsc-border border-dashed z-0" v-if="member.tasks.length > 1"></div>
                                     <div class="absolute left-1 top-4 w-3 h-3 bg-vsc-border rounded-full z-10 border-2 border-vsc-widget"></div>
 
-                                    <div class="border border-vsc-border rounded bg-vsc-bg p-3 hover:border-vsc-link transition-colors z-20 relative">
-                                        <div class="flex justify-between items-start">
-                                            <div>
-                                                <h5 class="font-semibold text-base">{{ task.name || task.task_id }}</h5>
+                                    <div class="border border-vsc-border rounded bg-vsc-bg p-3 hover:border-vsc-link transition-colors z-20 relative group">
+                                        <!-- Delete Task Button -->
+                                        <button @click="removeTask(member, task)" class="absolute top-2 right-2 text-vsc-muted hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity" title="Delete Task"><i class="ri-delete-bin-line"></i></button>
+
+                                        <div class="flex justify-between items-start pr-6">
+                                            <div class="flex-1 mr-4">
+                                                <input type="text" v-model="task.name" @input="markModified" placeholder="Task Name..." class="font-semibold text-base bg-transparent border-none focus:outline-none w-full text-vsc-fg placeholder-vsc-muted/50" />
                                                 <div class="text-xs text-vsc-muted font-mono mt-1 flex flex-col gap-1">
-                                                    <span>Workflow: <strong class="text-vsc-fg">{{ getWorkflowName(task.workflow_id) }}</strong></span>
-                                                    <span class="opacity-75" title="Workflow ID">{{ task.workflow_id }}</span>
-                                                    <span class="opacity-75 mt-1" title="Task ID">Task ID: {{ task.task_id }}</span>
+                                                    <span>Workflow: 
+                                                        <select v-model="task.workflow_id" @change="markModified" class="bg-vsc-input text-vsc-inputText border border-vsc-inputBorder rounded px-1 py-0.5 text-xs font-semibold focus:outline-none focus:border-vsc-link transition-colors w-48">
+                                                            <option v-for="(name, id) in workflowDict" :key="id" :value="id">{{ name }} ({{ id }})</option>
+                                                            <option v-if="!workflowDict[task.workflow_id]" :value="task.workflow_id">[Missing] {{ task.workflow_id }}</option>
+                                                        </select>
+                                                    </span>
+                                                    <span class="mt-1 flex items-center gap-1">Task ID: 
+                                                        <input type="text" v-model="task.task_id" @input="markModified" class="bg-vsc-input text-vsc-inputText border-none rounded px-1 py-0.5 focus:outline-none focus:bg-vsc-widget transition-colors flex-1 min-w-[150px]" />
+                                                    </span>
+                                                    <span class="mt-1 flex items-center gap-1">Depends On: 
+                                                        <input type="text" :value="(task.depends_on || []).join(', ')" @change="updateDependencies(task, $event.target.value)" placeholder="tsk_1, tsk_2..." class="bg-vsc-input text-vsc-inputText border-none rounded px-1 py-0.5 focus:outline-none focus:bg-vsc-widget transition-colors flex-1" />
+                                                    </span>
                                                 </div>
                                             </div>
                                             <!-- Schedule Editor -->
                                             <div class="flex flex-col gap-2 items-end">
-                                                <span v-if="task.depends_on" class="text-xs bg-yellow-900/30 text-yellow-500 border border-yellow-900/50 px-2 py-1 rounded flex items-center gap-1" title="Depends on other tasks">
-                                                    <i class="ri-link"></i> Wait ({{ task.depends_on.length }})
-                                                </span>
                                                 <div class="flex items-center gap-1 bg-vsc-bg border border-vsc-border rounded px-1 py-1 focus-within:border-vsc-link transition-colors">
                                                     <i :class="getScheduleIcon(task.schedule?.type) + ' text-vsc-muted ml-1'"></i>
                                                     <select v-if="task.schedule" v-model="task.schedule.type" @change="markModified" class="bg-transparent text-vsc-fg border-none text-xs focus:outline-none cursor-pointer px-1">
@@ -195,6 +215,12 @@
                                         </div>
                                     </div>
                                 </div>
+                            </div>
+                            <!-- Add Task Button -->
+                            <div class="mt-4 flex justify-center">
+                                <button @click="addTask(member)" class="text-xs text-vsc-muted hover:text-vsc-link border border-vsc-border border-dashed hover:border-vsc-link bg-vsc-bg px-4 py-1.5 rounded transition-colors flex items-center gap-1 w-full justify-center">
+                                    <i class="ri-add-line"></i> Add Task
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -266,6 +292,7 @@
                 return {
                     fleetData: null,
                     workflowDict: {},
+                    profileDict: {},
                     isRunning: false,
                     isModified: false,
                     collapsedMembers: [],
@@ -364,6 +391,54 @@
                 },
                 getWorkflowName(id) {
                     return this.workflowDict[id] || 'Unknown Workflow';
+                },
+                addMember() {
+                    if (!this.fleetData) return;
+                    if (!this.fleetData.members) this.fleetData.members = [];
+                    const newId = this.generateId('profile');
+                    this.fleetData.members.push({
+                        browser_id: newId,
+                        description: "",
+                        tasks: []
+                    });
+                    this.markModified();
+                },
+                removeMember(member) {
+                    if (confirm(`Remove member ${member.browser_id}?`)) {
+                        const idx = this.fleetData.members.indexOf(member);
+                        if (idx > -1) {
+                            this.fleetData.members.splice(idx, 1);
+                            this.markModified();
+                        }
+                    }
+                },
+                addTask(member) {
+                    if (!member.tasks) member.tasks = [];
+                    member.tasks.push({
+                        task_id: this.generateId('tsk'),
+                        name: "New Task",
+                        workflow_id: "",
+                        schedule: { type: 'on-start' }
+                    });
+                    this.markModified();
+                },
+                removeTask(member, task) {
+                    const idx = member.tasks.indexOf(task);
+                    if (idx > -1) {
+                        member.tasks.splice(idx, 1);
+                        this.markModified();
+                    }
+                },
+                updateDependencies(task, val) {
+                    if (!val.trim()) {
+                        delete task.depends_on;
+                    } else {
+                        task.depends_on = val.split(',').map(s => s.trim()).filter(Boolean);
+                    }
+                    this.markModified();
+                },
+                generateId(prefix) {
+                    return prefix + '_' + Math.random().toString(36).substring(2, 9);
                 }
             },
             mounted() {
@@ -375,6 +450,9 @@
                                 this.fleetData = JSON.parse(message.text);
                                 if (message.workflows) {
                                     this.workflowDict = message.workflows;
+                                }
+                                if (message.profiles) {
+                                    this.profileDict = message.profiles;
                                 }
                                 
                                 this.isInternalVarUpdate = true;

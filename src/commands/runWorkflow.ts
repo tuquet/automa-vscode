@@ -45,15 +45,7 @@ export async function runWorkflowCommand(nodeOrUri?: any, params?: any, runOptio
 	const keepBrowserOpen = runOptions?.keepBrowserOpen ?? !config.get<boolean>("vault.run.closeBrowserOnFinish", true);
 
 	const options: any = {
-		useDefaultParameters: config.get<boolean>("run.useDefaultParameters"),
-		logPath: config.get<string>("vault.run.logPath"),
-		debug: config.get<boolean>("vault.run.debug"),
 		variables: params ? params : undefined,
-		browserSettings: {
-			headless: config.get<boolean>("vault.run.headless"),
-			closeBrowserOnFinish: !keepBrowserOpen,
-			defaultBrowser: config.get<string>("vault.run.defaultBrowser"),
-		}
 	};
 
 	const isWin = process.platform === "win32";
@@ -77,8 +69,26 @@ export async function runWorkflowCommand(nodeOrUri?: any, params?: any, runOptio
 		args.push("--variables", JSON.stringify(params));
 	}
 	
-	// Add other options as env vars or flags if supported by CLI. 
-	// For now, the CLI relies on env or config for headless/browser path.
+	const configMappings = [
+		{ key: "run.useDefaultParameters", flag: "--use-default-parameters", type: "boolean" },
+		{ key: "vault.run.headless", flag: "--headless", type: "boolean" },
+		{ key: "vault.run.debug", flag: "--debug", type: "boolean" },
+		{ key: "vault.run.defaultBrowser", flag: "--default-browser", type: "string" },
+		{ key: "vault.run.logPath", flag: "--log-path", type: "string" }
+	];
+
+	for (const mapping of configMappings) {
+		const val = config.get(mapping.key);
+		if (mapping.type === "boolean" && val) {
+			args.push(mapping.flag);
+		} else if (mapping.type === "string" && typeof val === "string" && val.trim() !== "") {
+			args.push(mapping.flag, val);
+		}
+	}
+
+	if (keepBrowserOpen) {
+		args.push("--keep-browser-open");
+	}
 
 	TaskRunner.run({
 		id: `workflow-${Date.now()}`,

@@ -344,7 +344,7 @@
         ]
       },
       {
-        "viewType": "automa.fleetEditor",
+        "viewType": "automa.fleetPreview",
         "displayName": "Fleet Preview",
         "selector": [
           {
