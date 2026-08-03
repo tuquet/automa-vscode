@@ -248,6 +248,11 @@
             "default": "",
             "description": "Absolute path to the automa-cli executable. Leave empty to auto-detect or use npx."
           },
+          "automa.browserPathOverride": {
+            "type": "string",
+            "default": "",
+            "description": "Absolute path to a custom browser executable (e.g. C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe). Use this to bypass corporate policies if the default Chrome/Chromium crashes."
+          },
           "automa.daemon.port": {
             "type": "number",
             "default": 8765,

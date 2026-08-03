@@ -27,12 +27,20 @@ export class TaskRunner {
 		const isWin = process.platform === "win32";
 		const command = isWin ? "npx.cmd" : "npx";
 
+		const config = vscode.workspace.getConfiguration("automa");
+		const browserPathOverride = config.get<string>("browserPathOverride") || "";
+		
+		const env = { ...process.env };
+		if (browserPathOverride) {
+			env["AUTOMA_BROWSER_PATH"] = browserPathOverride;
+		}
+
 		const task = new vscode.Task(
 			{ type: "automa", id: options.id },
 			vscode.workspace.workspaceFolders?.[0] || vscode.TaskScope.Workspace,
 			options.name,
 			options.source || "Automa",
-			new vscode.ProcessExecution(command, options.args)
+			new vscode.ProcessExecution(command, options.args, { env })
 		);
 
 		task.presentationOptions = {

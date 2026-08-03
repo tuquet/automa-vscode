@@ -119,10 +119,17 @@ export class DaemonManager {
 
 			Logger.info(`Starting Automa background daemon on port ${this.port} via ${cmd} ${args.join(" ")}...`);
 			
+			const browserPathOverride = config.get<string>("browserPathOverride") || "";
+			const env = { ...process.env };
+			if (browserPathOverride) {
+				env["AUTOMA_BROWSER_PATH"] = browserPathOverride;
+			}
+
 			this.daemonProcess = spawn(cmd, args, {
 				shell: true,
 				detached: false, 
-				stdio: "pipe" 
+				stdio: "pipe",
+				env
 			});
 
 			if (this.daemonProcess.stdout) {
