@@ -95,6 +95,29 @@
           "when": "resourceExtname == .json && resourceFilename =~ /.*\\.fleets\\.json$/ && activeCustomEditorId != 'automa.fleetPreview'",
           "group": "navigation"
         }
+      ],
+      "view/title": [
+        {
+          "command": "automa.refreshRunners",
+          "when": "view == automa.activeRunners",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "automa.killRunner",
+          "when": "view == automa.activeRunners",
+          "group": "inline"
+        }
+      ]
+    },
+    "views": {
+      "explorer": [
+        {
+          "id": "automa.activeRunners",
+          "name": "Active Runners",
+          "icon": "$(server-process)"
+        }
       ]
     },
     "languages": [
@@ -166,6 +189,16 @@
         "command": "automa.openInStudio",
         "title": "Open in Studio",
         "icon": "$(link-external)"
+      },
+      {
+        "command": "automa.refreshRunners",
+        "title": "Refresh",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "automa.killRunner",
+        "title": "Kill / Stop",
+        "icon": "$(stop-circle)"
       }
     ],
     "customEditors": [
@@ -219,14 +252,15 @@
           "automa.vault.run.defaultBrowser": {
             "type": "string",
             "enum": [
+              "chromium",
               "chrome",
               "edge",
               "firefox",
               "brave",
               "active-tab"
             ],
-            "default": "chrome",
-            "description": "Default browser to use when running a workflow in the Vault."
+            "default": "chromium",
+            "description": "Default browser to use when running a workflow in the Vault. 'chromium' uses the isolated built-in browser."
           },
           "automa.vault.run.headless": {
             "type": "boolean",

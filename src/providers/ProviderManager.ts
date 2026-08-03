@@ -2,6 +2,7 @@ import * as vscode from "vscode";
 import { LogCustomEditorProvider } from "./LogCustomEditorProvider";
 import { WorkflowPreviewEditorProvider } from "./WorkflowPreviewEditorProvider";
 import { FleetPreviewEditorProvider } from "./FleetPreviewEditorProvider";
+import { RunnersTreeDataProvider } from "./RunnersTreeDataProvider";
 
 export class ProviderManager {
 	private readonly context: vscode.ExtensionContext;
@@ -52,5 +53,26 @@ export class ProviderManager {
 				}
 			)
 		);
+
+		// Register Tree Data Provider for Active Runners Panel
+		const runnersProvider = new RunnersTreeDataProvider();
+		
+		const treeView = vscode.window.createTreeView("automa.activeRunners", { 
+			treeDataProvider: runnersProvider 
+		});
+		
+		// Inject tree view back into provider to support badge updates
+		runnersProvider.setTreeView(treeView);
+		
+		this.context.subscriptions.push(treeView);
+
+		this.context.subscriptions.push(
+			vscode.commands.registerCommand("automa.refreshRunners", () => {
+				runnersProvider.refresh();
+			})
+		);
+		
+		// Perform an initial refresh to set the initial badge if runners already exist
+		runnersProvider.refresh();
 	}
 }

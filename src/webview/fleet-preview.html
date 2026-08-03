@@ -58,44 +58,66 @@
     </script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/javascript/javascript.min.js"></script>
+    <style>
+        .CodeMirror {
+            height: auto;
+            min-height: 120px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            font-size: 13px;
+            background-color: var(--vsc-input-bg) !important;
+            color: var(--vsc-input-fg) !important;
+        }
+        .CodeMirror-scroll { min-height: 120px; }
+        .CodeMirror-gutters {
+            background-color: var(--vsc-widget) !important;
+            border-right: 1px solid var(--vsc-border) !important;
+        }
+        .CodeMirror-linenumber { color: var(--vsc-muted) !important; }
+        .CodeMirror-cursor { border-left-color: var(--vsc-fg) !important; }
+        .CodeMirror-selected { background: var(--vscode-editor-selectionBackground, #264f78) !important; }
+        .cm-s-default .cm-property { color: #9CDCFE; }
+        .cm-s-default .cm-string { color: #CE9178; }
+        .cm-s-default .cm-number { color: #B5CEA8; }
+        .cm-s-default .cm-keyword { color: #569CD6; }
+        .cm-s-default .cm-atom { color: #569CD6; }
+    </style>
 </head>
 <body class="flex flex-col bg-vsc-bg text-vsc-fg font-sans m-0 h-screen overflow-hidden">
     <div id="app" class="flex flex-col h-full w-full">
-        <!-- Header -->
-        <div class="flex items-center justify-between px-6 py-4 border-b border-vsc-border bg-vsc-widget">
-            <div>
-                <h1 class="text-2xl font-semibold text-vsc-fg flex items-center gap-2">
-                    <i class="ri-ship-line"></i> {{ fleetName }}
-                </h1>
-                <div class="flex items-center gap-2 mt-2 text-sm text-vsc-muted">
-                    <span>Concurrency Mode:</span>
-                    <select v-if="fleetData && fleetData.settings" v-model="fleetData.settings.concurrency_mode" @change="markModified" class="bg-vsc-input text-vsc-inputText border border-vsc-inputBorder rounded px-1 py-0.5 text-xs font-mono focus:outline-none focus:border-vsc-link transition-colors">
-                        <option value="queue">queue</option>
-                        <option value="parallel">parallel</option>
-                        <option value="skip">skip</option>
-                    </select>
-                </div>
+        <!-- Actions Toolbar -->
+        <div class="flex flex-wrap items-center justify-between px-4 py-2 gap-2 border-b border-vsc-border bg-vsc-widget">
+            <div class="flex-1 min-w-[200px] flex items-center gap-2 text-sm text-vsc-muted">
+                <span class="text-[10px] px-1.5 py-0.5 bg-vsc-button text-vsc-buttonText rounded-sm shadow-sm font-medium leading-none uppercase tracking-wide">Fleet</span>
+                <span>Concurrency:</span>
+                <select v-if="fleetData && fleetData.settings" v-model="fleetData.settings.concurrency_mode" @change="markModified" class="bg-vsc-input text-vsc-inputText border border-vsc-inputBorder rounded px-1.5 py-0.5 text-xs font-mono focus:outline-none focus:border-vsc-link transition-colors">
+                    <option value="queue">queue</option>
+                    <option value="parallel">parallel</option>
+                    <option value="skip">skip</option>
+                </select>
             </div>
             
-            <div class="flex gap-3">
-                <button v-if="isModified" @click="saveChanges" class="px-6 py-2 bg-vsc-button hover:bg-vsc-buttonHover text-vsc-buttonText font-semibold rounded shadow transition-colors flex items-center gap-2 mr-2">
-                    <i class="ri-save-line"></i> Save Fleet Changes
+            <div class="flex gap-2 flex-shrink-0 items-center ml-auto">
+                <button v-if="isModified" @click="saveChanges" class="px-3 py-1 text-sm bg-amber-600 hover:bg-amber-700 text-white font-medium rounded shadow transition-colors flex items-center gap-1.5 mr-1">
+                    <i class="ri-save-line text-sm"></i> Save
                 </button>
                 <button @click="stopFleet" :disabled="!isRunning" 
-                    :class="['px-6 py-2 font-semibold rounded border transition-colors flex items-center gap-2', 
+                    :class="['px-3 py-1 text-sm font-medium rounded border transition-colors flex items-center gap-1.5', 
                     isRunning ? 'bg-red-600 hover:bg-red-700 text-white border-transparent' : 'bg-vsc-bg text-vsc-muted border-vsc-border cursor-not-allowed']">
-                    <i class="ri-stop-circle-line"></i> Stop
+                    <i class="ri-stop-circle-line text-sm"></i> Stop
                 </button>
                 <button @click="runFleet" :disabled="isRunning"
-                    :class="['px-6 py-2 font-semibold rounded shadow transition-colors flex items-center gap-2',
+                    :class="['px-3 py-1 text-sm font-medium rounded shadow transition-colors flex items-center gap-1.5',
                     isRunning ? 'bg-vsc-bg text-vsc-muted cursor-not-allowed border border-vsc-border' : 'bg-vsc-button hover:bg-vsc-buttonHover text-vsc-buttonText']">
-                    <i class="ri-play-circle-line"></i> Run
+                    <i class="ri-play-circle-line text-sm"></i> Run
                 </button>
             </div>
         </div>
 
         <!-- Content -->
-        <div class="flex-1 overflow-y-auto p-6">
+        <div class="flex-1 overflow-y-auto p-4">
             <div v-if="!fleetData" class="text-center text-vsc-muted mt-10">
                 Loading Fleet Data...
             </div>
@@ -104,14 +126,10 @@
                 <div v-if="hasGlobalVariables" class="border border-vsc-border rounded-lg bg-vsc-widget p-4">
                     <div class="flex justify-between items-center mb-3">
                         <h2 class="text-lg font-semibold flex items-center gap-2"><i class="ri-global-line"></i> Global Variables</h2>
+                        <button @click="formatJson" class="text-xs text-vsc-link hover:underline">Format JSON</button>
                     </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div v-for="(val, key) in fleetData.global_variables" :key="key" class="bg-vsc-bg border border-vsc-border rounded p-3 flex flex-col gap-1">
-                            <span class="text-xs text-vsc-muted font-mono uppercase tracking-wider">{{ key }}</span>
-                            <input type="text" v-model="fleetData.global_variables[key]" @input="markModified" 
-                                class="bg-vsc-input text-vsc-inputText border border-vsc-inputBorder rounded px-2 py-1.5 text-sm font-mono focus:outline-none focus:border-vsc-link transition-colors w-full" />
-                        </div>
-                    </div>
+                    <json-editor v-model="globalVariablesStr" min-height="120px"></json-editor>
+                    <div v-if="jsonError" class="mt-2 text-xs text-red-500 font-mono">{{ jsonError }}</div>
                 </div>
 
                 <!-- Members -->
@@ -188,16 +206,72 @@
     <script>
         const vscode = acquireVsCodeApi();
 
-        const { createApp } = Vue;
+        const { createApp, ref, onMounted, watch } = Vue;
 
-        createApp({
+        const JsonEditor = {
+            props: {
+                modelValue: String,
+                minHeight: { type: String, default: '120px' }
+            },
+            emits: ['update:modelValue'],
+            template: `<div ref="editorContainer" class="w-full border border-vsc-inputBorder rounded overflow-hidden focus-within:border-vsc-button transition-colors"></div>`,
+            setup(props, { emit }) {
+                const editorContainer = ref(null);
+                let editor = null;
+                let isInternalChange = false;
+
+                onMounted(() => {
+                    editor = CodeMirror(editorContainer.value, {
+                        value: props.modelValue || '',
+                        mode: { name: "javascript", json: true },
+                        lineNumbers: true,
+                        tabSize: 2,
+                        lineWrapping: true,
+                        viewportMargin: Infinity
+                    });
+
+                    if (editorContainer.value) {
+                        const cmEl = editorContainer.value.querySelector('.CodeMirror');
+                        if (cmEl) {
+                            cmEl.style.minHeight = props.minHeight;
+                        }
+                    }
+
+                    editor.on('change', () => {
+                        isInternalChange = true;
+                        emit('update:modelValue', editor.getValue());
+                        setTimeout(() => { isInternalChange = false; }, 0);
+                    });
+                    
+                    const observer = new IntersectionObserver((entries) => {
+                        if (entries[0].isIntersecting && editor) {
+                            setTimeout(() => editor.refresh(), 10);
+                        }
+                    });
+                    observer.observe(editorContainer.value);
+                });
+
+                watch(() => props.modelValue, (newVal) => {
+                    if (editor && !isInternalChange && editor.getValue() !== newVal) {
+                        editor.setValue(newVal || '');
+                    }
+                });
+
+                return { editorContainer };
+            }
+        };
+
+        const app = createApp({
             data() {
                 return {
                     fleetData: null,
                     workflowDict: {},
                     isRunning: false,
                     isModified: false,
-                    collapsedMembers: []
+                    collapsedMembers: [],
+                    globalVariablesStr: '{}',
+                    isInternalVarUpdate: false,
+                    jsonError: null
                 }
             },
             computed: {
@@ -211,15 +285,29 @@
                     return this.fleetData?.members || [];
                 },
                 hasGlobalVariables() {
-                    return this.fleetData?.global_variables && Object.keys(this.fleetData.global_variables).length > 0;
+                    // Always return true to let users add global vars from scratch if they want
+                    return true;
+                }
+            },
+            watch: {
+                globalVariablesStr(newVal) {
+                    if (this.isInternalVarUpdate) return;
+                    try {
+                        const parsed = JSON.parse(newVal);
+                        this.jsonError = null;
+                        if (this.fleetData) {
+                            this.fleetData.global_variables = parsed;
+                            this.markModified();
+                        }
+                    } catch (e) {
+                        this.jsonError = e.message;
+                    }
                 }
             },
             methods: {
                 runFleet() {
                     this.isRunning = true;
                     vscode.postMessage({ type: 'run-fleet' });
-                    // In a real implementation we would listen for a stop event or process end
-                    // For now, simulate it resetting after 3s if no real state sync is implemented
                     setTimeout(() => { this.isRunning = false; }, 3000);
                 },
                 stopFleet() {
@@ -254,7 +342,20 @@
                 markModified() {
                     this.isModified = true;
                 },
+                formatJson() {
+                    try {
+                        const parsed = JSON.parse(this.globalVariablesStr);
+                        this.globalVariablesStr = JSON.stringify(parsed, null, 2);
+                        this.jsonError = null;
+                    } catch (e) {
+                        this.jsonError = e.message;
+                    }
+                },
                 saveChanges() {
+                    if (this.jsonError) {
+                        vscode.postMessage({ command: 'error', text: 'Cannot save: Global Variables contains invalid JSON.' });
+                        return;
+                    }
                     this.isModified = false;
                     vscode.postMessage({ 
                         type: 'save-fleet', 
@@ -275,6 +376,12 @@
                                 if (message.workflows) {
                                     this.workflowDict = message.workflows;
                                 }
+                                
+                                this.isInternalVarUpdate = true;
+                                this.globalVariablesStr = JSON.stringify(this.fleetData.global_variables || {}, null, 2);
+                                this.jsonError = null;
+                                setTimeout(() => { this.isInternalVarUpdate = false; }, 50);
+                                
                             } catch(e) {
                                 console.error("Failed to parse fleet data", e);
                             }
@@ -283,7 +390,10 @@
                 });
                 vscode.postMessage({ type: 'ready' });
             }
-        }).mount('#app');
+        });
+        
+        app.component('json-editor', JsonEditor);
+        app.mount('#app');
     </script>
 </body>
 </html>

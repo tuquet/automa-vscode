@@ -5,6 +5,8 @@ import { openInStudioCommand } from "./openInStudio";
 import { fixWorkflowIdCommand } from "./fixWorkflowId";
 import { lintCheckCommand } from "./lintCheck";
 import { stopFleetCommand } from "./stopFleet";
+import { killRunner } from "./killRunner";
+import { showRunnerLogCommand } from "./showRunnerLog";
 import { DaemonManager } from "../core/DaemonManager";
 
 export class CommandManager {
@@ -64,6 +66,8 @@ export class CommandManager {
 					daemon.start();
 				}
 			}),
+			vscode.commands.registerCommand("automa.killRunner", killRunner),
+			vscode.commands.registerCommand("automa.showRunnerLog", showRunnerLogCommand),
 		];
 
 		this.context.subscriptions.push(...commands);

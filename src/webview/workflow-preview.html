@@ -64,42 +64,81 @@
     <!-- Remix Icons and Material Design Icons for Icon Preview -->
     <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet" />
     <link href="https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/css/materialdesignicons.min.css" rel="stylesheet" />
+    <!-- CodeMirror 5 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
+    <style>
+        .CodeMirror {
+            background-color: var(--vsc-input-bg) !important;
+            color: var(--vsc-input-fg) !important;
+            font-family: var(--vscode-editor-font-family), 'Consolas', 'Courier New', monospace;
+            font-size: 13px;
+            height: auto;
+            min-height: 120px;
+        }
+        .CodeMirror-scroll {
+            min-height: 120px;
+        }
+        .CodeMirror-gutters {
+            background-color: var(--vsc-bg) !important;
+            border-right: 1px solid var(--vsc-border) !important;
+        }
+        .CodeMirror-linenumber {
+            color: var(--vsc-muted) !important;
+        }
+        .CodeMirror-cursor {
+            border-left: 2px solid var(--vsc-input-fg) !important;
+        }
+        .CodeMirror-selected {
+            background: var(--vscode-editor-selectionBackground, #3a3d41) !important;
+        }
+        .CodeMirror-focused .CodeMirror-selected {
+            background: var(--vscode-editor-selectionBackground, #264f78) !important;
+        }
+        .CodeMirror-line::selection, .CodeMirror-line > span::selection, .CodeMirror-line > span > span::selection {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        /* Basic syntax highlighting colors mimicking VSCode Dark */
+        .cm-s-default .cm-string { color: #ce9178; }
+        .cm-s-default .cm-property { color: #9cdcfe; }
+        .cm-s-default .cm-number { color: #b5cea8; }
+        .cm-s-default .cm-keyword { color: #569cd6; }
+        .cm-s-default .cm-atom { color: #569cd6; } /* true, false, null */
+        .cm-s-default .cm-def { color: #dcdcaa; }
+        .cm-s-default .cm-operator { color: #d4d4d4; }
+        .cm-s-default .cm-comment { color: #6A9955; }
+    </style>
 </head>
 <body class="flex h-screen flex-col bg-vsc-bg text-vsc-fg font-sans m-0 overflow-hidden">
     <div id="app" class="flex flex-col h-full w-full">
-        <!-- Header -->
-        <div class="flex items-center justify-between px-6 py-4 border-b border-vsc-border">
-            <div>
-                <h1 class="text-2xl font-semibold text-vsc-fg truncate max-w-lg" title="{{WORKFLOW_NAME}}">{{WORKFLOW_NAME}}</h1>
+        <!-- Actions Toolbar -->
+        <div class="flex flex-wrap items-center justify-between px-4 py-2 gap-2">
+            <div class="flex-1 min-w-[200px]">
                 {{UPDATED_AT_HTML}}
             </div>
-            
-            <div class="flex gap-3 flex-shrink-0 items-center">
-                <label class="flex items-center gap-2 text-sm text-vsc-muted cursor-pointer hover:text-vsc-fg transition-colors mr-2" title="Don't close the browser when workflow finishes">
-                    <input type="checkbox" v-model="keepBrowserOpen" class="w-4 h-4 rounded border-vsc-border bg-vsc-input text-vsc-button focus:ring-vsc-button accent-blue-500 cursor-pointer">
-                    Keep browser open
-                </label>
-                <button @click="openStudio" class="px-6 py-2 bg-vsc-bg hover:bg-vsc-border text-vsc-fg font-semibold rounded border border-vsc-border transition-colors flex items-center gap-2 shadow-sm" title="Open in Automa Studio (Browser Extension)">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M10 21V23H6C4.89543 23 4 22.1046 4 21V3C4 1.89543 4.89543 1 6 1H18C19.1046 1 20 1.89543 20 3V10H18V3H6V21H10ZM15.5355 12.4645C17.4882 10.5118 20.654 10.5118 22.6066 12.4645C24.5592 14.4171 24.5592 17.5829 22.6066 19.5355L21.1924 18.1213C22.3639 16.9497 22.3639 15.0503 21.1924 13.8787C20.0208 12.7071 18.1213 12.7071 16.9497 13.8787L15.5355 12.4645ZM18.4645 21.5355C16.5118 23.4882 13.346 23.4882 11.3934 21.5355C9.44078 19.5829 9.44078 16.4171 11.3934 14.4645L12.8076 15.8787C11.636 17.0503 11.636 18.9497 12.8076 20.1213C13.9792 21.2929 15.8787 21.2929 17.0503 20.1213L18.4645 21.5355ZM14.8284 14.8284L19.0711 19.0711L17.6569 20.4853L13.4142 16.2426L14.8284 14.8284Z"></path></svg>
-                    Studio
-                </button>
-                <button @click="saveWorkflow" class="px-6 py-2 bg-vsc-bg hover:bg-vsc-border text-vsc-fg font-semibold rounded border border-vsc-border transition-colors flex items-center gap-2 shadow-sm">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M7 19v-6h10v6h2V7.828L16.172 5H5v14h2zM4 3h13l4 4v13a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zm5 12v4h6v-4H9z"/></svg>
+            <div class="flex gap-2 flex-shrink-0 items-center ml-auto">
+                <button @click="saveWorkflow" class="px-3 py-1 text-sm bg-vsc-bg hover:bg-vsc-border text-vsc-fg font-medium rounded border border-vsc-border transition-colors flex items-center gap-1.5 shadow-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><path d="M7 19v-6h10v6h2V7.828L16.172 5H5v14h2zM4 3h13l4 4v13a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zm5 12v4h6v-4H9z"/></svg>
                     Save
                 </button>
-                <button @click="runWorkflow" class="px-6 py-2 bg-vsc-button hover:bg-vsc-buttonHover text-vsc-buttonText font-semibold rounded shadow transition-colors flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M19.376 12.416L8.777 19.482A.5.5 0 0 1 8 19.066V4.934a.5.5 0 0 1 .777-.416l10.599 7.066a.5.5 0 0 1 0 .832z"/></svg>
+                <button @click="openStudio" class="px-3 py-1 text-sm bg-vsc-bg hover:bg-vsc-border text-vsc-fg font-medium rounded border border-vsc-border transition-colors flex items-center gap-1.5 shadow-sm" title="Open in Automa Studio (Browser Extension)">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><path d="M10 21V23H6C4.89543 23 4 22.1046 4 21V3C4 1.89543 4.89543 1 6 1H18C19.1046 1 20 1.89543 20 3V10H18V3H6V21H10ZM15.5355 12.4645C17.4882 10.5118 20.654 10.5118 22.6066 12.4645C24.5592 14.4171 24.5592 17.5829 22.6066 19.5355L21.1924 18.1213C22.3639 16.9497 22.3639 15.0503 21.1924 13.8787C20.0208 12.7071 18.1213 12.7071 16.9497 13.8787L15.5355 12.4645ZM18.4645 21.5355C16.5118 23.4882 13.346 23.4882 11.3934 21.5355C9.44078 19.5829 9.44078 16.4171 11.3934 14.4645L12.8076 15.8787C11.636 17.0503 11.636 18.9497 12.8076 20.1213C13.9792 21.2929 15.8787 21.2929 17.0503 20.1213L18.4645 21.5355ZM14.8284 14.8284L19.0711 19.0711L17.6569 20.4853L13.4142 16.2426L14.8284 14.8284Z"></path></svg>
+                    Studio
+                </button>
+                <button @click="runWorkflow" class="px-3 py-1 text-sm bg-vsc-button hover:bg-vsc-buttonHover text-vsc-buttonText font-medium rounded shadow transition-colors flex items-center gap-1.5">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><path d="M19.376 12.416L8.777 19.482A.5.5 0 0 1 8 19.066V4.934a.5.5 0 0 1 .777-.416l10.599 7.066a.5.5 0 0 1 0 .832z"/></svg>
                     Run
                 </button>
             </div>
         </div>
 
         <!-- Main Tabs Navigation -->
-        <div class="flex border-b border-vsc-border px-6 mt-2">
+        <div class="flex border-b border-vsc-border px-4 overflow-x-auto whitespace-nowrap scrollbar-hide">
             <button v-for="tab in tabs" :key="tab.id"
                 @click="currentTab = tab.id"
                 :class="[
-                    'px-4 py-2 border-b-2 font-medium',
+                    'px-3 py-1.5 border-b-2 text-sm font-medium transition-colors flex-shrink-0',
                     currentTab === tab.id ? 'border-vsc-link text-vsc-link' : 'border-transparent text-vsc-muted hover:text-vsc-fg'
                 ]">
                 {{ tab.label }}
@@ -107,12 +146,12 @@
         </div>
 
         <!-- Content Area -->
-        <div class="flex-1 overflow-y-auto relative p-6">
+        <div class="flex-1 overflow-y-auto relative p-4">
             <!-- PARAMS TAB -->
             <div v-show="currentTab === 'params'" class="max-w-3xl">
                 <form ref="paramsForm" @submit.prevent="runWorkflow" class="flex flex-col gap-4">
                     <div v-if="triggerParams.length === 0" class="flex flex-col items-center justify-center text-vsc-muted mt-20">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="currentColor" viewBox="0 0 24 24" class="mb-4"><path d="M11 2.04938V12H2.04938C2.55294 17.0673 6.83067 21 12 21C16.9706 21 21 16.9706 21 12C21 7.02944 16.9706 3 12 3C11.6621 3 11.3286 3.01669 11 2.04938ZM13 1.95062C17.4471 2.45422 21 6.33159 21 11H13V1.95062Z"></path></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24"><!-- Icon from Lucide by Lucide Contributors - https://github.com/lucide-icons/lucide/blob/main/LICENSE --><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v-2.38C4 11.5 2.97 10.5 3 8c.03-2.72 1.49-6 4.5-6C9.37 2 10 3.8 10 5.5c0 3.11-2 5.66-2 8.68V16a2 2 0 1 1-4 0m16 4v-2.38c0-2.12 1.03-3.12 1-5.62c-.03-2.72-1.49-6-4.5-6C14.63 6 14 7.8 14 9.5c0 3.11 2 5.66 2 8.68V20a2 2 0 1 0 4 0m-4-3h4M4 13h4"/></svg>
                         <p class="text-lg">No trigger parameters found.</p>
                     </div>
 
@@ -189,11 +228,11 @@
                     <div class="flex flex-col gap-4">
                         <div class="flex flex-col gap-1">
                             <label class="text-xs text-vsc-fg">Global Data (String/JSON)</label>
-                            <textarea name="globalData" v-model="workflow.globalData" rows="4" class="w-full px-3 py-2 bg-vsc-input text-vsc-inputText border border-vsc-inputBorder rounded font-mono text-sm focus:outline-none focus:border-vsc-button"></textarea>
+                            <json-editor v-model="workflow.globalData"></json-editor>
                         </div>
                         <div class="flex flex-col gap-1">
                             <label class="text-xs text-vsc-fg">Table (JSON Array)</label>
-                            <textarea name="table" v-model="workflow.table" rows="5" class="w-full px-3 py-2 bg-vsc-input text-vsc-inputText border border-vsc-inputBorder rounded font-mono text-sm focus:outline-none focus:border-vsc-button"></textarea>
+                            <json-editor v-model="workflow.table" min-height="160px"></json-editor>
                         </div>
                     </div>
                 </div>
@@ -203,11 +242,11 @@
                     <div class="flex flex-col gap-4">
                         <div class="flex flex-col gap-1">
                             <label class="text-xs text-vsc-fg">Settings (JSON)</label>
-                            <textarea name="settings" v-model="workflow.settings" rows="6" class="w-full px-3 py-2 bg-vsc-input text-vsc-inputText border border-vsc-inputBorder rounded font-mono text-sm focus:outline-none focus:border-vsc-button"></textarea>
+                            <json-editor v-model="workflow.settings" min-height="200px"></json-editor>
                         </div>
                         <div class="flex flex-col gap-1">
                             <label class="text-xs text-vsc-fg">Included Workflows (JSON)</label>
-                            <textarea name="includedWorkflows" v-model="workflow.includedWorkflows" rows="4" class="w-full px-3 py-2 bg-vsc-input text-vsc-inputText border border-vsc-inputBorder rounded font-mono text-sm focus:outline-none focus:border-vsc-button"></textarea>
+                            <json-editor v-model="workflow.includedWorkflows"></json-editor>
                         </div>
                     </div>
                 </div>
@@ -219,9 +258,65 @@
         {{INJECT_PARAMS_DATA}}
         const vscode = acquireVsCodeApi();
 
-        const { createApp, ref, reactive, computed } = Vue;
+        const { createApp, ref, reactive, computed, onMounted, watch } = Vue;
 
-        createApp({
+        const JsonEditor = {
+            props: {
+                modelValue: String,
+                minHeight: { type: String, default: '120px' }
+            },
+            emits: ['update:modelValue'],
+            template: `<div ref="editorContainer" class="w-full border border-vsc-inputBorder rounded overflow-hidden focus-within:border-vsc-button transition-colors"></div>`,
+            setup(props, { emit }) {
+                const editorContainer = ref(null);
+                let editor = null;
+                let isInternalChange = false;
+
+                onMounted(() => {
+                    editor = CodeMirror(editorContainer.value, {
+                        value: props.modelValue || '',
+                        mode: { name: "javascript", json: true },
+                        lineNumbers: true,
+                        tabSize: 2,
+                        lineWrapping: true,
+                        viewportMargin: Infinity
+                    });
+
+                    // Set height based on prop
+                    if (editorContainer.value) {
+                        const cmEl = editorContainer.value.querySelector('.CodeMirror');
+                        if (cmEl) {
+                            cmEl.style.minHeight = props.minHeight;
+                        }
+                    }
+
+                    editor.on('change', () => {
+                        isInternalChange = true;
+                        emit('update:modelValue', editor.getValue());
+                        // Refresh internal flag after next tick to allow watch to ignore it
+                        setTimeout(() => { isInternalChange = false; }, 0);
+                    });
+                    
+                    // Refresh layout if tab changes make it visible
+                    const observer = new IntersectionObserver((entries) => {
+                        if (entries[0].isIntersecting && editor) {
+                            setTimeout(() => editor.refresh(), 10);
+                        }
+                    });
+                    observer.observe(editorContainer.value);
+                });
+
+                watch(() => props.modelValue, (newVal) => {
+                    if (editor && !isInternalChange && editor.getValue() !== newVal) {
+                        editor.setValue(newVal || '');
+                    }
+                });
+
+                return { editorContainer };
+            }
+        };
+
+        const app = createApp({
             setup() {
                 const currentTab = ref('params');
                 const tabs = [
@@ -313,8 +408,7 @@
 
                     vscode.postMessage({
                         command: 'runWorkflow',
-                        parameters: params,
-                        keepBrowserOpen: keepBrowserOpen.value
+                        parameters: params
                     });
                 };
 
@@ -335,7 +429,10 @@
                     paramsForm
                 };
             }
-        }).mount('#app');
+        });
+        
+        app.component('json-editor', JsonEditor);
+        app.mount('#app');
     </script>
 </body>
 </html>
