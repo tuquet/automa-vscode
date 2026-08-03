@@ -15,11 +15,30 @@ export class WorkflowPreviewEditorProvider implements vscode.CustomTextEditorPro
 	): Promise<void> {
 		webviewPanel.webview.options = { enableScripts: true };
 
-		const updateWebview = () => {
+		const updateWebview = async () => {
 			try {
 				const content = document.getText();
 				const json = JSON.parse(content);
 				
+				const { WorkflowSanitizer } = await import("../core/Sanitizer");
+				const isModified = WorkflowSanitizer.sanitize(json);
+				
+				if (isModified) {
+					const edit = new vscode.WorkspaceEdit();
+					edit.replace(
+						document.uri,
+						new vscode.Range(0, 0, document.lineCount, 0),
+						JSON.stringify(json, null, 4)
+					);
+					// Apply silently in the background
+					vscode.workspace.applyEdit(edit).then(success => {
+						if (success) {
+							// We don't auto-save to disk, just leave it as an unsaved editor change
+							// Or we can save. Let's just apply to the document buffer.
+						}
+					});
+				}
+
 				let triggerParams: any[] = [];
 				const implicitVars = new Set<string>();
 
@@ -140,6 +159,8 @@ export class WorkflowPreviewEditorProvider implements vscode.CustomTextEditorPro
 
 		const changeDocumentDisposable = vscode.workspace.onDidChangeTextDocument((e) => {
 			if (e.document.uri.toString() === document.uri.toString()) {
+				// Prevent infinite loop if we just modified it via Auto-Sanitizer
+				// Actually, since sanitize(json) returns false if already sanitized, it's safe!
 				updateWebview();
 			}
 		});

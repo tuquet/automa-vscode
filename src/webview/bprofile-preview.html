@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Browser Profile Preview</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --vsc-bg: var(--vscode-editor-background);
+            --vsc-fg: var(--vscode-editor-foreground);
+            --vsc-muted: var(--vscode-descriptionForeground);
+            --vsc-border: var(--vscode-panel-border);
+            --vsc-widget: var(--vscode-editorWidget-background);
+            --vsc-button-bg: var(--vscode-button-background);
+            --vsc-button-fg: var(--vscode-button-foreground);
+            --vsc-button-hover: var(--vscode-button-hoverBackground);
+            --vsc-input-bg: var(--vscode-input-background);
+            --vsc-input-fg: var(--vscode-input-foreground);
+            --vsc-input-border: var(--vscode-input-border);
+            --vsc-link: var(--vscode-textLink-foreground);
+        }
+        body, html { 
+            margin: 0; padding: 0; width: 100%; height: 100%; 
+            background-color: var(--vsc-bg);
+            color: var(--vsc-fg);
+            font-family: var(--vscode-font-family), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+        
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--vscode-scrollbarSlider-background); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--vscode-scrollbarSlider-hoverBackground); }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        vsc: {
+                            bg: 'var(--vsc-bg)',
+                            fg: 'var(--vsc-fg)',
+                            muted: 'var(--vsc-muted)',
+                            border: 'var(--vsc-border)',
+                            widget: 'var(--vsc-widget)',
+                            button: 'var(--vsc-button-bg)',
+                            buttonHover: 'var(--vsc-button-hover)',
+                            buttonText: 'var(--vsc-button-fg)',
+                            input: 'var(--vsc-input-bg)',
+                            inputText: 'var(--vsc-input-fg)',
+                            inputBorder: 'var(--vsc-input-border)',
+                            link: 'var(--vsc-link)',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/javascript/javascript.min.js"></script>
+    <style>
+        .CodeMirror {
+            height: auto;
+            min-height: 200px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            font-size: 13px;
+            background-color: var(--vsc-input-bg) !important;
+            color: var(--vsc-input-fg) !important;
+        }
+        .CodeMirror-scroll { min-height: 200px; }
+        .CodeMirror-gutters {
+            background-color: var(--vsc-widget) !important;
+            border-right: 1px solid var(--vsc-border) !important;
+        }
+        .CodeMirror-linenumber { color: var(--vsc-muted) !important; }
+        .CodeMirror-cursor { border-left-color: var(--vsc-fg) !important; }
+        .CodeMirror-selected { background: var(--vscode-editor-selectionBackground, #264f78) !important; }
+        .cm-s-default .cm-property { color: #9CDCFE; }
+        .cm-s-default .cm-string { color: #CE9178; }
+        .cm-s-default .cm-number { color: #B5CEA8; }
+        .cm-s-default .cm-keyword { color: #569CD6; }
+        .cm-s-default .cm-atom { color: #569CD6; }
+    </style>
+</head>
+<body class="flex flex-col bg-vsc-bg text-vsc-fg font-sans m-0 h-screen overflow-hidden">
+    <div id="app" class="flex flex-col h-full w-full">
+        <!-- Actions Toolbar -->
+        <div class="flex flex-wrap items-center justify-between px-4 py-2 gap-2 border-b border-vsc-border bg-vsc-widget">
+            <div class="flex-1 min-w-[200px] flex items-center gap-2 text-sm text-vsc-muted">
+                <span class="text-[10px] px-1.5 py-0.5 bg-vsc-button text-vsc-buttonText rounded-sm shadow-sm font-medium leading-none uppercase tracking-wide">Profile</span>
+                <span class="text-vsc-fg font-medium flex items-center gap-1"><i class="ri-window-line"></i> {{ profileName }}</span>
+            </div>
+            
+            <div class="flex gap-2 flex-shrink-0 items-center ml-auto">
+                <button @click="formatJson" class="px-3 py-1 text-sm bg-vsc-bg hover:bg-vsc-border text-vsc-fg font-medium rounded border border-vsc-border transition-colors flex items-center gap-1.5 shadow-sm">
+                    <i class="ri-code-s-slash-line text-sm"></i> Format
+                </button>
+                <button v-if="isModified" @click="saveChanges" class="px-3 py-1 text-sm bg-amber-600 hover:bg-amber-700 text-white font-medium rounded shadow transition-colors flex items-center gap-1.5 mr-1">
+                    <i class="ri-save-line text-sm"></i> Save
+                </button>
+                <button v-else @click="saveChanges" class="px-3 py-1 text-sm bg-vsc-bg hover:bg-vsc-border text-vsc-fg font-medium rounded border border-vsc-border transition-colors flex items-center gap-1.5 shadow-sm">
+                    <i class="ri-save-line text-sm"></i> Save
+                </button>
+            </div>
+        </div>
+
+        <!-- Content -->
+        <div class="flex-1 overflow-y-auto p-4 flex flex-col">
+            <div class="flex-1 flex flex-col max-w-4xl mx-auto w-full space-y-4">
+                <div class="border border-vsc-border rounded-lg bg-vsc-widget flex-1 flex flex-col overflow-hidden">
+                    <div class="bg-vsc-bg px-4 py-3 border-b border-vsc-border flex justify-between items-center">
+                        <h2 class="font-semibold text-base flex items-center gap-2"><i class="ri-settings-4-line"></i> Profile Configuration JSON</h2>
+                    </div>
+                    <div class="flex-1 relative">
+                        <json-editor v-model="profileDataStr" min-height="100%"></json-editor>
+                    </div>
+                </div>
+                <div v-if="jsonError" class="p-3 border border-red-900 bg-red-900/20 text-red-400 rounded-lg text-sm font-mono flex items-start gap-2 shadow-sm">
+                    <i class="ri-error-warning-line mt-0.5"></i>
+                    <div>{{ jsonError }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const vscode = acquireVsCodeApi();
+        const initialData = `{{PROFILE_DATA}}`;
+        const initialName = `{{PROFILE_NAME}}`;
+
+        const { createApp, ref, onMounted, watch } = Vue;
+
+        const JsonEditor = {
+            props: {
+                modelValue: String,
+                minHeight: { type: String, default: '200px' }
+            },
+            emits: ['update:modelValue'],
+            template: `<div ref="editorContainer" class="w-full h-full absolute inset-0"></div>`,
+            setup(props, { emit }) {
+                const editorContainer = ref(null);
+                let editor = null;
+                let isInternalChange = false;
+
+                onMounted(() => {
+                    editor = CodeMirror(editorContainer.value, {
+                        value: props.modelValue || '',
+                        mode: { name: "javascript", json: true },
+                        lineNumbers: true,
+                        tabSize: 2,
+                        lineWrapping: true,
+                        viewportMargin: Infinity
+                    });
+
+                    editor.on('change', () => {
+                        isInternalChange = true;
+                        emit('update:modelValue', editor.getValue());
+                        setTimeout(() => { isInternalChange = false; }, 0);
+                    });
+                    
+                    const observer = new IntersectionObserver((entries) => {
+                        if (entries[0].isIntersecting && editor) {
+                            setTimeout(() => editor.refresh(), 10);
+                        }
+                    });
+                    observer.observe(editorContainer.value);
+                });
+
+                watch(() => props.modelValue, (newVal) => {
+                    if (editor && !isInternalChange && editor.getValue() !== newVal) {
+                        editor.setValue(newVal || '');
+                    }
+                });
+
+                return { editorContainer };
+            }
+        };
+
+        const app = createApp({
+            data() {
+                return {
+                    profileName: initialName,
+                    profileDataStr: initialData,
+                    initialDataStr: initialData,
+                    jsonError: null
+                }
+            },
+            computed: {
+                isModified() {
+                    return this.profileDataStr !== this.initialDataStr;
+                }
+            },
+            watch: {
+                profileDataStr(newVal) {
+                    try {
+                        JSON.parse(newVal);
+                        this.jsonError = null;
+                    } catch (e) {
+                        this.jsonError = e.message;
+                    }
+                }
+            },
+            methods: {
+                formatJson() {
+                    try {
+                        const parsed = JSON.parse(this.profileDataStr);
+                        this.profileDataStr = JSON.stringify(parsed, null, 2);
+                        this.jsonError = null;
+                    } catch (e) {
+                        this.jsonError = e.message;
+                    }
+                },
+                saveChanges() {
+                    if (this.jsonError) {
+                        vscode.postMessage({ command: 'error', text: 'Cannot save: JSON is invalid.' });
+                        return;
+                    }
+                    this.initialDataStr = this.profileDataStr;
+                    vscode.postMessage({ 
+                        type: 'save-profile', 
+                        data: this.profileDataStr 
+                    });
+                }
+            }
+        });
+        
+        app.component('json-editor', JsonEditor);
+        app.mount('#app');
+    </script>
+</body>
+</html>

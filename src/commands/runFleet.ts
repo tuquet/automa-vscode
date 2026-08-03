@@ -27,7 +27,7 @@ export async function runFleetCommand(nodeOrUri?: any) {
 		args.push("--run-now");
 	}
 
-	TaskRunner.run({
+	TaskRunner.runWithTelemetry({
 		id: `fleet-orchestrator-${Date.now()}`,
 		name: `Fleet: ${displayName}`,
 		args: args,

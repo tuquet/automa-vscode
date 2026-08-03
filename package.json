@@ -101,6 +101,46 @@
           "command": "automa.refreshRunners",
           "when": "view == automa.activeRunners",
           "group": "navigation"
+        },
+        {
+          "command": "automa.searchProfiles",
+          "when": "view == automa.browserProfiles",
+          "group": "navigation@1"
+        },
+        {
+          "command": "automa.clearSearchProfiles",
+          "when": "view == automa.browserProfiles && automa.browserProfiles.isFiltered",
+          "group": "navigation@2"
+        },
+        {
+          "command": "automa.searchWorkflows",
+          "when": "view == automa.workflows",
+          "group": "navigation@1"
+        },
+        {
+          "command": "automa.clearSearchWorkflows",
+          "when": "view == automa.workflows && automa.workflows.isFiltered",
+          "group": "navigation@2"
+        },
+        {
+          "command": "automa.searchPackages",
+          "when": "view == automa.packages",
+          "group": "navigation@1"
+        },
+        {
+          "command": "automa.clearSearchPackages",
+          "when": "view == automa.packages && automa.packages.isFiltered",
+          "group": "navigation@2"
+        },
+        {
+          "command": "automa.searchFleets",
+          "when": "view == automa.fleets",
+          "group": "navigation@1"
+        },
+        {
+          "command": "automa.clearSearchFleets",
+          "when": "view == automa.fleets && automa.fleets.isFiltered",
+          "group": "navigation@2"
         }
       ],
       "view/item/context": [
@@ -111,12 +151,46 @@
         }
       ]
     },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "automa-activity-bar",
+          "title": "Automa Ecosystem",
+          "icon": "$(server-process)"
+        }
+      ]
+    },
     "views": {
-      "explorer": [
+      "automa-activity-bar": [
         {
           "id": "automa.activeRunners",
-          "name": "Active Runners",
-          "icon": "$(server-process)"
+          "name": "Runners",
+          "icon": "$(server-process)",
+          "contextualTitle": "Automa Runners"
+        },
+        {
+          "id": "automa.browserProfiles",
+          "name": "Profiles",
+          "icon": "$(account)",
+          "contextualTitle": "Automa Profiles"
+        },
+        {
+          "id": "automa.workflows",
+          "name": "Workflows",
+          "icon": "$(file-code)",
+          "contextualTitle": "Automa Workflows"
+        },
+        {
+          "id": "automa.packages",
+          "name": "Packages",
+          "icon": "$(package)",
+          "contextualTitle": "Automa Packages"
+        },
+        {
+          "id": "automa.fleets",
+          "name": "Fleets",
+          "icon": "$(rocket)",
+          "contextualTitle": "Automa Fleets"
         }
       ]
     },
@@ -199,6 +273,46 @@
         "command": "automa.killRunner",
         "title": "Kill / Stop",
         "icon": "$(stop-circle)"
+      },
+      {
+        "command": "automa.searchProfiles",
+        "title": "Search",
+        "icon": "$(search)"
+      },
+      {
+        "command": "automa.searchWorkflows",
+        "title": "Search",
+        "icon": "$(search)"
+      },
+      {
+        "command": "automa.searchPackages",
+        "title": "Search",
+        "icon": "$(search)"
+      },
+      {
+        "command": "automa.searchFleets",
+        "title": "Search",
+        "icon": "$(search)"
+      },
+      {
+        "command": "automa.clearSearchProfiles",
+        "title": "Clear Search",
+        "icon": "$(clear-all)"
+      },
+      {
+        "command": "automa.clearSearchWorkflows",
+        "title": "Clear Search",
+        "icon": "$(clear-all)"
+      },
+      {
+        "command": "automa.clearSearchPackages",
+        "title": "Clear Search",
+        "icon": "$(clear-all)"
+      },
+      {
+        "command": "automa.clearSearchFleets",
+        "title": "Clear Search",
+        "icon": "$(clear-all)"
       }
     ],
     "customEditors": [
@@ -221,11 +335,35 @@
         ]
       },
       {
-        "viewType": "automa.fleetPreview",
-        "displayName": "Automa Fleet Preview",
+        "viewType": "automa.packageEditor",
+        "displayName": "Package Preview",
         "selector": [
           {
+            "filenamePattern": "*.package.json"
+          }
+        ]
+      },
+      {
+        "viewType": "automa.fleetEditor",
+        "displayName": "Fleet Preview",
+        "selector": [
+          {
+            "filenamePattern": "*.fleet.json"
+          },
+          {
             "filenamePattern": "*.fleets.json"
+          }
+        ]
+      },
+      {
+        "viewType": "automa.bprofileEditor",
+        "displayName": "Profile Editor",
+        "selector": [
+          {
+            "filenamePattern": "*.profile.json"
+          },
+          {
+            "filenamePattern": "*.bprofile.json"
           }
         ]
       }
@@ -329,5 +467,9 @@
     "@types/vscode": "^1.80.0",
     "tsup": "^8.0.2",
     "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "leader-line-new": "^1.1.9",
+    "sortablejs": "^1.15.7"
   }
 }

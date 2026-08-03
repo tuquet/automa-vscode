@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import * as path from "node:path";
 import * as fs from "node:fs";
+import { TaskRunner } from "../core/TaskRunner";
 
 export class FleetPreviewEditorProvider implements vscode.CustomTextEditorProvider {
 	public static readonly viewType = "automa.fleetPreview";
@@ -37,7 +38,17 @@ export class FleetPreviewEditorProvider implements vscode.CustomTextEditorProvid
 
 		webviewPanel.onDidDispose(() => {
 			changeDocumentSubscription.dispose();
+			TaskRunner.telemetryEmitter.off("telemetry", telemetryListener);
 		});
+
+		// Listen to telemetry
+		const telemetryListener = (telemetry: any) => {
+			webviewPanel.webview.postMessage({
+				type: "telemetry",
+				data: telemetry
+			});
+		};
+		TaskRunner.telemetryEmitter.on("telemetry", telemetryListener);
 
 		// Listen to messages from webview
 		webviewPanel.webview.onDidReceiveMessage((e) => {
