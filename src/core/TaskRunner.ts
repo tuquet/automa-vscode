@@ -3,6 +3,7 @@ import * as vscode from "vscode";
 export interface TaskOptions {
 	id: string;
 	name: string;
+	command?: string;
 	source?: string;
 	args: string[];
 	startMessage?: string;
@@ -25,7 +26,8 @@ export class TaskRunner {
 		}
 
 		const isWin = process.platform === "win32";
-		const command = isWin ? "npx.cmd" : "npx";
+		const defaultCommand = isWin ? "npx.cmd" : "npx";
+		const command = options.command || defaultCommand;
 
 		const config = vscode.workspace.getConfiguration("automa");
 		const browserPathOverride = config.get<string>("browserPathOverride") || "";
