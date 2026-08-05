@@ -484,7 +484,7 @@
           },
           "automa.vault.run.fleetGridSystem": {
             "type": "boolean",
-            "default": false,
+            "default": true,
             "description": "Bật tính năng chia lưới màn hình (Grid System) tự động phân bổ cửa sổ trình duyệt khi chạy Automa Fleet."
           },
           "automa.cliPath": {

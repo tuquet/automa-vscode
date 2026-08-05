@@ -104,6 +104,22 @@ export class ProviderManager {
 			})
 		);
 		this.context.subscriptions.push(
+			vscode.commands.registerCommand("automa.filterHistoryByTaskId", async () => {
+				const taskId = await vscode.window.showInputBox({
+					prompt: "Enter Task ID to filter history",
+					placeHolder: "e.g. tsk_dev002"
+				});
+				if (taskId) {
+					historyProvider.setFilter(taskId);
+				}
+			})
+		);
+		this.context.subscriptions.push(
+			vscode.commands.registerCommand("automa.clearHistoryFilter", () => {
+				historyProvider.clearFilter();
+			})
+		);
+		this.context.subscriptions.push(
 			vscode.commands.registerCommand("automa.deleteHistoryItem", async (item: vscode.TreeItem) => {
 				if (!item || !item.id) return;
 				const confirm = await vscode.window.showWarningMessage(`Are you sure you want to delete this log?`, "Yes", "No");
@@ -112,7 +128,7 @@ export class ProviderManager {
 				const cliPath = DaemonManager.getInstance().resolveCliPath(this.context.extensionPath);
 				const cmd = cliPath.endsWith('.ts') ? 'npx tsx' : 'node';
 				try {
-					await execAsync(`${cmd} "${cliPath}" history --delete ${item.id} --json`);
+					await execAsync(`${cmd} "${cliPath}" history --delete "${item.id}" --json`);
 					historyProvider.refresh();
 				} catch (err: any) {
 					vscode.window.showErrorMessage(`Failed to delete log: ${err.message}`);

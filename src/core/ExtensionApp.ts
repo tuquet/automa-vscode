@@ -48,30 +48,7 @@ export class ExtensionApp {
 		// Start Backend Daemon
 		DaemonManager.getInstance().start();
 
-		const historyProvider = new HistoryTreeDataProvider(this.context);
-		vscode.window.registerTreeDataProvider("automa.executionHistory", historyProvider);
-		
-		// Register history filtering commands
-		this.context.subscriptions.push(
-			vscode.commands.registerCommand("automa.filterHistoryByTaskId", async () => {
-				const taskId = await vscode.window.showInputBox({
-					prompt: "Enter Task ID to filter history",
-					placeHolder: "e.g. tsk_dev002"
-				});
-				if (taskId) {
-					historyProvider.setFilter(taskId);
-				}
-			}),
-			vscode.commands.registerCommand("automa.clearHistoryFilter", () => {
-				historyProvider.clearFilter();
-			}),
-			vscode.commands.registerCommand("automa.clearHistory", async () => {
-				const cliPath = DaemonManager.getInstance().resolveCliPath(this.context.extensionPath);
-				const cmd = cliPath.endsWith('.ts') ? 'npx tsx' : 'node';
-				await require('util').promisify(require('child_process').exec)(`${cmd} "${cliPath}" history --clear`);
-				historyProvider.refresh();
-			})
-		);
+
 	}
 
 	public deactivate() {
