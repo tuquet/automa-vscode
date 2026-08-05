@@ -110,9 +110,19 @@
           "group": "navigation"
         },
         {
+          "command": "automa.filterHistoryByTaskId",
+          "when": "view == automa.executionHistory",
+          "group": "navigation@1"
+        },
+        {
+          "command": "automa.clearHistoryFilter",
+          "when": "view == automa.executionHistory && automa.history.isFiltered",
+          "group": "navigation@2"
+        },
+        {
           "command": "automa.clearHistory",
           "when": "view == automa.executionHistory",
-          "group": "navigation"
+          "group": "navigation@3"
         },
         {
           "command": "automa.searchProfiles",
@@ -305,13 +315,28 @@
       },
       {
         "command": "automa.clearHistory",
-        "title": "Clear All History",
+        "title": "Clear History",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "automa.filterHistoryByTaskId",
+        "title": "Filter by Task ID",
+        "icon": "$(filter)"
+      },
+      {
+        "command": "automa.clearHistoryFilter",
+        "title": "Clear Filter",
         "icon": "$(clear-all)"
       },
       {
         "command": "automa.killRunner",
-        "title": "Kill / Stop",
-        "icon": "$(stop-circle)"
+        "title": "Kill Runner",
+        "icon": "$(close)"
+      },
+      {
+        "command": "automa.vault.encryptSecret",
+        "title": "Automa: Encrypt Secret",
+        "category": "Automa Vault"
       },
       {
         "command": "automa.searchProfiles",
@@ -456,6 +481,11 @@
             "type": "boolean",
             "default": false,
             "description": "Enable verbose debug logging for CLI execution"
+          },
+          "automa.vault.run.fleetGridSystem": {
+            "type": "boolean",
+            "default": false,
+            "description": "Bật tính năng chia lưới màn hình (Grid System) tự động phân bổ cửa sổ trình duyệt khi chạy Automa Fleet."
           },
           "automa.cliPath": {
             "type": "string",

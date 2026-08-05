@@ -9,9 +9,22 @@ export class HistoryTreeDataProvider implements vscode.TreeDataProvider<vscode.T
 	private _onDidChangeTreeData: vscode.EventEmitter<vscode.TreeItem | undefined | void> = new vscode.EventEmitter<vscode.TreeItem | undefined | void>();
 	readonly onDidChangeTreeData: vscode.Event<vscode.TreeItem | undefined | void> = this._onDidChangeTreeData.event;
 	private context: vscode.ExtensionContext;
+	private taskIdFilter: string | undefined;
 
 	constructor(context: vscode.ExtensionContext) {
 		this.context = context;
+	}
+
+	setFilter(taskId: string) {
+		this.taskIdFilter = taskId;
+		vscode.commands.executeCommand('setContext', 'automa.history.isFiltered', true);
+		this.refresh();
+	}
+
+	clearFilter() {
+		this.taskIdFilter = undefined;
+		vscode.commands.executeCommand('setContext', 'automa.history.isFiltered', false);
+		this.refresh();
 	}
 
 	refresh(): void {
@@ -30,12 +43,18 @@ export class HistoryTreeDataProvider implements vscode.TreeDataProvider<vscode.T
 				const cliPath = DaemonManager.getInstance().resolveCliPath(this.context.extensionPath);
 				const cmd = cliPath.endsWith('.ts') ? 'npx tsx' : 'node';
 				
-				const { stdout } = await execAsync(`${cmd} "${cliPath}" history --json --limit 50`);
+				let execCmd = `${cmd} "${cliPath}" history --json --limit 50`;
+				if (this.taskIdFilter) {
+					execCmd += ` --task-id ${this.taskIdFilter}`;
+				}
+				
+				const { stdout } = await execAsync(execCmd);
 				const jobs = JSON.parse(stdout);
 
 				if (!jobs || jobs.length === 0) {
-					const emptyItem = new vscode.TreeItem("No history found", vscode.TreeItemCollapsibleState.None);
-					emptyItem.description = "Run a workflow first";
+					const msg = this.taskIdFilter ? `No jobs found for Task ID: ${this.taskIdFilter}` : "No history found";
+					const emptyItem = new vscode.TreeItem(msg, vscode.TreeItemCollapsibleState.None);
+					emptyItem.description = this.taskIdFilter ? "Clear filter to see all" : "Run a workflow first";
 					return [emptyItem];
 				}
 

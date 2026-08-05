@@ -178,7 +178,7 @@ export class ProviderManager {
 		this.context.subscriptions.push(vscode.commands.registerCommand("automa.clearSearchPackages", () => packagesProvider.setSearchQuery('')));
 
 		// 5. Fleets Panel
-		const fleetsProvider = new AutomaFilesProvider('**/*.{fleet.json,fleets.json}', 'rocket', 'automa.fleets');
+		const fleetsProvider = new AutomaFilesProvider('**/*.fleet.json', 'rocket', 'automa.fleets');
 		this.context.subscriptions.push(
 			vscode.window.createTreeView("automa.fleets", { treeDataProvider: fleetsProvider })
 		);
