@@ -19,8 +19,12 @@ export class BrowserProfileEditorProvider implements vscode.CustomTextEditorProv
 				const content = document.getText();
 				const json = JSON.parse(content || '{}');
 				
-				webviewPanel.title = `Profile: ${json.name || path.basename(document.uri.fsPath)}`;
-				webviewPanel.webview.html = this.getHtmlContent(json);
+				const fileName = path.basename(document.uri.fsPath);
+				const isProfile = fileName.includes('.profile.') || fileName.includes('.bprofile.');
+				const label = isProfile ? 'Profile' : 'Data';
+				const icon = isProfile ? 'ri-window-line' : 'ri-database-2-line';
+				webviewPanel.title = `${label}: ${json.name || fileName}`;
+				webviewPanel.webview.html = this.getHtmlContent(json, label, icon, fileName);
 			} catch (e: any) {
 				webviewPanel.webview.html = `<body><h2>Error reading profile</h2><p>${e.message}</p></body>`;
 			}
@@ -61,7 +65,7 @@ export class BrowserProfileEditorProvider implements vscode.CustomTextEditorProv
 		updateWebview();
 	}
 
-	private getHtmlContent(json: any): string {
+	private getHtmlContent(json: any, label: string, icon: string, fileName: string): string {
 		try {
 			const htmlPath = path.join(this.context.extensionPath, "src", "webview", "bprofile-preview.html");
 			let htmlContent = fs.readFileSync(htmlPath, "utf-8");
@@ -69,7 +73,9 @@ export class BrowserProfileEditorProvider implements vscode.CustomTextEditorProv
 			const safeString = (str: any) => str ? String(str).replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$\{/g, '\\${').replace(/<\/script>/gi, '<\\/script>') : '';
 
 			htmlContent = htmlContent.replace("{{PROFILE_DATA}}", safeString(JSON.stringify(json, null, 2)));
-			htmlContent = htmlContent.replace("{{PROFILE_NAME}}", safeString(json.name || 'Unknown Profile'));
+			htmlContent = htmlContent.replace("{{PROFILE_NAME}}", safeString(json.name || fileName));
+			htmlContent = htmlContent.replace("{{LABEL}}", label);
+			htmlContent = htmlContent.replace("{{ICON}}", icon);
 
 			return htmlContent;
 		} catch (error: any) {

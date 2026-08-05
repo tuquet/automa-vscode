@@ -73,8 +73,7 @@ export async function runWorkflowCommand(nodeOrUri?: any, params?: any, runOptio
 		{ key: "run.useDefaultParameters", flag: "--use-default-parameters", type: "boolean" },
 		{ key: "vault.run.headless", flag: "--headless", type: "boolean" },
 		{ key: "vault.run.debug", flag: "--debug", type: "boolean" },
-		{ key: "vault.run.defaultBrowser", flag: "--default-browser", type: "string" },
-		{ key: "vault.run.logPath", flag: "--log-path", type: "string" }
+		{ key: "vault.run.defaultBrowser", flag: "--default-browser", type: "string" }
 	];
 
 	for (const mapping of configMappings) {

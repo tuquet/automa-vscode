@@ -62,7 +62,7 @@
         },
         {
           "command": "automa.showWorkflowPreview",
-          "when": "resourceFilename =~ /automa.json/ && activeCustomEditorId != 'automa.workflowPreview'",
+          "when": "resourceFilename =~ /\\.(workflow|package)\\.json/ && activeCustomEditorId != 'automa.workflowPreview'",
           "group": "navigation"
         },
         {
@@ -89,7 +89,7 @@
       "editor/title/context": [
         {
           "command": "automa.showWorkflowPreview",
-          "when": "resourceFilename =~ /automa.json/ && activeCustomEditorId != 'automa.workflowPreview'",
+          "when": "resourceFilename =~ /\\.(workflow|package)\\.json/ && activeCustomEditorId != 'automa.workflowPreview'",
           "group": "navigation"
         },
         {
@@ -102,6 +102,16 @@
         {
           "command": "automa.refreshRunners",
           "when": "view == automa.activeRunners",
+          "group": "navigation"
+        },
+        {
+          "command": "automa.refreshHistory",
+          "when": "view == automa.executionHistory",
+          "group": "navigation"
+        },
+        {
+          "command": "automa.clearHistory",
+          "when": "view == automa.executionHistory",
           "group": "navigation"
         },
         {
@@ -150,6 +160,11 @@
           "command": "automa.killRunner",
           "when": "view == automa.activeRunners",
           "group": "inline"
+        },
+        {
+          "command": "automa.deleteHistoryItem",
+          "when": "view == automa.executionHistory",
+          "group": "inline"
         }
       ]
     },
@@ -166,9 +181,15 @@
       "automa-activity-bar": [
         {
           "id": "automa.activeRunners",
-          "name": "Runners",
-          "icon": "$(server-process)",
-          "contextualTitle": "Automa Runners"
+          "name": "Active Runners",
+          "icon": "assets/icons/rocket.svg",
+          "contextualTitle": "Automa Active Runners"
+        },
+        {
+          "id": "automa.executionHistory",
+          "name": "Execution History",
+          "icon": "assets/icons/rocket.svg",
+          "contextualTitle": "Automa Execution History"
         },
         {
           "id": "automa.browserProfiles",
@@ -200,7 +221,8 @@
       {
         "id": "json",
         "extensions": [
-          ".automa.json",
+          ".workflow.json",
+          ".package.json",
           ".automa-var.json",
           ".automa-table.json",
           ".automa-rows.json",
@@ -268,8 +290,23 @@
       },
       {
         "command": "automa.refreshRunners",
-        "title": "Refresh",
+        "title": "Refresh Runners",
         "icon": "$(refresh)"
+      },
+      {
+        "command": "automa.refreshHistory",
+        "title": "Refresh History",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "automa.deleteHistoryItem",
+        "title": "Delete",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "automa.clearHistory",
+        "title": "Clear All History",
+        "icon": "$(clear-all)"
       },
       {
         "command": "automa.killRunner",
@@ -332,14 +369,8 @@
         "displayName": "Automa Workflow Preview",
         "selector": [
           {
-            "filenamePattern": "*.automa.json"
-          }
-        ]
-      },
-      {
-        "viewType": "automa.packageEditor",
-        "displayName": "Package Preview",
-        "selector": [
+            "filenamePattern": "*.workflow.json"
+          },
           {
             "filenamePattern": "*.package.json"
           }
@@ -359,13 +390,22 @@
       },
       {
         "viewType": "automa.bprofileEditor",
-        "displayName": "Profile Editor",
+        "displayName": "Automa Data Editor",
         "selector": [
           {
             "filenamePattern": "*.profile.json"
           },
           {
             "filenamePattern": "*.bprofile.json"
+          },
+          {
+            "filenamePattern": "*.variables.json"
+          },
+          {
+            "filenamePattern": "*.credentials.json"
+          },
+          {
+            "filenamePattern": "*.tables.json"
           }
         ]
       }
@@ -377,7 +417,7 @@
           "automa.preview.defaultOnClick": {
             "type": "boolean",
             "default": true,
-            "description": "Set Automa Workflow Preview as the default editor when clicking on *.automa.json files."
+            "description": "Set Automa Workflow/Package Preview as the default editor when clicking on *.workflow.json or *.package.json files."
           }
         }
       },

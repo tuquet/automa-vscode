@@ -75,10 +75,14 @@ export class CommandManager {
 				}
 			}),
 			vscode.commands.registerCommand("automa.showLogPreview", (uri: vscode.Uri) => {
-				if (uri) {
-					vscode.commands.executeCommand("vscode.openWith", uri, "automa.logEditor");
-				}
-			}),
+			if (uri && uri.scheme === "automa-log") {
+				const jobId = uri.authority || uri.path.replace(/^\//, ''); // handle automa-log://job-id or automa-log:job-id
+				const { LogCustomEditorProvider } = require("../providers/LogCustomEditorProvider");
+				LogCustomEditorProvider.showLogForJobId(this.context, jobId);
+			} else if (uri) {
+				vscode.commands.executeCommand("vscode.openWith", uri, "automa.logEditor");
+			}
+		}),
 			vscode.commands.registerCommand("automa.openInStudio", openInStudioCommand),
 			vscode.commands.registerCommand("automa.fixWorkflowId", fixWorkflowIdCommand),
 			vscode.commands.registerCommand("automa.lintCheck", lintCheckCommand),

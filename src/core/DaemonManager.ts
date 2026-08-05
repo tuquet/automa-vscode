@@ -27,6 +27,22 @@ export class DaemonManager {
 		return DaemonManager.instance;
 	}
 
+	public resolveCliPath(extensionPath?: string): string {
+		const config = vscode.workspace.getConfiguration("automa");
+		const userCliPath = config.get<string>("cliPath");
+		if (userCliPath && fs.existsSync(userCliPath)) {
+			return userCliPath;
+		}
+		if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
+			const workspaceRoot = vscode.workspace.workspaceFolders[0].uri.fsPath;
+			const localCliPath = path.join(workspaceRoot, "..", "automa-cli", "dist", "cli.js");
+			if (fs.existsSync(localCliPath)) {
+				return localCliPath;
+			}
+		}
+		return "npx tuquet-automa-cli";
+	}
+
 	public getPort(): number {
 		return this.port;
 	}
@@ -98,23 +114,14 @@ export class DaemonManager {
 			this.port = await this.findAvailablePort(basePort);
 
 			// 2. Smart CLI Resolve
-			const userCliPath = config.get<string>("cliPath");
+			const cliPath = this.resolveCliPath();
 			let cmd = "npx";
 			let args = ["-y", "tuquet-automa-cli@latest", "serve", "--port", this.port.toString()];
-
-			if (userCliPath && fs.existsSync(userCliPath)) {
-				// User explicitly provided a path
+			
+			if (cliPath !== "npx tuquet-automa-cli") {
 				cmd = "node";
-				args = [userCliPath, "serve", "--port", this.port.toString()];
-			} else if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
-				// Check for local monorepo development
-				const workspaceRoot = vscode.workspace.workspaceFolders[0].uri.fsPath;
-				const localCliPath = path.join(workspaceRoot, "..", "automa-cli", "dist", "cli.js");
-				if (fs.existsSync(localCliPath)) {
-					cmd = "node";
-					args = [localCliPath, "serve", "--port", this.port.toString()];
-					Logger.info(`[Smart Resolve] Found local CLI at ${localCliPath}`);
-				}
+				args = [cliPath, "serve", "--port", this.port.toString()];
+				Logger.info(`[Smart Resolve] Found CLI at ${cliPath}`);
 			}
 
 			Logger.info(`Starting Automa background daemon on port ${this.port} via ${cmd} ${args.join(" ")}...`);

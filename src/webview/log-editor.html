@@ -318,7 +318,12 @@
 
                 function formatTime(isoString) {
                     if (!isoString) return '';
-                    const date = new Date(isoString);
+                    let dateStr = isoString;
+                    // SQLite returns 'YYYY-MM-DD HH:MM:SS' in UTC
+                    if (typeof dateStr === 'string' && dateStr.includes(' ') && !dateStr.endsWith('Z')) {
+                        dateStr = dateStr.replace(' ', 'T') + 'Z';
+                    }
+                    const date = new Date(dateStr);
                     const hh = String(date.getHours()).padStart(2, '0');
                     const mm = String(date.getMinutes()).padStart(2, '0');
                     const ss = String(date.getSeconds()).padStart(2, '0');
@@ -342,17 +347,22 @@
                         const timestamp = msg.timestamp || log.created_at;
                         const { icon, color } = getIconAndColor(msg.status, msg.type);
                         
-                        return {
-                            originalIndex: index,
-                            msg: msg,
-                            timestamp,
-                            timeStr: formatTime(timestamp),
-                            duration: msg.duration,
-                            icon,
-                            color,
-                            name: msg.name || msg.blockId || 'unknown',
-                            description: msg.description || '',
-                            message: msg.message || '',
+                            let msgText = msg.message || '';
+                            if (typeof msgText === 'string' && msgText.trim().startsWith('{')) {
+                                msgText = '';
+                            }
+                            
+                            return {
+                                originalIndex: index,
+                                msg: msg,
+                                timestamp,
+                                timeStr: formatTime(timestamp),
+                                duration: msg.duration,
+                                icon,
+                                color,
+                                name: msg.name || msg.blockId || 'unknown',
+                                description: msg.description || '',
+                                message: msgText,
                             status: msg.status,
                             type: msg.type,
                             ctxData: msg.ctxData || msg

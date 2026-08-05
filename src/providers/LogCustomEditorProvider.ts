@@ -16,6 +16,54 @@ export class LogCustomEditorProvider implements vscode.CustomReadonlyEditorProvi
 		return { uri, dispose: () => {} };
 	}
 
+	public static async showLogForJobId(context: vscode.ExtensionContext, jobId: string) {
+		const panel = vscode.window.createWebviewPanel(
+			LogCustomEditorProvider.viewType,
+			`Log: ${jobId}`,
+			vscode.ViewColumn.Active,
+			{ enableScripts: true }
+		);
+
+		panel.webview.html = `
+			<!DOCTYPE html>
+			<html>
+				<head><style>body{color:#ccc; font-family:sans-serif; padding: 20px;}</style></head>
+				<body><h2>Loading Log Data for ${jobId}...</h2></body>
+			</html>
+		`;
+
+		try {
+			const { exec } = require("child_process");
+			const { promisify } = require("util");
+			const execAsync = promisify(exec);
+			
+			// Resolve CLI path using daemon manager logic or just assume automa is in PATH
+			// But for reliability, we can use the same resolveCliPath logic.
+			// For now, let's just use 'automa' assuming it's linked, or we can require DaemonManager.
+			const { DaemonManager } = require("../core/DaemonManager");
+			const cliPath = DaemonManager.getInstance().resolveCliPath(context.extensionPath);
+			const cmd = cliPath.endsWith('.ts') ? 'npx tsx' : 'node';
+			
+			const { stdout } = await execAsync(`${cmd} "${cliPath}" log ${jobId} --json`);
+			const parsed = JSON.parse(stdout);
+			
+			if (parsed.error) {
+				panel.webview.html = `<body><h2>Error</h2><pre>${parsed.error}</pre></body>`;
+				return;
+			}
+			
+			const job = parsed.job || { name: "Unknown", id: jobId, status: "unknown" };
+			const logs = parsed.logs || [];
+			const results = parsed.results || { table: [], variables: {} };
+			job.results = results;
+
+			const provider = new LogCustomEditorProvider(context);
+			panel.webview.html = provider.getWebviewContent(job, logs);
+		} catch (error: any) {
+			panel.webview.html = `<body><h2>Failed to load log</h2><pre>${error.message}</pre></body>`;
+		}
+	}
+
 	public async resolveCustomEditor(
 		document: vscode.CustomDocument,
 		webviewPanel: vscode.WebviewPanel,

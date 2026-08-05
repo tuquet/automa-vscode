@@ -6,13 +6,23 @@ export class AutomaFilesProvider implements vscode.TreeDataProvider<FileItem> {
     private _onDidChangeTreeData: vscode.EventEmitter<FileItem | undefined | void> = new vscode.EventEmitter<FileItem | undefined | void>();
     readonly onDidChangeTreeData: vscode.Event<FileItem | undefined | void> = this._onDidChangeTreeData.event;
     private searchQuery: string = '';
+    private watcher: vscode.FileSystemWatcher;
 
     constructor(
         private globPattern: string,
         private iconName: string,
         private viewId: string,
         private filterType: 'all' | 'workflow' | 'package' = 'all'
-    ) {}
+    ) {
+        this.watcher = vscode.workspace.createFileSystemWatcher(this.globPattern);
+        this.watcher.onDidCreate(() => this.refresh());
+        this.watcher.onDidChange(() => this.refresh());
+        this.watcher.onDidDelete(() => this.refresh());
+    }
+
+    dispose() {
+        this.watcher.dispose();
+    }
 
     refresh(): void {
         this._onDidChangeTreeData.fire();

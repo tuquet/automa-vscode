@@ -82,13 +82,13 @@ export class ExtensionApp {
 		
 		let updated = false;
 
-		// Automate *.automa.json -> automa.workflowPreview
-		const currentWorkflowAssoc = editorAssociations["*.automa.json"];
+		// Automate *.workflow.json -> automa.workflowPreview
+		const currentWorkflowAssoc = editorAssociations["*.workflow.json"];
 		if (defaultOnClick && currentWorkflowAssoc !== "automa.workflowPreview") {
-			editorAssociations["*.automa.json"] = "automa.workflowPreview";
+			editorAssociations["*.workflow.json"] = "automa.workflowPreview";
 			updated = true;
 		} else if (!defaultOnClick && currentWorkflowAssoc === "automa.workflowPreview") {
-			editorAssociations["*.automa.json"] = "default";
+			editorAssociations["*.workflow.json"] = "default";
 			updated = true;
 		}
 

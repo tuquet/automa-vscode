@@ -90,12 +90,21 @@
         <!-- Actions Toolbar -->
         <div class="flex flex-wrap items-center justify-between px-4 py-2 gap-2 border-b border-vsc-border bg-vsc-widget">
             <div class="flex-1 min-w-[200px] flex items-center gap-2 text-sm text-vsc-muted">
-                <span class="text-[10px] px-1.5 py-0.5 bg-vsc-button text-vsc-buttonText rounded-sm shadow-sm font-medium leading-none uppercase tracking-wide">Profile</span>
-                <span class="text-vsc-fg font-medium flex items-center gap-1"><i class="ri-window-line"></i> {{ profileName }}</span>
+                <span class="text-[10px] px-1.5 py-0.5 bg-vsc-button text-vsc-buttonText rounded-sm shadow-sm font-medium leading-none uppercase tracking-wide">{{LABEL}}</span>
+                <span class="text-vsc-fg font-medium flex items-center gap-1"><i class="{{ICON}}"></i> {{ profileName }}</span>
             </div>
             
+            <div class="flex border border-vsc-border rounded overflow-hidden shadow-sm">
+                <button @click="viewMode = 'form'" :class="['px-3 py-1 text-xs font-medium transition-colors flex items-center gap-1', viewMode === 'form' ? 'bg-vsc-button text-vsc-buttonText' : 'bg-vsc-bg text-vsc-fg hover:bg-vsc-widget']">
+                    <i class="ri-layout-masonry-line"></i> Form
+                </button>
+                <button @click="viewMode = 'json'" :class="['px-3 py-1 text-xs font-medium transition-colors border-l border-vsc-border flex items-center gap-1', viewMode === 'json' ? 'bg-vsc-button text-vsc-buttonText' : 'bg-vsc-bg text-vsc-fg hover:bg-vsc-widget']">
+                    <i class="ri-code-s-slash-line"></i> JSON
+                </button>
+            </div>
+
             <div class="flex gap-2 flex-shrink-0 items-center ml-auto">
-                <button @click="formatJson" class="px-3 py-1 text-sm bg-vsc-bg hover:bg-vsc-border text-vsc-fg font-medium rounded border border-vsc-border transition-colors flex items-center gap-1.5 shadow-sm">
+                <button v-if="viewMode === 'json'" @click="formatJson" class="px-3 py-1 text-sm bg-vsc-bg hover:bg-vsc-border text-vsc-fg font-medium rounded border border-vsc-border transition-colors flex items-center gap-1.5 shadow-sm">
                     <i class="ri-code-s-slash-line text-sm"></i> Format
                 </button>
                 <button v-if="isModified" @click="saveChanges" class="px-3 py-1 text-sm bg-amber-600 hover:bg-amber-700 text-white font-medium rounded shadow transition-colors flex items-center gap-1.5 mr-1">
@@ -108,20 +117,85 @@
         </div>
 
         <!-- Content -->
-        <div class="flex-1 overflow-y-auto p-4 flex flex-col">
-            <div class="flex-1 flex flex-col max-w-4xl mx-auto w-full space-y-4">
-                <div class="border border-vsc-border rounded-lg bg-vsc-widget flex-1 flex flex-col overflow-hidden">
-                    <div class="bg-vsc-bg px-4 py-3 border-b border-vsc-border flex justify-between items-center">
-                        <h2 class="font-semibold text-base flex items-center gap-2"><i class="ri-settings-4-line"></i> Profile Configuration JSON</h2>
+        <div class="flex-1 relative flex flex-col">
+            <!-- JSON View -->
+            <div v-show="viewMode === 'json'" class="w-full h-full absolute inset-0">
+                <json-editor v-model="profileDataStr" min-height="100%"></json-editor>
+            </div>
+
+            <!-- Form View -->
+            <div v-if="viewMode === 'form' && formData" class="w-full h-full absolute inset-0 overflow-y-auto p-6 flex flex-col gap-6">
+                <div class="max-w-4xl mx-auto w-full">
+                    
+                    <!-- Profile Form -->
+                    <div v-if="!Array.isArray(formData)" class="flex flex-col gap-5">
+                        <div class="grid grid-cols-2 gap-5">
+                            <div class="flex flex-col gap-1.5">
+                                <label class="text-xs font-semibold text-vsc-muted uppercase tracking-wider">ID</label>
+                                <input v-model="formData.id" @input="syncToJson" placeholder="e.g. default-profile" class="px-3 py-2 bg-vsc-input border border-vsc-inputBorder rounded text-sm focus:outline-none focus:border-vsc-button transition-colors">
+                            </div>
+                            <div class="flex flex-col gap-1.5">
+                                <label class="text-xs font-semibold text-vsc-muted uppercase tracking-wider">Name</label>
+                                <input v-model="formData.name" @input="syncToJson" placeholder="e.g. My Profile" class="px-3 py-2 bg-vsc-input border border-vsc-inputBorder rounded text-sm focus:outline-none focus:border-vsc-button transition-colors">
+                            </div>
+                        </div>
+                        <div class="flex flex-col gap-1.5">
+                            <label class="text-xs font-semibold text-vsc-muted uppercase tracking-wider">User Agent</label>
+                            <textarea v-model="formData.userAgent" @input="syncToJson" rows="2" placeholder="Mozilla/5.0..." class="px-3 py-2 bg-vsc-input border border-vsc-inputBorder rounded text-sm focus:outline-none focus:border-vsc-button transition-colors resize-y"></textarea>
+                        </div>
+                        <div class="grid grid-cols-2 gap-5">
+                            <div class="flex flex-col gap-1.5">
+                                <label class="text-xs font-semibold text-vsc-muted uppercase tracking-wider">Timezone</label>
+                                <input v-model="formData.timezone" @input="syncToJson" placeholder="e.g. Asia/Ho_Chi_Minh" class="px-3 py-2 bg-vsc-input border border-vsc-inputBorder rounded text-sm focus:outline-none focus:border-vsc-button transition-colors">
+                            </div>
+                            <div class="flex flex-col gap-1.5">
+                                <label class="text-xs font-semibold text-vsc-muted uppercase tracking-wider">Proxy</label>
+                                <input v-model="formData.proxy" @input="syncToJson" placeholder="http://user:pass@ip:port" class="px-3 py-2 bg-vsc-input border border-vsc-inputBorder rounded text-sm focus:outline-none focus:border-vsc-button transition-colors">
+                            </div>
+                        </div>
                     </div>
-                    <div class="flex-1 relative">
-                        <json-editor v-model="profileDataStr" min-height="100%"></json-editor>
+                    
+                    <!-- Variables/Credentials List Form (Array) -->
+                    <div v-else-if="Array.isArray(formData)" class="flex flex-col gap-3">
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 class="text-sm font-semibold text-vsc-muted uppercase tracking-wider">Data Entries ({{formData.length}})</h3>
+                            <button @click="addArrayItem" class="px-3 py-1 text-xs bg-vsc-button hover:bg-vsc-buttonHover text-vsc-buttonText rounded transition-colors shadow-sm flex items-center gap-1">
+                                <i class="ri-add-line"></i> Add Entry
+                            </button>
+                        </div>
+                        
+                        <div v-if="formData.length === 0" class="py-12 border-2 border-dashed border-vsc-border rounded-lg flex flex-col items-center justify-center text-vsc-muted">
+                            <i class="ri-inbox-archive-line text-3xl mb-2 opacity-50"></i>
+                            <p class="text-sm">No entries found.</p>
+                        </div>
+
+                        <div v-for="(item, idx) in formData" :key="idx" class="flex items-start gap-3 p-3 bg-vsc-widget border border-vsc-border rounded-lg shadow-sm relative group">
+                            <div class="flex-1 grid grid-cols-12 gap-3">
+                                <div class="col-span-3 flex flex-col gap-1">
+                                    <label class="text-[10px] text-vsc-muted uppercase">ID</label>
+                                    <input v-model="item.id" @input="syncToJson" placeholder="ID" class="w-full px-2 py-1.5 bg-vsc-input border border-vsc-inputBorder rounded text-xs focus:outline-none focus:border-vsc-button">
+                                </div>
+                                <div class="col-span-3 flex flex-col gap-1">
+                                    <label class="text-[10px] text-vsc-muted uppercase">Name</label>
+                                    <input v-model="item.name" @input="syncToJson" placeholder="Name" class="w-full px-2 py-1.5 bg-vsc-input border border-vsc-inputBorder rounded text-xs focus:outline-none focus:border-vsc-button">
+                                </div>
+                                <div class="col-span-6 flex flex-col gap-1">
+                                    <label class="text-[10px] text-vsc-muted uppercase">Value</label>
+                                    <input v-model="item.value" @input="syncToJson" placeholder="Value..." class="w-full px-2 py-1.5 bg-vsc-input border border-vsc-inputBorder rounded text-xs focus:outline-none focus:border-vsc-button font-mono">
+                                </div>
+                            </div>
+                            <button @click="removeArrayItem(idx)" class="mt-5 w-8 h-8 flex items-center justify-center text-vsc-muted hover:text-red-400 hover:bg-red-500/10 rounded transition-colors" title="Delete">
+                                <i class="ri-delete-bin-line"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
-                <div v-if="jsonError" class="p-3 border border-red-900 bg-red-900/20 text-red-400 rounded-lg text-sm font-mono flex items-start gap-2 shadow-sm">
-                    <i class="ri-error-warning-line mt-0.5"></i>
-                    <div>{{ jsonError }}</div>
-                </div>
+            </div>
+            
+            <!-- Error Banner overlay -->
+            <div v-if="jsonError" class="absolute bottom-4 left-4 right-4 p-3 border border-red-900 bg-red-900/90 text-red-200 rounded text-sm font-mono flex items-start gap-2 shadow-lg z-10 backdrop-blur-sm">
+                <i class="ri-error-warning-line mt-0.5"></i>
+                <div>{{ jsonError }}</div>
             </div>
         </div>
     </div>
@@ -182,11 +256,17 @@
         const app = createApp({
             data() {
                 return {
+                    viewMode: 'form',
                     profileName: initialName,
                     profileDataStr: initialData,
                     initialDataStr: initialData,
-                    jsonError: null
+                    jsonError: null,
+                    formData: null,
+                    isInternalSync: false
                 }
+            },
+            created() {
+                this.syncToForm();
             },
             computed: {
                 isModified() {
@@ -195,15 +275,44 @@
             },
             watch: {
                 profileDataStr(newVal) {
+                    if (this.isInternalSync) return;
                     try {
                         JSON.parse(newVal);
                         this.jsonError = null;
+                        this.syncToForm();
                     } catch (e) {
                         this.jsonError = e.message;
                     }
                 }
             },
             methods: {
+                syncToForm() {
+                    try {
+                        this.formData = JSON.parse(this.profileDataStr);
+                        if (!this.formData) this.formData = {};
+                    } catch(e) {
+                        if (!this.formData) this.formData = {};
+                    }
+                },
+                syncToJson() {
+                    this.isInternalSync = true;
+                    this.profileDataStr = JSON.stringify(this.formData, null, 2);
+                    this.jsonError = null;
+                    setTimeout(() => { this.isInternalSync = false; }, 50);
+                },
+                addArrayItem() {
+                    if (!Array.isArray(this.formData)) {
+                        this.formData = [];
+                    }
+                    this.formData.push({ id: '', name: '', value: '' });
+                    this.syncToJson();
+                },
+                removeArrayItem(idx) {
+                    if (Array.isArray(this.formData)) {
+                        this.formData.splice(idx, 1);
+                        this.syncToJson();
+                    }
+                },
                 formatJson() {
                     try {
                         const parsed = JSON.parse(this.profileDataStr);

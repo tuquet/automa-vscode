@@ -87,7 +87,7 @@ export class FleetPreviewEditorProvider implements vscode.CustomTextEditorProvid
 	private async getWorkflowDictionary(): Promise<Record<string, string>> {
 		const dict: Record<string, string> = {};
 		try {
-			const files = await vscode.workspace.findFiles("**/*.automa.json", "**/node_modules/**");
+			const files = await vscode.workspace.findFiles("**/*.workflow.json", "**/node_modules/**");
 			for (const file of files) {
 				try {
 					const content = await vscode.workspace.fs.readFile(file);
@@ -108,7 +108,7 @@ export class FleetPreviewEditorProvider implements vscode.CustomTextEditorProvid
 	private async getProfileDictionary(): Promise<Record<string, string>> {
 		const dict: Record<string, string> = {};
 		try {
-			const files = await vscode.workspace.findFiles("**/*.{bprofile.json,profile.json}", "**/node_modules/**");
+			const files = await vscode.workspace.findFiles("**/*.profile.json", "**/node_modules/**");
 			for (const file of files) {
 				try {
 					const content = await vscode.workspace.fs.readFile(file);
