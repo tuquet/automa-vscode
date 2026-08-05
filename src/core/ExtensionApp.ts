@@ -56,7 +56,7 @@ export class ExtensionApp {
 	private showWelcomePopupOnce() {
 		const hasShownWelcome = this.context.globalState.get<boolean>("automa.hasShownWelcome");
 		if (!hasShownWelcome) {
-			vscode.window.showInformationMessage("Automa VS Code Extension is now active!");
+			vscode.commands.executeCommand("automa.welcome");
 			this.context.globalState.update("automa.hasShownWelcome", true);
 		}
 	}

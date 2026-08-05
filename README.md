@@ -1,55 +1,70 @@
-# Automa VS Code Extension
+<div align="center">
+  <img src="assets/logo.jpg" width="128" height="128" alt="Automa CLI Toolkit Logo" />
+  <h1>Automa CLI Toolkit</h1>
+  <p><strong>The ultimate visual orchestration engine for your automated browser workflows inside VS Code.</strong></p>
+  
+  <p>
+    <a href="https://github.com/tuquet/automa-ecosystem/actions"><img src="https://img.shields.io/badge/build-passing-brightgreen" alt="Build Status"></a>
+    <a href="https://marketplace.visualstudio.com/items?itemName=NguyenDinhTu.automa-vscode"><img src="https://img.shields.io/visual-studio-marketplace/v/NguyenDinhTu.automa-vscode?color=blue" alt="VS Code Marketplace Version"></a>
+    <a href="https://marketplace.visualstudio.com/items?itemName=NguyenDinhTu.automa-vscode"><img src="https://img.shields.io/visual-studio-marketplace/d/NguyenDinhTu.automa-vscode" alt="Downloads"></a>
+  </p>
 
-Một extension gọn nhẹ nhưng mạnh mẽ dành cho hệ sinh thái **Automa**, giúp bạn quản lý, chạy và xem báo cáo các workflow trực tiếp bên trong Visual Studio Code.
+  <img src="assets/banner.jpg" alt="Automa Ecosystem Banner" />
+</div>
 
-## 🚀 Tính năng nổi bật
+<br/>
 
-### 1. Run Workflow siêu tốc
-- Hỗ trợ chạy các workflow `.json` ngay lập tức thông qua biểu tượng `Play` trên thanh tiêu đề hoặc qua Menu chuột phải (Context Menu) trong Explorer.
-- Kích hoạt ngầm `automa-cli` và mở ra một Background Task hiển thị tiến trình. Bắt lỗi chuẩn xác và thông báo trực quan trên màn hình.
-
-### 2. Workflow Quick Edit (Trình chỉnh sửa nhanh)
-- Khác với giao diện JSON khô khan, khi click vào các file có đuôi `*.automa.json`, extension sẽ tự động mở màn hình **Quick Edit**.
-- Giao diện form cực kỳ trực quan ở chính giữa màn hình giúp bạn thiết lập `Name`, `Description`, `Trigger Parameters`, `Settings`, `Global Data` một cách nhanh chóng.
-- Vẫn cho phép nhấn nút `Show Source` (biểu tượng code `</>`) góc trên bên phải để quay về chế độ sửa JSON thuần.
-
-### 3. Automa Execution Log Viewer
-- Mỗi khi `automa-cli` chạy xong, một file log dạng `*.automa-log.json` sẽ được sinh ra.
-- Thay vì phải đọc cục JSON khổng lồ, extension cung cấp một Custom Editor dành riêng cho file log, biến chúng thành dạng bảng **Báo cáo thực thi** đẹp mắt (Timeline, Trạng thái thành công/thất bại của từng Block).
-
----
-
-## ⚙️ Cấu hình (Settings)
-
-Bạn có thể tinh chỉnh cách hoạt động của extension thông qua VS Code Settings (nhấn `Ctrl + ,` và gõ `automa`):
-
-| Tên thiết lập | Mô tả | Mặc định |
-|---|---|---|
-| `automa.run.useDefaultParameters` | Bỏ qua bước hỏi tham số (interactive prompts) khi chạy workflow. Tự động dùng giá trị mặc định của Trigger. | `false` |
-| `automa.preview.defaultOnClick` | Biến màn hình Quick Edit (hoặc Preview) thành trình soạn thảo mặc định khi bạn click vào các file `*.automa.json`. (Nếu tắt, IDE sẽ mở JSON thuần) | `true` |
-
-### ⚙️ Vault Settings (Khuyên dùng cho Workspace)
-Để cá nhân hóa một thư mục chứa workflow (gọi là Automa Vault), bạn nên tạo file `.vscode/settings.json` bên trong thư mục đó và cấu hình các thông số sau:
-
-| Tên thiết lập | Mô tả | Mặc định |
-|---|---|---|
-| `automa.vault.run.defaultBrowser` | Trình duyệt mặc định sẽ dùng để chạy workflow (`chrome`, `edge`, `firefox`, `brave`, `active-tab`) | `chrome` |
-| `automa.vault.run.headless` | Chạy trình duyệt ở chế độ ngầm (không mở cửa sổ). | `false` |
-| `automa.vault.run.closeBrowserOnFinish` | Tự động đóng trình duyệt sau khi chạy xong. | `false` |
-| `automa.vault.run.globalVariables` | Định nghĩa 1 object JSON chứa các biến dùng chung cho cả Vault. Sẽ tự động nối vào tham số `-v` của lệnh. | `{}` |
-
-> 💡 **Lưu ý về thứ tự ưu tiên của biến số (Trigger Parameters):**
-> Khi nhấn nút **Run** trên giao diện Preview, hệ thống sẽ chắt lọc tham số theo thứ tự ưu tiên sau: 
-> 1. Biến nhập trên Form (Ưu tiên cao nhất).
-> 2. Biến trong `globalVariables` ở `settings.json`.
-> 3. Giá trị `Default` lưu cố định bên trong file `*.automa.json`.
-> 4. Rỗng (Undefined).
-
-> 💡 **Mẹo:** Nếu bạn lỡ cài `defaultOnClick` là `true` nhưng vẫn muốn mở JSON của một file cụ thể, hãy click phải chuột vào file trong cây thư mục Explorer -> Chọn **Open With...** -> Chọn **Text Editor**.
+**Automa CLI Toolkit** transforms VS Code into a centralized command center for the entire Automa Ecosystem. Say goodbye to raw JSON files. Design, manage, schedule, and execute your browser automation fleets with gorgeous visual editors and zero-dependency Chromium integration.
 
 ---
 
-## 🛠 Yêu cầu hệ thống
+## 🚀 Features That Wow
 
-- Visual Studio Code phiên bản `>=1.80.0`
-- Đã cài đặt Node.js và module `automa-cli` (nếu chạy local).
+### 🎨 Custom Visual Editors
+No more staring at raw `.json` files! Click on any Automa file to experience our bespoke visual editors:
+- **Workflow Preview (`*.automa.json`)**: Interactively set trigger parameters, modify global data, and edit metadata before launching your script.
+- **Fleet Manager (`*.fleets.json`)**: Visually orchestrate parallel execution, map browser profiles, and schedule cron jobs effortlessly.
+- **Log Viewer (`*.automa-log.json`)**: Dive into a beautiful timeline-based execution log. Filter by success/failure and drill down into individual block data.
+
+*(Insert GIF Demo here: Quick Edit to Run Workflow)*
+
+### ⚡ Lightning Fast Execution
+- Run workflows directly from the editor title bar or the Explorer context menu.
+- Triggers the isolated `automa-cli` engine using native Chrome APIs (MV3) with anti-detection Puppeteer CDP polling.
+- Zero `webextension-polyfill` crash issues! Fully compatible with Chrome 129+.
+
+### 📊 Sidebar Control Center
+Monitor your automation empire with the dedicated Activity Bar:
+- **Runners**: Live telemetry of all active daemon processes. One-click to kill or view real-time logs.
+- **Profiles & Fleets**: Browse and search your entire workspace's browser profiles and orchestration fleets.
+
+### 🛡️ Smart Linter & Auto-Fix
+Imported a workflow from the community with broken `n1` IDs? 
+- Right-click and choose **Auto-Fix Workflow ID** to instantly sanitize nodes and edges with valid 21-char NanoIDs.
+- Real-time **Linting** integrates directly into the VS Code Problems panel to catch schema deviations before execution.
+
+---
+
+## ⚙️ Configuration
+
+Tune the execution engine to your needs via VS Code Settings (`Ctrl + ,` -> search `automa`):
+
+| Setting | Description | Default |
+|---|---|---|
+| `automa.vault.run.defaultBrowser` | The isolated browser to use (`chromium`, `chrome`, `edge`, `firefox`). | `chromium` |
+| `automa.vault.run.headless` | Run browser invisibly in the background. | `false` |
+| `automa.run.useDefaultParameters` | Skip interactive prompts and auto-run using default parameters. | `false` |
+| `automa.preview.defaultOnClick` | Open `.automa.json` files in the Visual Editor by default. | `true` |
+
+*(Pro Tip: Create a `.vscode/settings.json` to define `automa.vault.run.globalVariables` for your specific workspace!)*
+
+---
+
+## 🛠 System Requirements
+- Visual Studio Code `>= 1.80.0`
+- Node.js 18+ (for local CLI execution)
+
+## 🤝 Community & Support
+Love the extension? Give it an upvote on Product Hunt and a star on GitHub!
+- **Documentation:** Check out the comprehensive Obsidian Vault in our repository.
+- **Report Bugs:** Open an issue on GitHub.

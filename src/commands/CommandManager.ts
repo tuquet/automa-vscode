@@ -8,6 +8,8 @@ import { stopFleetCommand } from "./stopFleet";
 import { killRunner } from "./killRunner";
 import { showRunnerLogCommand } from "./showRunnerLog";
 import { DaemonManager } from "../core/DaemonManager";
+import { WelcomePanel } from "../panels/WelcomePanel";
+import { exec } from "child_process";
 
 export class CommandManager {
 	private readonly context: vscode.ExtensionContext;
@@ -18,6 +20,28 @@ export class CommandManager {
 
 	public registerAll() {
 		const commands = [
+			vscode.commands.registerCommand("automa.welcome", () => {
+				WelcomePanel.createOrShow(this.context.extensionUri);
+			}),
+			vscode.commands.registerCommand("automa.installBrowser", () => {
+				vscode.window.withProgress({
+					location: vscode.ProgressLocation.Notification,
+					title: "Installing Automa Browser...",
+					cancellable: false
+				}, async (progress) => {
+					return new Promise<void>((resolve, reject) => {
+						exec("npx tuquet-automa-cli install-browser", (err, stdout, stderr) => {
+							if (err) {
+								vscode.window.showErrorMessage(`Failed to install browser: ${stderr}`);
+								reject(err);
+							} else {
+								vscode.window.showInformationMessage("Browser installed successfully!");
+								resolve();
+							}
+						});
+					});
+				});
+			}),
 			vscode.commands.registerCommand("automa.showWorkflowSource", async (uri: vscode.Uri) => {
 				if (uri) {
 					await vscode.workspace.getConfiguration("automa").update("preview.defaultOnClick", false, vscode.ConfigurationTarget.Global);
