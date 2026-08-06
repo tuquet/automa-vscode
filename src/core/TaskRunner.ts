@@ -117,12 +117,8 @@ export class TaskRunner {
 		const command = options.command || defaultCommand;
 
 		const config = vscode.workspace.getConfiguration("automa");
-		const browserPathOverride = config.get<string>("browserPathOverride") || "";
 		
 		const env = { ...process.env };
-		if (browserPathOverride) {
-			env["AUTOMA_BROWSER_PATH"] = browserPathOverride;
-		}
 
 		// Create an output channel to show logs
 		const outputChannel = vscode.window.createOutputChannel(options.name);

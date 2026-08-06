@@ -22,29 +22,36 @@
     "menus": {
       "explorer/context": [
         {
-          "command": "automa.runWorkflow",
+          "submenu": "automa.explorerSubmenu",
           "when": "resourceExtname == .json && resourceFilename =~ /^(?!.*automa-log).*$/",
           "group": "automa@1"
+        }
+      ],
+      "automa.explorerSubmenu": [
+        {
+          "command": "automa.runWorkflow",
+          "when": "resourceExtname == .json && resourceFilename =~ /^(?!.*automa-log).*$/",
+          "group": "1_run@1"
         },
         {
           "command": "automa.runWorkflowWithParams",
           "when": "resourceExtname == .json && resourceFilename =~ /^(?!.*automa-log).*$/",
-          "group": "automa@1_5"
+          "group": "1_run@2"
         },
         {
           "command": "automa.runFleet",
           "when": "resourceExtname == .json && resourceFilename =~ /.*\\.fleets\\.json$/",
-          "group": "automa@2"
+          "group": "1_run@3"
         },
         {
           "command": "automa.fixWorkflowId",
           "when": "resourceExtname == .json && resourceFilename =~ /^(?!.*automa-log).*$/",
-          "group": "automa@3"
+          "group": "2_tools@1"
         },
         {
           "command": "automa.lintCheck",
           "when": "resourceExtname == .json && resourceFilename =~ /^(?!.*automa-log).*$/",
-          "group": "automa@4"
+          "group": "2_tools@2"
         }
       ],
       "editor/title/run": [
@@ -223,6 +230,12 @@
         }
       ]
     },
+    "submenus": [
+      {
+        "id": "automa.explorerSubmenu",
+        "label": "Automa Toolkit"
+      }
+    ],
     "viewsContainers": {
       "activitybar": [
         {
@@ -582,11 +595,6 @@
             "type": "string",
             "default": "",
             "description": "Absolute path to the automa-cli executable. Leave empty to auto-detect or use npx."
-          },
-          "automa.browserPathOverride": {
-            "type": "string",
-            "default": "",
-            "description": "Absolute path to a custom browser executable (e.g. C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe). Use this to bypass corporate policies if the default Chrome/Chromium crashes."
           },
           "automa.daemon.port": {
             "type": "number",
