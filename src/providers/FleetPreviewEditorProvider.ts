@@ -10,10 +10,6 @@ export class FleetPreviewEditorProvider
 {
 	public static readonly viewType = "automa.fleetPreview";
 
-	constructor(context: vscode.ExtensionContext) {
-		super(context);
-	}
-
 	public async resolveCustomTextEditor(
 		document: vscode.TextDocument,
 		webviewPanel: vscode.WebviewPanel,
@@ -91,7 +87,7 @@ export class FleetPreviewEditorProvider
 					if (json.id && json.name) {
 						dict[json.id] = json.name;
 					}
-				} catch (e) {
+				} catch (_e) {
 					// Ignore parse errors for individual files
 				}
 			}
@@ -116,7 +112,7 @@ export class FleetPreviewEditorProvider
 						json.id || path.basename(file.fsPath, path.extname(file.fsPath));
 					const name = json.name || id;
 					dict[id] = name;
-				} catch (e) {
+				} catch (_e) {
 					// Ignore parse errors
 				}
 			}
@@ -126,7 +122,7 @@ export class FleetPreviewEditorProvider
 		return dict;
 	}
 
-	private getHtmlForWebview(webview: vscode.Webview): string {
+	private getHtmlForWebview(_webview: vscode.Webview): string {
 		const htmlPath = path.join(
 			this.context.extensionPath,
 			"src",

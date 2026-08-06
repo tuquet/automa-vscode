@@ -24,7 +24,7 @@ export class WorkflowParser {
 		implicitVars: Set<string>,
 	): any[] {
 		const triggerParams: any[] = [];
-		if (json.drawflow && json.drawflow.nodes && json.drawflow.edges) {
+		if (json.drawflow?.nodes && json.drawflow.edges) {
 			const nodesList = json.drawflow.nodes;
 			for (const node of nodesList) {
 				if (

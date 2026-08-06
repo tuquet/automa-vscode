@@ -10,10 +10,6 @@ export class WorkflowPreviewEditorProvider
 {
 	public static readonly viewType = "automa.workflowPreview";
 
-	constructor(context: vscode.ExtensionContext) {
-		super(context);
-	}
-
 	public async resolveCustomTextEditor(
 		document: vscode.TextDocument,
 		webviewPanel: vscode.WebviewPanel,
@@ -51,7 +47,7 @@ export class WorkflowPreviewEditorProvider
 				);
 
 				if (
-					!(json.drawflow && json.drawflow.nodes && json.drawflow.edges) &&
+					!(json.drawflow?.nodes && json.drawflow.edges) &&
 					Array.isArray(json)
 				) {
 					webviewPanel.webview.html = `<body><h2>Not an Automa workflow</h2><p>This JSON file does not appear to be an Automa workflow.</p></body>`;
@@ -94,7 +90,7 @@ export class WorkflowPreviewEditorProvider
 					if (document.uri.scheme === "file") {
 						updatedAt = fs.statSync(document.uri.fsPath).mtimeMs;
 					}
-				} catch (err) {}
+				} catch (_err) {}
 
 				const isPackage =
 					json.settings?.asBlock === true ||
@@ -148,23 +144,19 @@ export class WorkflowPreviewEditorProvider
 						try {
 							if (updateData.settings)
 								json.settings = JSON.parse(updateData.settings);
-						} catch (e) {}
+						} catch (_e) {}
 						try {
 							if (updateData.table) json.table = JSON.parse(updateData.table);
-						} catch (e) {}
+						} catch (_e) {}
 						try {
 							if (updateData.includedWorkflows)
 								json.includedWorkflows = JSON.parse(
 									updateData.includedWorkflows,
 								);
-						} catch (e) {}
+						} catch (_e) {}
 
 						// Update Trigger Parameters Default Values
-						if (
-							updateData.triggerParams !== undefined &&
-							json.drawflow &&
-							json.drawflow.nodes
-						) {
+						if (updateData.triggerParams && json.drawflow?.nodes) {
 							const triggerNode = json.drawflow.nodes.find(
 								(n: any) =>
 									n.label === "trigger" ||
@@ -188,7 +180,7 @@ export class WorkflowPreviewEditorProvider
 						);
 					} catch (e: any) {
 						vscode.window.showErrorMessage(
-							"Failed to save workflow: " + e.message,
+							`Failed to save workflow: ${e.message}`,
 						);
 					}
 				} else if (message.command === "openInStudio") {

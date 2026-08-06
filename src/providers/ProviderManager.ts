@@ -103,11 +103,14 @@ export class ProviderManager {
 		runnersProvider.refresh();
 		// 1.5. Execution History Panel
 		const historyProvider = new HistoryTreeDataProvider(this.context);
-		const historyTreeView = vscode.window.createTreeView("automa.executionHistory", {
-			treeDataProvider: historyProvider,
-		});
+		const historyTreeView = vscode.window.createTreeView(
+			"automa.executionHistory",
+			{
+				treeDataProvider: historyProvider,
+			},
+		);
 		this.context.subscriptions.push(historyTreeView);
-		
+
 		historyTreeView.onDidChangeVisibility((e) => {
 			if (e.visible) {
 				historyProvider.refresh();
@@ -146,7 +149,7 @@ export class ProviderManager {
 			vscode.commands.registerCommand(
 				"automa.deleteHistoryItem",
 				async (item: vscode.TreeItem) => {
-					if (!item || !item.id) return;
+					if (!item?.id) return;
 					const confirm = await vscode.window.showWarningMessage(
 						`Are you sure you want to delete this log?`,
 						"Yes",
@@ -198,9 +201,12 @@ export class ProviderManager {
 			"account",
 			"automa.browserProfiles",
 		);
-		const profilesTreeView = vscode.window.createTreeView("automa.browserProfiles", {
-			treeDataProvider: profilesProvider,
-		});
+		const profilesTreeView = vscode.window.createTreeView(
+			"automa.browserProfiles",
+			{
+				treeDataProvider: profilesProvider,
+			},
+		);
 		this.context.subscriptions.push(profilesTreeView);
 		profilesTreeView.onDidChangeVisibility((e) => {
 			if (e.visible) profilesProvider.setSearchQuery("");
@@ -305,7 +311,9 @@ export class ProviderManager {
 		});
 
 		// 6. Global File System Watcher
-		const vaultWatcher = vscode.workspace.createFileSystemWatcher("**/*.{json,yaml,yml}");
+		const vaultWatcher = vscode.workspace.createFileSystemWatcher(
+			"**/*.{json,yaml,yml}",
+		);
 		this.context.subscriptions.push(vaultWatcher);
 		const refreshAll = () => {
 			workflowsProvider.setSearchQuery("");

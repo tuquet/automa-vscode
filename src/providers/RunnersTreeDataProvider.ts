@@ -4,35 +4,32 @@ export class RunnersTreeDataProvider
 	implements vscode.TreeDataProvider<vscode.TaskExecution>
 {
 	private _onDidChangeTreeData: vscode.EventEmitter<
-		vscode.TaskExecution | undefined | void
-	> = new vscode.EventEmitter<vscode.TaskExecution | undefined | void>();
+		vscode.TaskExecution | undefined | undefined
+	> = new vscode.EventEmitter<vscode.TaskExecution | undefined | undefined>();
 	readonly onDidChangeTreeData: vscode.Event<
-		vscode.TaskExecution | undefined | void
+		vscode.TaskExecution | undefined | undefined
 	> = this._onDidChangeTreeData.event;
 	private treeView?: vscode.TreeView<vscode.TaskExecution>;
 	public statusBarItem: vscode.StatusBarItem;
 
 	constructor() {
-		this.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
+		this.statusBarItem = vscode.window.createStatusBarItem(
+			vscode.StatusBarAlignment.Right,
+			100,
+		);
 		this.statusBarItem.command = "automa-activity-bar.focus"; // Focus the automa activity bar (Wait, what is the view container command? Usually `workbench.view.extension.automa-activity-bar`)
 		// Actually, I can just register a command that focuses the active runners panel: "automa.activeRunners.focus"
 		this.statusBarItem.command = "automa.focusActiveRunners";
-		
+
 		// Listen for tasks starting and ending to auto-refresh the list
 		vscode.tasks.onDidStartTask((e) => {
-			if (
-				e.execution.task.source &&
-				e.execution.task.source.startsWith("Automa")
-			) {
+			if (e.execution.task.source?.startsWith("Automa")) {
 				this.refresh();
 			}
 		});
 
 		vscode.tasks.onDidEndTask((e) => {
-			if (
-				e.execution.task.source &&
-				e.execution.task.source.startsWith("Automa")
-			) {
+			if (e.execution.task.source?.startsWith("Automa")) {
 				this.refresh();
 			}
 		});
@@ -44,9 +41,8 @@ export class RunnersTreeDataProvider
 
 	refresh(): void {
 		if (this.treeView) {
-			const runners = vscode.tasks.taskExecutions.filter(
-				(execution) =>
-					execution.task.source && execution.task.source.startsWith("Automa"),
+			const runners = vscode.tasks.taskExecutions.filter((execution) =>
+				execution.task.source?.startsWith("Automa"),
 			);
 
 			if (runners.length > 0) {
@@ -62,7 +58,7 @@ export class RunnersTreeDataProvider
 				this.statusBarItem.hide();
 			}
 		}
-		this._onDidChangeTreeData.fire();
+		this._onDidChangeTreeData.fire(undefined);
 	}
 
 	getTreeItem(element: vscode.TaskExecution): vscode.TreeItem {
@@ -95,9 +91,8 @@ export class RunnersTreeDataProvider
 			return Promise.resolve([]);
 		} else {
 			// Return all running tasks that originate from Automa (e.g. Automa, Automa-Studio)
-			const runners = vscode.tasks.taskExecutions.filter(
-				(execution) =>
-					execution.task.source && execution.task.source.startsWith("Automa"),
+			const runners = vscode.tasks.taskExecutions.filter((execution) =>
+				execution.task.source?.startsWith("Automa"),
 			);
 			return Promise.resolve(runners);
 		}

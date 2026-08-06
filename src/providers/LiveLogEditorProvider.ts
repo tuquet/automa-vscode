@@ -5,7 +5,7 @@ export class LiveLogEditorProvider {
 	public static currentPanels: Map<string, vscode.WebviewPanel> = new Map();
 
 	public static showLiveLog(
-		context: vscode.ExtensionContext,
+		_context: vscode.ExtensionContext,
 		taskId: string,
 		taskName: string,
 	) {

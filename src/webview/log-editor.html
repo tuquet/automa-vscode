@@ -290,7 +290,9 @@
         </div>
     </div>
 
-    <script>{{INJECT_LOGS_DATA}}{{INJECT_JOB_DATA}}
+    <script>
+        {{INJECT_LOGS_DATA}}
+        {{INJECT_JOB_DATA}}
         
         const { createApp, ref, computed, onMounted, nextTick, watch } = Vue;
 
@@ -319,7 +321,7 @@
                     let dateStr = isoString;
                     // SQLite returns 'YYYY-MM-DD HH:MM:SS' in UTC
                     if (typeof dateStr === 'string' && dateStr.includes(' ') && !dateStr.endsWith('Z')) {
-                        dateStr = dateStr.replace(' ', 'T') + 'Z';
+                        dateStr = `${dateStr.replace(' ', 'T')}Z`;
                     }
                     const date = new Date(dateStr);
                     const hh = String(date.getHours()).padStart(2, '0');

@@ -52,7 +52,7 @@ export async function lintCheckCommand(nodeOrUri?: any, nodesOrUris?: any[]) {
 							"lint",
 							filePath,
 						]);
-					const output = stdout + "\n" + stderr;
+					const output = `${stdout}\n${stderr}`;
 
 					const diagnostics: vscode.Diagnostic[] = [];
 

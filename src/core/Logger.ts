@@ -5,9 +5,7 @@ export class Logger {
 
 	public static initialize(context: vscode.ExtensionContext) {
 		if (!Logger.outputChannel) {
-			Logger.outputChannel = vscode.window.createOutputChannel(
-				"Automa",
-			);
+			Logger.outputChannel = vscode.window.createOutputChannel("Automa");
 			context.subscriptions.push(Logger.outputChannel);
 		}
 	}

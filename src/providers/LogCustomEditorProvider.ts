@@ -10,14 +10,10 @@ export class LogCustomEditorProvider
 {
 	public static readonly viewType = "automa.logEditor";
 
-	constructor(context: vscode.ExtensionContext) {
-		super(context);
-	}
-
 	public async openCustomDocument(
 		uri: vscode.Uri,
-		openContext: vscode.CustomDocumentOpenContext,
-		token: vscode.CancellationToken,
+		_openContext: vscode.CustomDocumentOpenContext,
+		_token: vscode.CancellationToken,
 	): Promise<vscode.CustomDocument> {
 		return { uri, dispose: () => {} };
 	}
@@ -75,7 +71,7 @@ export class LogCustomEditorProvider
 	public async resolveCustomEditor(
 		document: vscode.CustomDocument,
 		webviewPanel: vscode.WebviewPanel,
-		token: vscode.CancellationToken,
+		_token: vscode.CancellationToken,
 	): Promise<void> {
 		let isFirstLoad = true;
 		const updateWebview = async () => {
@@ -131,7 +127,7 @@ export class LogCustomEditorProvider
 					minute: "2-digit",
 					second: "2-digit",
 				});
-			} catch (e) {}
+			} catch (_e) {}
 		}
 
 		let jobStatusColor = "text-vsc-fg";

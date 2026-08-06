@@ -58,7 +58,7 @@ export class BrowserProfileEditorProvider
 						);
 					} catch (e: any) {
 						vscode.window.showErrorMessage(
-							"Failed to save profile: " + e.message,
+							`Failed to save profile: ${e.message}`,
 						);
 					}
 				}

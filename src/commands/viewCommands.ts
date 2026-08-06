@@ -1,0 +1,100 @@
+import * as vscode from "vscode";
+import { LiveLogEditorProvider } from "../providers/LiveLogEditorProvider";
+
+export function showWorkflowSourceCommand() {
+	return async (uri: vscode.Uri) => {
+		if (uri) {
+			await vscode.workspace
+				.getConfiguration("automa")
+				.update(
+					"preview.defaultOnClick",
+					false,
+					vscode.ConfigurationTarget.Global,
+				);
+			vscode.commands.executeCommand("vscode.openWith", uri, "default");
+		}
+	};
+}
+
+export function showWorkflowPreviewCommand() {
+	return async (uri: vscode.Uri) => {
+		if (uri) {
+			await vscode.workspace
+				.getConfiguration("automa")
+				.update(
+					"preview.defaultOnClick",
+					true,
+					vscode.ConfigurationTarget.Global,
+				);
+			vscode.commands.executeCommand(
+				"vscode.openWith",
+				uri,
+				"automa.workflowPreview",
+			);
+		}
+	};
+}
+
+export function showFleetSourceCommand() {
+	return async (uri: vscode.Uri) => {
+		if (uri) {
+			vscode.commands.executeCommand("vscode.openWith", uri, "default");
+		}
+	};
+}
+
+export function showFleetPreviewCommand() {
+	return async (uri: vscode.Uri) => {
+		if (uri) {
+			vscode.commands.executeCommand(
+				"vscode.openWith",
+				uri,
+				"automa.fleetPreview",
+			);
+		}
+	};
+}
+
+export function showLogSourceCommand() {
+	return (uri: vscode.Uri) => {
+		if (uri) {
+			vscode.commands.executeCommand("vscode.openWith", uri, "default");
+		} else {
+			vscode.commands.executeCommand("workbench.action.reopenTextEditor");
+		}
+	};
+}
+
+export function showLogPreviewCommand(context: vscode.ExtensionContext) {
+	return (uri: vscode.Uri) => {
+		if (uri && uri.scheme === "automa-log") {
+			const jobId = uri.authority || uri.path.replace(/^\//, "");
+			const {
+				LogCustomEditorProvider,
+			} = require("../providers/LogCustomEditorProvider");
+			LogCustomEditorProvider.showLogForJobId(context, jobId);
+		} else if (uri) {
+			vscode.commands.executeCommand(
+				"vscode.openWith",
+				uri,
+				"automa.logEditor",
+			);
+		}
+	};
+}
+
+export function openInStudioCommand(context: vscode.ExtensionContext) {
+	return (uri: vscode.Uri) => {
+		const { StudioWebviewPanel } = require("../panels/StudioWebviewPanel");
+		StudioWebviewPanel.createOrShow(context.extensionUri, uri);
+	};
+}
+
+export function showLiveLogCommand(context: vscode.ExtensionContext) {
+	return (execution: vscode.TaskExecution) => {
+		if (execution) {
+			const taskId = execution.task.definition.id || execution.task.name;
+			LiveLogEditorProvider.showLiveLog(context, taskId, execution.task.name);
+		}
+	};
+}

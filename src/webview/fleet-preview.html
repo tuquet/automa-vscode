@@ -67,17 +67,17 @@
             min-height: 120px;
             font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
             font-size: 13px;
-            background-color: var(--vsc-input-bg) !important;
-            color: var(--vsc-input-fg) !important;
+            background-color: var(--vsc-input-bg);
+            color: var(--vsc-input-fg);
         }
         .CodeMirror-scroll { min-height: 120px; }
         .CodeMirror-gutters {
-            background-color: var(--vsc-widget) !important;
-            border-right: 1px solid var(--vsc-border) !important;
+            background-color: var(--vsc-widget);
+            border-right: 1px solid var(--vsc-border);
         }
-        .CodeMirror-linenumber { color: var(--vsc-muted) !important; }
-        .CodeMirror-cursor { border-left-color: var(--vsc-fg) !important; }
-        .CodeMirror-selected { background: var(--vscode-editor-selectionBackground, #264f78) !important; }
+        .CodeMirror-linenumber { color: var(--vsc-muted); }
+        .CodeMirror-cursor { border-left-color: var(--vsc-fg); }
+        .CodeMirror-selected { background: var(--vscode-editor-selectionBackground, #264f78); }
         .cm-s-default .cm-property { color: #9CDCFE; }
         .cm-s-default .cm-string { color: #CE9178; }
         .cm-s-default .cm-number { color: #B5CEA8; }
@@ -438,7 +438,7 @@
                     this.markModified();
                 },
                 generateId(prefix) {
-                    return prefix + '_' + Math.random().toString(36).substring(2, 9);
+                    return `${prefix}_${Math.random().toString(36).substring(2, 9)}`;
                 }
             },
             mounted() {

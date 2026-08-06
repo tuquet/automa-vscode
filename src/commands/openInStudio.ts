@@ -31,17 +31,16 @@ export async function openInStudioCommand(uri: vscode.Uri) {
 		args = [userCliPath, "studio", uri.fsPath];
 		if (workspaceRoot) args.push("--vault-path", workspaceRoot);
 	} else if (workspaceRoot) {
-		const localCliPath = path.join(
-			workspaceRoot,
-			"..",
-			"automa-cli",
-			"dist",
-			"cli.js",
-		);
-		if (require("node:fs").existsSync(localCliPath)) {
+		const fs = require("node:fs");
+		const candidates = [
+			path.join(workspaceRoot, "automa-cli", "dist", "cli.js"),
+			path.join(workspaceRoot, "..", "automa-cli", "dist", "cli.js"),
+		];
+		const foundCli = candidates.find((p) => fs.existsSync(p));
+		if (foundCli) {
 			cmd = "node";
 			args = [
-				localCliPath,
+				foundCli,
 				"studio",
 				uri.fsPath,
 				"--vault-path",

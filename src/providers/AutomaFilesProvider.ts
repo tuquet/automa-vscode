@@ -1,12 +1,12 @@
-import * as fs from "fs";
-import * as path from "path";
+import * as fs from "node:fs";
+import * as path from "node:path";
 import * as vscode from "vscode";
 
 export class AutomaFilesProvider implements vscode.TreeDataProvider<FileItem> {
 	private _onDidChangeTreeData: vscode.EventEmitter<
-		FileItem | undefined | void
-	> = new vscode.EventEmitter<FileItem | undefined | void>();
-	readonly onDidChangeTreeData: vscode.Event<FileItem | undefined | void> =
+		FileItem | undefined | undefined
+	> = new vscode.EventEmitter<FileItem | undefined | undefined>();
+	readonly onDidChangeTreeData: vscode.Event<FileItem | undefined | undefined> =
 		this._onDidChangeTreeData.event;
 	private searchQuery: string = "";
 	private watcher: vscode.FileSystemWatcher;
@@ -23,7 +23,7 @@ export class AutomaFilesProvider implements vscode.TreeDataProvider<FileItem> {
 		this.watcher.onDidCreate(() => this.refresh());
 		this.watcher.onDidChange(() => this.refresh());
 		this.watcher.onDidDelete(() => this.refresh());
-		
+
 		// Preload data
 		this.refresh();
 	}
@@ -34,7 +34,7 @@ export class AutomaFilesProvider implements vscode.TreeDataProvider<FileItem> {
 
 	refresh(): void {
 		this._cachedChildren = this.fetchChildren();
-		this._onDidChangeTreeData.fire();
+		this._onDidChangeTreeData.fire(undefined);
 	}
 
 	setSearchQuery(query: string): void {
@@ -82,7 +82,7 @@ export class AutomaFilesProvider implements vscode.TreeDataProvider<FileItem> {
 
 					if (this.filterType === "package") return isPackage;
 					if (this.filterType === "workflow") return !isPackage;
-				} catch (e) {
+				} catch (_e) {
 					// If parsing fails, consider it a normal workflow by default
 					return this.filterType === "workflow";
 				}

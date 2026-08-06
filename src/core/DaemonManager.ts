@@ -33,7 +33,7 @@ export class DaemonManager {
 		return DaemonManager.instance;
 	}
 
-	public resolveCliPath(extensionPath?: string): string {
+	public resolveCliPath(_extensionPath?: string): string {
 		const config = vscode.workspace.getConfiguration("automa");
 		const userCliPath = config.get<string>("cliPath");
 		if (userCliPath && fs.existsSync(userCliPath)) {
@@ -124,15 +124,38 @@ export class DaemonManager {
 			execCmd = `${cmd} "${cliPath}" ${argsStr}`;
 		}
 
-		const { stdout } = await execAsync(execCmd);
-		return JSON.parse(stdout);
+		const { stdout, stderr } = await execAsync(execCmd).catch(e => e);
+		const output = stdout || stderr || "";
+		
+		let jsonStr = output.trim();
+		const firstBrace = jsonStr.indexOf("{");
+		const firstBracket = jsonStr.indexOf("[");
+		let startIndex = -1;
+		
+		if (firstBrace !== -1 && firstBracket !== -1) {
+			startIndex = Math.min(firstBrace, firstBracket);
+		} else if (firstBrace !== -1) {
+			startIndex = firstBrace;
+		} else if (firstBracket !== -1) {
+			startIndex = firstBracket;
+		}
+		
+		if (startIndex !== -1 && startIndex > 0) {
+			jsonStr = jsonStr.substring(startIndex);
+		}
+		
+		try {
+			return JSON.parse(jsonStr);
+		} catch(e: any) {
+			throw new Error(`Failed to parse CLI JSON output: ${e.message}\nOutput was: ${output}`);
+		}
 	}
 
 	public async executeRawCliCommand(
 		args: string[],
 	): Promise<{ stdout: string; stderr: string }> {
 		const { cmd, args: finalArgs } = this.resolveCommandAndArgs(args);
-		const commandStr = `${cmd} ${finalArgs.map((a) => '"' + a.replace(/"/g, '\\"') + '"').join(" ")}`;
+		const commandStr = `${cmd} ${finalArgs.map((a) => `"${a.replace(/"/g, '\\"')}"`).join(" ")}`;
 		const { stdout, stderr } = await execAsync(commandStr);
 		return { stdout, stderr };
 	}
@@ -150,7 +173,7 @@ export class DaemonManager {
 				const data = (await res.json()) as any;
 				return data.status === "ok";
 			}
-		} catch (e) {
+		} catch (_e) {
 			// Ignore fetch errors (e.g. connection refused)
 		}
 		return false;
@@ -238,7 +261,7 @@ export class DaemonManager {
 				config.get<string>("browserPathOverride") || "";
 			const env = { ...process.env };
 			if (browserPathOverride) {
-				env["AUTOMA_BROWSER_PATH"] = browserPathOverride;
+				env.AUTOMA_BROWSER_PATH = browserPathOverride;
 			}
 
 			this.daemonProcess = spawn(cmd, args, {

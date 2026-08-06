@@ -187,7 +187,8 @@
         </div>
     </div>
 
-    <script>{{INJECT_PACKAGE_DATA}}
+    <script>
+        {{INJECT_PACKAGE_DATA}}
         const vscode = acquireVsCodeApi();
 
         const { createApp, ref, reactive, computed } = Vue;
@@ -252,7 +253,7 @@
                 const iconClass = computed(() => {
                     const kebab = camelToKebab(workflow.icon);
                     if (workflow.icon.startsWith('mdi')) {
-                        return 'mdi ' + kebab;
+                        return `mdi ${kebab}`;
                     }
                     return kebab;
                 });

@@ -3,7 +3,7 @@ import * as path from "node:path";
 import * as vscode from "vscode";
 import { TaskRunner } from "../core/TaskRunner";
 
-let automaOutputChannel: vscode.OutputChannel;
+let _automaOutputChannel: vscode.OutputChannel;
 
 export async function runWorkflowCommand(
 	nodeOrUri?: any,
@@ -12,7 +12,7 @@ export async function runWorkflowCommand(
 ) {
 	let targetPath = "";
 	let displayName = "";
-	let workflowData: any = null;
+	let _workflowData: any = null;
 
 	if (nodeOrUri?.fsPath) {
 		targetPath = nodeOrUri.fsPath;
@@ -40,7 +40,7 @@ export async function runWorkflowCommand(
 
 	try {
 		const fileContent = fs.readFileSync(targetPath, "utf-8");
-		workflowData = JSON.parse(fileContent);
+		_workflowData = JSON.parse(fileContent);
 	} catch (e: any) {
 		vscode.window.showErrorMessage(
 			`Failed to read workflow file: ${e.message}`,
@@ -54,7 +54,7 @@ export async function runWorkflowCommand(
 		runOptions?.keepBrowserOpen ??
 		!config.get<boolean>("vault.run.closeBrowserOnFinish", true);
 
-	const options: any = {
+	const _options: any = {
 		variables: params ? params : undefined,
 	};
 
@@ -136,10 +136,10 @@ export async function runWorkflowWithParamsCommand(nodeOrUri?: any) {
 		return;
 	}
 
-	let workflowData: any = null;
+	let _workflowData: any = null;
 	try {
 		const fileContent = fs.readFileSync(targetPath, "utf-8");
-		workflowData = JSON.parse(fileContent);
+		_workflowData = JSON.parse(fileContent);
 	} catch (e: any) {
 		vscode.window.showErrorMessage(
 			`Failed to read workflow file: ${e.message}`,

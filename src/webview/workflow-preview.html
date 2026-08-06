@@ -70,8 +70,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
     <style>
         .CodeMirror {
-            background-color: var(--vsc-input-bg) !important;
-            color: var(--vsc-input-fg) !important;
+            background-color: var(--vsc-input-bg);
+            color: var(--vsc-input-fg);
             font-family: var(--vscode-editor-font-family), 'Consolas', 'Courier New', monospace;
             font-size: 13px;
             height: auto;
@@ -81,20 +81,20 @@
             min-height: 120px;
         }
         .CodeMirror-gutters {
-            background-color: var(--vsc-bg) !important;
-            border-right: 1px solid var(--vsc-border) !important;
+            background-color: var(--vsc-bg);
+            border-right: 1px solid var(--vsc-border);
         }
         .CodeMirror-linenumber {
-            color: var(--vsc-muted) !important;
+            color: var(--vsc-muted);
         }
         .CodeMirror-cursor {
-            border-left: 2px solid var(--vsc-input-fg) !important;
+            border-left: 2px solid var(--vsc-input-fg);
         }
         .CodeMirror-selected {
-            background: var(--vscode-editor-selectionBackground, #3a3d41) !important;
+            background: var(--vscode-editor-selectionBackground, #3a3d41);
         }
         .CodeMirror-focused .CodeMirror-selected {
-            background: var(--vscode-editor-selectionBackground, #264f78) !important;
+            background: var(--vscode-editor-selectionBackground, #264f78);
         }
         .CodeMirror-line::selection, .CodeMirror-line > span::selection, .CodeMirror-line > span > span::selection {
             background: rgba(255, 255, 255, 0.1);
@@ -257,7 +257,8 @@
         </div>
     </div>
 
-    <script>{{INJECT_PARAMS_DATA}}
+    <script>
+        {{INJECT_PARAMS_DATA}}
         const vscode = acquireVsCodeApi();
 
         const { createApp, ref, reactive, computed, onMounted, watch } = Vue;
@@ -366,7 +367,7 @@
                 const iconClass = computed(() => {
                     const kebab = camelToKebab(workflow.icon);
                     if (workflow.icon.startsWith('mdi')) {
-                        return 'mdi ' + kebab;
+                        return `mdi ${kebab}`;
                     }
                     return kebab;
                 });

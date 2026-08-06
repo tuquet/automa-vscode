@@ -1,7 +1,6 @@
 import * as vscode from "vscode";
 import { CommandManager } from "../commands/CommandManager";
 import { activateLintDiagnostics } from "../commands/lintCheck";
-import { HistoryTreeDataProvider } from "../providers/HistoryTreeDataProvider";
 import { ProviderManager } from "../providers/ProviderManager";
 import { DaemonManager } from "./DaemonManager";
 import { Logger } from "./Logger";

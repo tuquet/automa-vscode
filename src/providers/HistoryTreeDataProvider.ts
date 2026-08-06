@@ -5,19 +5,19 @@ export class HistoryTreeDataProvider
 	implements vscode.TreeDataProvider<vscode.TreeItem>
 {
 	private _onDidChangeTreeData: vscode.EventEmitter<
-		vscode.TreeItem | undefined | void
-	> = new vscode.EventEmitter<vscode.TreeItem | undefined | void>();
+		vscode.TreeItem | undefined | undefined
+	> = new vscode.EventEmitter<vscode.TreeItem | undefined | undefined>();
 	readonly onDidChangeTreeData: vscode.Event<
-		vscode.TreeItem | undefined | void
+		vscode.TreeItem | undefined | undefined
 	> = this._onDidChangeTreeData.event;
-	private context: vscode.ExtensionContext;
 	private taskIdFilter: string | undefined;
 	private currentLimit: number = 50;
 	private _cachedChildren: Promise<vscode.TreeItem[]> | undefined;
+	private context: vscode.ExtensionContext;
 
 	constructor(context: vscode.ExtensionContext) {
 		this.context = context;
-		
+
 		// Preload data
 		this.refresh();
 	}
@@ -51,7 +51,7 @@ export class HistoryTreeDataProvider
 
 	refresh(): void {
 		this._cachedChildren = this.fetchChildren();
-		this._onDidChangeTreeData.fire();
+		this._onDidChangeTreeData.fire(undefined);
 	}
 
 	getTreeItem(element: vscode.TreeItem): vscode.TreeItem {
@@ -62,7 +62,7 @@ export class HistoryTreeDataProvider
 		if (element) {
 			return Promise.resolve([]);
 		}
-		
+
 		if (this._cachedChildren) {
 			return this._cachedChildren;
 		}
@@ -131,7 +131,10 @@ export class HistoryTreeDataProvider
 			});
 
 			if (jobs.length >= this.currentLimit) {
-				const loadMoreItem = new vscode.TreeItem("Load More...", vscode.TreeItemCollapsibleState.None);
+				const loadMoreItem = new vscode.TreeItem(
+					"Load More...",
+					vscode.TreeItemCollapsibleState.None,
+				);
 				loadMoreItem.iconPath = new vscode.ThemeIcon("sync");
 				loadMoreItem.command = {
 					command: "automa.history.loadMore",

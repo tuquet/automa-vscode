@@ -1,5 +1,5 @@
-import { spawn } from "child_process";
-import { EventEmitter } from "events";
+import { spawn } from "node:child_process";
+import { EventEmitter } from "node:events";
 import * as vscode from "vscode";
 import { DaemonManager } from "./DaemonManager";
 
@@ -70,7 +70,7 @@ export class TaskRunner {
 		}
 
 		if (browserPathOverride) {
-			env["AUTOMA_BROWSER_PATH"] = browserPathOverride;
+			env.AUTOMA_BROWSER_PATH = browserPathOverride;
 		}
 
 		const task = new vscode.Task(
@@ -130,7 +130,7 @@ export class TaskRunner {
 		const defaultCommand = isWin ? "npx.cmd" : "npx";
 		const command = options.command || defaultCommand;
 
-		const config = vscode.workspace.getConfiguration("automa");
+		const _config = vscode.workspace.getConfiguration("automa");
 
 		const env = { ...process.env };
 
@@ -154,7 +154,7 @@ export class TaskRunner {
 					try {
 						const telemetry = JSON.parse(trimmed);
 						TaskRunner.telemetryEmitter.emit("telemetry", telemetry);
-					} catch (e) {
+					} catch (_e) {
 						// ignore parse error
 					}
 				}

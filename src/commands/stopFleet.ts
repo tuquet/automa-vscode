@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { Logger } from "../core/Logger";
 
-export const stopFleetCommand = async (uri: vscode.Uri) => {
+export const stopFleetCommand = async (_uri: vscode.Uri) => {
 	const executions = vscode.tasks.taskExecutions;
 	let stopped = 0;
 	for (const execution of executions) {
