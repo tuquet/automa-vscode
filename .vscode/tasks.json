@@ -8,13 +8,17 @@
       "problemMatcher": {
         "owner": "tsup",
         "pattern": {
-          "regexp": "^(.*)$",
-          "message": 1
+          "regexp": "^(.*):(\\d+):(\\d+):\\s+(warning|error):\\s+(.*)$",
+          "file": 1,
+          "line": 2,
+          "column": 3,
+          "severity": 4,
+          "message": 5
         },
         "background": {
           "activeOnStart": true,
-          "beginsPattern": "Build start",
-          "endsPattern": "Build success"
+          "beginsPattern": "^.*Build start.*$",
+          "endsPattern": "^.*Build success.*$"
         }
       },
       "isBackground": true,
