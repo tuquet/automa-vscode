@@ -312,7 +312,7 @@ export class ProviderManager {
 
 		// 6. Global File System Watcher
 		const vaultWatcher = vscode.workspace.createFileSystemWatcher(
-			"**/*.{json,yaml,yml}",
+			"**/*.{profile,workflow,package,fleet}.json",
 		);
 		this.context.subscriptions.push(vaultWatcher);
 		const refreshAll = () => {
