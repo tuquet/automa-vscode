@@ -210,6 +210,11 @@
           "command": "automa.addCredential",
           "when": "view == automa.globalVault",
           "group": "navigation@3"
+        },
+        {
+          "command": "automa.addTable",
+          "when": "view == automa.globalVault",
+          "group": "navigation@4"
         }
       ],
       "view/item/context": [
@@ -226,6 +231,16 @@
         {
           "command": "automa.deleteHistoryItem",
           "when": "view == automa.executionHistory",
+          "group": "inline"
+        },
+        {
+          "command": "automa.runWorkflow",
+          "when": "viewItem == automaFileItem-automa.workflows",
+          "group": "inline"
+        },
+        {
+          "command": "automa.runFleet",
+          "when": "viewItem == automaFileItem-automa.fleets",
           "group": "inline"
         }
       ]
@@ -260,10 +275,22 @@
           "contextualTitle": "Automa Execution History"
         },
         {
+          "id": "automa.fleets",
+          "name": "Fleets",
+          "icon": "$(rocket)",
+          "contextualTitle": "Automa Fleets"
+        },
+        {
           "id": "automa.workflows",
           "name": "Workflows",
           "icon": "$(file-code)",
           "contextualTitle": "Automa Workflows"
+        },
+        {
+          "id": "automa.globalVault",
+          "name": "Global Vault",
+          "icon": "$(shield)",
+          "contextualTitle": "Automa Global Vault"
         },
         {
           "id": "automa.browserProfiles",
@@ -276,18 +303,6 @@
           "name": "Packages",
           "icon": "$(package)",
           "contextualTitle": "Automa Packages"
-        },
-        {
-          "id": "automa.fleets",
-          "name": "Fleets",
-          "icon": "$(rocket)",
-          "contextualTitle": "Automa Fleets"
-        },
-        {
-          "id": "automa.globalVault",
-          "name": "Global Vault",
-          "icon": "$(shield)",
-          "contextualTitle": "Automa Global Vault"
         }
       ]
     },
@@ -363,9 +378,18 @@
         "icon": "$(preview)"
       },
       {
+        "command": "automa.history.loadMore",
+        "title": "Load More...",
+        "icon": "$(sync)"
+      },
+      {
         "command": "automa.openInStudio",
         "title": "Open in Studio",
         "icon": "$(link-external)"
+      },
+      {
+        "command": "automa.focusActiveRunners",
+        "title": "Focus Active Runners"
       },
       {
         "command": "automa.createWorkflow",
@@ -476,6 +500,11 @@
         "command": "automa.addCredential",
         "title": "Add Credential",
         "icon": "$(key)"
+      },
+      {
+        "command": "automa.addTable",
+        "title": "Add Table",
+        "icon": "$(list-flat)"
       },
       {
         "command": "automa.refreshVault",

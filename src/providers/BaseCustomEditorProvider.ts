@@ -7,7 +7,7 @@ export abstract class BaseCustomEditorProvider {
 		document: vscode.TextDocument | vscode.CustomDocument,
 		webviewPanel: vscode.WebviewPanel,
 		updateWebview: () => void | Promise<void>,
-		additionalDisposables: vscode.Disposable[] = []
+		additionalDisposables: vscode.Disposable[] = [],
 	) {
 		webviewPanel.webview.options = { enableScripts: true };
 
@@ -22,11 +22,13 @@ export abstract class BaseCustomEditorProvider {
 			});
 		} else {
 			// Fallback to FileSystemWatcher for CustomDocument
-			const watcher = vscode.workspace.createFileSystemWatcher(document.uri.fsPath);
+			const watcher = vscode.workspace.createFileSystemWatcher(
+				document.uri.fsPath,
+			);
 			const handleChange = () => {
 				setTimeout(() => updateWebview(), 50);
 			};
-			
+
 			const changeSub = watcher.onDidChange(handleChange);
 			const createSub = watcher.onDidCreate(handleChange);
 
@@ -35,7 +37,7 @@ export abstract class BaseCustomEditorProvider {
 					changeSub.dispose();
 					createSub.dispose();
 					watcher.dispose();
-				}
+				},
 			};
 		}
 
@@ -45,12 +47,15 @@ export abstract class BaseCustomEditorProvider {
 		});
 	}
 
-	protected async saveDocument(document: vscode.TextDocument, content: string): Promise<boolean> {
+	protected async saveDocument(
+		document: vscode.TextDocument,
+		content: string,
+	): Promise<boolean> {
 		const edit = new vscode.WorkspaceEdit();
 		edit.replace(
 			document.uri,
 			new vscode.Range(0, 0, document.lineCount, 0),
-			content
+			content,
 		);
 		const success = await vscode.workspace.applyEdit(edit);
 		if (success) {

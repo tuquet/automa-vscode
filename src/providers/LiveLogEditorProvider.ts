@@ -4,8 +4,12 @@ import { TaskRunner } from "../core/TaskRunner";
 export class LiveLogEditorProvider {
 	public static currentPanels: Map<string, vscode.WebviewPanel> = new Map();
 
-	public static showLiveLog(context: vscode.ExtensionContext, taskId: string, taskName: string) {
-		let panel = this.currentPanels.get(taskId);
+	public static showLiveLog(
+		context: vscode.ExtensionContext,
+		taskId: string,
+		taskName: string,
+	) {
+		let panel = LiveLogEditorProvider.currentPanels.get(taskId);
 
 		if (panel) {
 			panel.reveal(vscode.ViewColumn.One);
@@ -13,21 +17,26 @@ export class LiveLogEditorProvider {
 		}
 
 		panel = vscode.window.createWebviewPanel(
-			'automaLiveLog',
+			"automaLiveLog",
 			`Live Log: ${taskName}`,
 			vscode.ViewColumn.One,
 			{
 				enableScripts: true,
-				retainContextWhenHidden: true
-			}
+				retainContextWhenHidden: true,
+			},
 		);
 
-		this.currentPanels.set(taskId, panel);
+		LiveLogEditorProvider.currentPanels.set(taskId, panel);
 
-		panel.webview.html = this.getHtmlForWebview();
+		panel.webview.html = LiveLogEditorProvider.getHtmlForWebview();
 
 		const listener = (data: any) => {
-			if (data && (data.taskId === taskId || data.id === taskId || data.runnerId === taskId)) {
+			if (
+				data &&
+				(data.taskId === taskId ||
+					data.id === taskId ||
+					data.runnerId === taskId)
+			) {
 				panel?.webview.postMessage(data);
 			}
 		};
@@ -36,7 +45,7 @@ export class LiveLogEditorProvider {
 
 		panel.onDidDispose(() => {
 			TaskRunner.telemetryEmitter.off("telemetry", listener);
-			this.currentPanels.delete(taskId);
+			LiveLogEditorProvider.currentPanels.delete(taskId);
 		});
 	}
 

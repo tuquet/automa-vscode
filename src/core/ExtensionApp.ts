@@ -1,10 +1,10 @@
 import * as vscode from "vscode";
-import { Logger } from "./Logger";
 import { CommandManager } from "../commands/CommandManager";
-import { ProviderManager } from "../providers/ProviderManager";
 import { activateLintDiagnostics } from "../commands/lintCheck";
-import { DaemonManager } from "./DaemonManager";
 import { HistoryTreeDataProvider } from "../providers/HistoryTreeDataProvider";
+import { ProviderManager } from "../providers/ProviderManager";
+import { DaemonManager } from "./DaemonManager";
+import { Logger } from "./Logger";
 
 export class ExtensionApp {
 	private static instance: ExtensionApp;
@@ -47,8 +47,6 @@ export class ExtensionApp {
 
 		// Start Backend Daemon
 		DaemonManager.getInstance().start();
-
-
 	}
 
 	public deactivate() {
@@ -57,7 +55,9 @@ export class ExtensionApp {
 	}
 
 	private showWelcomePopupOnce() {
-		const hasShownWelcome = this.context.globalState.get<boolean>("automa.hasShownWelcome");
+		const hasShownWelcome = this.context.globalState.get<boolean>(
+			"automa.hasShownWelcome",
+		);
 		if (!hasShownWelcome) {
 			vscode.commands.executeCommand("automa.welcome");
 			this.context.globalState.update("automa.hasShownWelcome", true);
@@ -68,21 +68,22 @@ export class ExtensionApp {
 		this.syncPreviewSetting();
 
 		this.context.subscriptions.push(
-			vscode.workspace.onDidChangeConfiguration(e => {
+			vscode.workspace.onDidChangeConfiguration((e) => {
 				if (e.affectsConfiguration("automa.preview.defaultOnClick")) {
 					this.syncPreviewSetting();
 				}
-			})
+			}),
 		);
 	}
 
 	private syncPreviewSetting() {
 		const config = vscode.workspace.getConfiguration("automa");
 		const defaultOnClick = config.get<boolean>("preview.defaultOnClick", true);
-		
+
 		const workbenchConfig = vscode.workspace.getConfiguration("workbench");
-		let editorAssociations: Record<string, string> = workbenchConfig.get("editorAssociations") || {};
-		
+		const editorAssociations: Record<string, string> =
+			workbenchConfig.get("editorAssociations") || {};
+
 		let updated = false;
 
 		// Automate *.workflow.json -> automa.workflowPreview
@@ -90,7 +91,10 @@ export class ExtensionApp {
 		if (defaultOnClick && currentWorkflowAssoc !== "automa.workflowPreview") {
 			editorAssociations["*.workflow.json"] = "automa.workflowPreview";
 			updated = true;
-		} else if (!defaultOnClick && currentWorkflowAssoc === "automa.workflowPreview") {
+		} else if (
+			!defaultOnClick &&
+			currentWorkflowAssoc === "automa.workflowPreview"
+		) {
 			editorAssociations["*.workflow.json"] = "default";
 			updated = true;
 		}
@@ -106,7 +110,11 @@ export class ExtensionApp {
 		}
 
 		if (updated) {
-			workbenchConfig.update("editorAssociations", editorAssociations, vscode.ConfigurationTarget.Global);
+			workbenchConfig.update(
+				"editorAssociations",
+				editorAssociations,
+				vscode.ConfigurationTarget.Global,
+			);
 		}
 	}
 }

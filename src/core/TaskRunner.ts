@@ -1,6 +1,6 @@
-import * as vscode from "vscode";
 import { spawn } from "child_process";
 import { EventEmitter } from "events";
+import * as vscode from "vscode";
 import { DaemonManager } from "./DaemonManager";
 
 export interface TaskOptions {
@@ -18,19 +18,25 @@ export interface TaskOptions {
 export class TaskRunner {
 	public static telemetryEmitter = new EventEmitter();
 
-	public static runAutomaCli(cliArgs: string[], taskConfig: Omit<TaskOptions, 'command' | 'args'> & { useTelemetry?: boolean }): void {
-		const { cmd, args } = DaemonManager.getInstance().resolveCommandAndArgs(cliArgs);
-		
+	public static runAutomaCli(
+		cliArgs: string[],
+		taskConfig: Omit<TaskOptions, "command" | "args"> & {
+			useTelemetry?: boolean;
+		},
+	): void {
+		const { cmd, args } =
+			DaemonManager.getInstance().resolveCommandAndArgs(cliArgs);
+
 		const options: TaskOptions = {
 			...taskConfig,
 			command: cmd,
-			args: args
+			args: args,
 		};
 
 		if (taskConfig.useTelemetry) {
-			this.runWithTelemetry(options);
+			TaskRunner.runWithTelemetry(options);
 		} else {
-			this.run(options);
+			TaskRunner.run(options);
 		}
 	}
 
@@ -41,7 +47,10 @@ export class TaskRunner {
 
 		let statusBarItem: vscode.StatusBarItem | undefined;
 		if (options.statusBarText) {
-			statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
+			statusBarItem = vscode.window.createStatusBarItem(
+				vscode.StatusBarAlignment.Right,
+				100,
+			);
 			statusBarItem.text = `$(sync~spin) ${options.statusBarText}`;
 			statusBarItem.show();
 		}
@@ -52,14 +61,14 @@ export class TaskRunner {
 
 		const config = vscode.workspace.getConfiguration("automa");
 		const browserPathOverride = config.get<string>("browserPathOverride") || "";
-		
+
 		const env: { [key: string]: string } = {};
 		for (const key in process.env) {
 			if (process.env[key] !== undefined) {
 				env[key] = process.env[key] as string;
 			}
 		}
-		
+
 		if (browserPathOverride) {
 			env["AUTOMA_BROWSER_PATH"] = browserPathOverride;
 		}
@@ -69,12 +78,12 @@ export class TaskRunner {
 			vscode.workspace.workspaceFolders?.[0] || vscode.TaskScope.Workspace,
 			options.name,
 			options.source || "Automa",
-			new vscode.ProcessExecution(command, options.args, { env })
+			new vscode.ProcessExecution(command, options.args, { env }),
 		);
 
 		task.presentationOptions = {
 			reveal: vscode.TaskRevealKind.Always,
-			panel: vscode.TaskPanelKind.Shared
+			panel: vscode.TaskPanelKind.Shared,
 		};
 
 		vscode.tasks.executeTask(task);
@@ -86,14 +95,16 @@ export class TaskRunner {
 					statusBarItem.dispose();
 				}
 				disposable.dispose();
-				
+
 				if (e.exitCode === 0) {
 					if (options.successMessage) {
 						vscode.window.showInformationMessage(options.successMessage);
 					}
 				} else {
 					if (options.errorMessage) {
-						vscode.window.showErrorMessage(`${options.errorMessage} (Exit code ${e.exitCode})`);
+						vscode.window.showErrorMessage(
+							`${options.errorMessage} (Exit code ${e.exitCode})`,
+						);
 					}
 				}
 			}
@@ -107,7 +118,10 @@ export class TaskRunner {
 
 		let statusBarItem: vscode.StatusBarItem | undefined;
 		if (options.statusBarText) {
-			statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
+			statusBarItem = vscode.window.createStatusBarItem(
+				vscode.StatusBarAlignment.Right,
+				100,
+			);
 			statusBarItem.text = `$(sync~spin) ${options.statusBarText}`;
 			statusBarItem.show();
 		}
@@ -117,7 +131,7 @@ export class TaskRunner {
 		const command = options.command || defaultCommand;
 
 		const config = vscode.workspace.getConfiguration("automa");
-		
+
 		const env = { ...process.env };
 
 		// Create an output channel to show logs
@@ -125,13 +139,13 @@ export class TaskRunner {
 		outputChannel.show(true);
 
 		const cwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-		
+
 		const child = spawn(command, options.args, { env, cwd, shell: isWin });
 
 		child.stdout.on("data", (data) => {
 			const str = data.toString();
 			outputChannel.append(str);
-			
+
 			// Parse telemetry
 			const lines = str.split("\n");
 			for (const line of lines) {
@@ -139,7 +153,7 @@ export class TaskRunner {
 				if (trimmed.startsWith("{") && trimmed.includes('"type":"telemetry"')) {
 					try {
 						const telemetry = JSON.parse(trimmed);
-						this.telemetryEmitter.emit("telemetry", telemetry);
+						TaskRunner.telemetryEmitter.emit("telemetry", telemetry);
 					} catch (e) {
 						// ignore parse error
 					}
@@ -156,14 +170,16 @@ export class TaskRunner {
 				statusBarItem.hide();
 				statusBarItem.dispose();
 			}
-			
+
 			if (code === 0) {
 				if (options.successMessage) {
 					vscode.window.showInformationMessage(options.successMessage);
 				}
 			} else {
 				if (options.errorMessage) {
-					vscode.window.showErrorMessage(`${options.errorMessage} (Exit code ${code})`);
+					vscode.window.showErrorMessage(
+						`${options.errorMessage} (Exit code ${code})`,
+					);
 				}
 			}
 		});

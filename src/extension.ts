@@ -1,4 +1,4 @@
-import * as vscode from "vscode";
+import type * as vscode from "vscode";
 import { ExtensionApp } from "./core/ExtensionApp";
 
 export function activate(context: vscode.ExtensionContext) {

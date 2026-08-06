@@ -1,10 +1,13 @@
-import * as vscode from "vscode";
-import * as path from "node:path";
 import * as fs from "node:fs";
+import * as path from "node:path";
+import * as vscode from "vscode";
 import { runWorkflowCommand } from "../commands/runWorkflow";
 import { BaseCustomEditorProvider } from "./BaseCustomEditorProvider";
 
-export class WorkflowPreviewEditorProvider extends BaseCustomEditorProvider implements vscode.CustomTextEditorProvider {
+export class WorkflowPreviewEditorProvider
+	extends BaseCustomEditorProvider
+	implements vscode.CustomTextEditorProvider
+{
 	public static readonly viewType = "automa.workflowPreview";
 
 	constructor(context: vscode.ExtensionContext) {
@@ -14,25 +17,25 @@ export class WorkflowPreviewEditorProvider extends BaseCustomEditorProvider impl
 	public async resolveCustomTextEditor(
 		document: vscode.TextDocument,
 		webviewPanel: vscode.WebviewPanel,
-		_token: vscode.CancellationToken
+		_token: vscode.CancellationToken,
 	): Promise<void> {
 		const updateWebview = async () => {
 			try {
 				const content = document.getText();
 				const json = JSON.parse(content);
-				
+
 				const { WorkflowSanitizer } = await import("../core/Sanitizer");
 				const isModified = WorkflowSanitizer.sanitize(json);
-				
+
 				if (isModified) {
 					const edit = new vscode.WorkspaceEdit();
 					edit.replace(
 						document.uri,
 						new vscode.Range(0, 0, document.lineCount, 0),
-						JSON.stringify(json, null, 4)
+						JSON.stringify(json, null, 4),
 					);
 					// Apply silently in the background
-					vscode.workspace.applyEdit(edit).then(success => {
+					vscode.workspace.applyEdit(edit).then((success) => {
 						if (success) {
 							// We don't auto-save to disk, just leave it as an unsaved editor change
 							// Or we can save. Let's just apply to the document buffer.
@@ -42,132 +45,249 @@ export class WorkflowPreviewEditorProvider extends BaseCustomEditorProvider impl
 
 				const { WorkflowParser } = await import("../core/WorkflowParser");
 				const implicitVars = WorkflowParser.extractImplicitVariables(content);
-				let triggerParams = WorkflowParser.extractTriggerParameters(json, implicitVars);
+				const triggerParams = WorkflowParser.extractTriggerParameters(
+					json,
+					implicitVars,
+				);
 
-				if (!(json.drawflow && json.drawflow.nodes && json.drawflow.edges) && Array.isArray(json)) {
+				if (
+					!(json.drawflow && json.drawflow.nodes && json.drawflow.edges) &&
+					Array.isArray(json)
+				) {
 					webviewPanel.webview.html = `<body><h2>Not an Automa workflow</h2><p>This JSON file does not appear to be an Automa workflow.</p></body>`;
 					return;
 				}
 
 				// Get workspace settings to pre-fill global variables
-				const config = vscode.workspace.getConfiguration("automa", document.uri);
-				const globalVariables = config.get<any>("vault.run.globalVariables", {});
+				const config = vscode.workspace.getConfiguration(
+					"automa",
+					document.uri,
+				);
+				const globalVariables = config.get<any>(
+					"vault.run.globalVariables",
+					{},
+				);
 
 				for (const varName of implicitVars) {
 					let defaultVal = "";
-					if (globalVariables && typeof globalVariables === 'object' && globalVariables[varName] !== undefined) {
+					if (
+						globalVariables &&
+						typeof globalVariables === "object" &&
+						globalVariables[varName] !== undefined
+					) {
 						defaultVal = globalVariables[varName];
 					}
 					triggerParams.push({
 						name: varName,
-						description: varName.startsWith('$$') ? '(Auto-detected Global Var)' : '(Auto-detected Implicit Var)',
+						description: varName.startsWith("$$")
+							? "(Auto-detected Global Var)"
+							: "(Auto-detected Implicit Var)",
 						defaultValue: defaultVal,
 						value: defaultVal,
 						required: false,
-						isImplicit: true
+						isImplicit: true,
 					});
 				}
 
 				let updatedAt = 0;
 				try {
-					if (document.uri.scheme === 'file') {
+					if (document.uri.scheme === "file") {
 						updatedAt = fs.statSync(document.uri.fsPath).mtimeMs;
 					}
 				} catch (err) {}
 
-				const isPackage = json.settings?.asBlock === true || Array.isArray(json.inputs) || Array.isArray(json.outputs);
+				const isPackage =
+					json.settings?.asBlock === true ||
+					Array.isArray(json.inputs) ||
+					Array.isArray(json.outputs);
 				const pkgInputs = Array.isArray(json.inputs) ? json.inputs : [];
 				const pkgOutputs = Array.isArray(json.outputs) ? json.outputs : [];
 				const pkgVars = Array.isArray(json.variable) ? json.variable : [];
 
 				webviewPanel.title = `Preview: ${json.name || "Workflow"}`;
-				webviewPanel.webview.html = this.getHtmlContent(json, triggerParams, updatedAt, isPackage, pkgInputs, pkgOutputs, pkgVars);
+				webviewPanel.webview.html = this.getHtmlContent(
+					json,
+					triggerParams,
+					updatedAt,
+					isPackage,
+					pkgInputs,
+					pkgOutputs,
+					pkgVars,
+				);
 			} catch (e: any) {
 				webviewPanel.webview.html = `<body><h2>Error reading workflow</h2><p>${e.message}</p></body>`;
 			}
 		};
 
 		// Message Listener
-		const messageDisposable = webviewPanel.webview.onDidReceiveMessage(async (message) => {
-			if (message.command === 'runWorkflow') {
-				runWorkflowCommand(document.uri, message.parameters, { keepBrowserOpen: message.keepBrowserOpen });
-			} else if (message.command === 'saveWorkflow') {
-				try {
-					const content = document.getText();
-					const json = JSON.parse(content);
-					
-					// Update fields
-					const updateData = message.data;
-					if (updateData.name !== undefined) json.name = updateData.name;
-					if (updateData.description !== undefined) json.description = updateData.description;
-					if (updateData.version !== undefined) json.version = updateData.version;
-					if (updateData.extVersion !== undefined) json.extVersion = updateData.extVersion;
-					if (updateData.icon !== undefined) json.icon = updateData.icon;
-					if (updateData.globalData !== undefined) json.globalData = updateData.globalData;
-					
-					// JSON parse for objects/arrays
-					try { if (updateData.settings) json.settings = JSON.parse(updateData.settings); } catch(e){}
-					try { if (updateData.table) json.table = JSON.parse(updateData.table); } catch(e){}
-					try { if (updateData.includedWorkflows) json.includedWorkflows = JSON.parse(updateData.includedWorkflows); } catch(e){}
-					
-					// Update Trigger Parameters Default Values
-					if (updateData.triggerParams !== undefined && json.drawflow && json.drawflow.nodes) {
-						const triggerNode = json.drawflow.nodes.find((n: any) => n.label === "trigger" || n.name === "trigger" || n.type === "BlockTrigger");
-						if (triggerNode && Array.isArray(triggerNode.data?.parameters)) {
-							for (const param of triggerNode.data.parameters) {
-								if (updateData.triggerParams[param.name] !== undefined) {
-									param.defaultValue = updateData.triggerParams[param.name];
+		const messageDisposable = webviewPanel.webview.onDidReceiveMessage(
+			async (message) => {
+				if (message.command === "runWorkflow") {
+					runWorkflowCommand(document.uri, message.parameters, {
+						keepBrowserOpen: message.keepBrowserOpen,
+					});
+				} else if (message.command === "saveWorkflow") {
+					try {
+						const content = document.getText();
+						const json = JSON.parse(content);
+
+						// Update fields
+						const updateData = message.data;
+						if (updateData.name !== undefined) json.name = updateData.name;
+						if (updateData.description !== undefined)
+							json.description = updateData.description;
+						if (updateData.version !== undefined)
+							json.version = updateData.version;
+						if (updateData.extVersion !== undefined)
+							json.extVersion = updateData.extVersion;
+						if (updateData.icon !== undefined) json.icon = updateData.icon;
+						if (updateData.globalData !== undefined)
+							json.globalData = updateData.globalData;
+
+						// JSON parse for objects/arrays
+						try {
+							if (updateData.settings)
+								json.settings = JSON.parse(updateData.settings);
+						} catch (e) {}
+						try {
+							if (updateData.table) json.table = JSON.parse(updateData.table);
+						} catch (e) {}
+						try {
+							if (updateData.includedWorkflows)
+								json.includedWorkflows = JSON.parse(
+									updateData.includedWorkflows,
+								);
+						} catch (e) {}
+
+						// Update Trigger Parameters Default Values
+						if (
+							updateData.triggerParams !== undefined &&
+							json.drawflow &&
+							json.drawflow.nodes
+						) {
+							const triggerNode = json.drawflow.nodes.find(
+								(n: any) =>
+									n.label === "trigger" ||
+									n.name === "trigger" ||
+									n.type === "BlockTrigger",
+							);
+							if (triggerNode && Array.isArray(triggerNode.data?.parameters)) {
+								for (const param of triggerNode.data.parameters) {
+									if (updateData.triggerParams[param.name] !== undefined) {
+										param.defaultValue = updateData.triggerParams[param.name];
+									}
 								}
 							}
 						}
+
+						// Apply edits to document
+						await this.saveDocument(document, JSON.stringify(json, null, 4));
+
+						vscode.window.showInformationMessage(
+							"Workflow saved successfully!",
+						);
+					} catch (e: any) {
+						vscode.window.showErrorMessage(
+							"Failed to save workflow: " + e.message,
+						);
 					}
-					
-					// Apply edits to document
-					await this.saveDocument(document, JSON.stringify(json, null, 4));
-
-					vscode.window.showInformationMessage("Workflow saved successfully!");
-				} catch (e: any) {
-					vscode.window.showErrorMessage("Failed to save workflow: " + e.message);
+				} else if (message.command === "openInStudio") {
+					vscode.commands.executeCommand("automa.openInStudio", document.uri);
 				}
-			} else if (message.command === 'openInStudio') {
-				vscode.commands.executeCommand("automa.openInStudio", document.uri);
-			}
-		});
+			},
+		);
 
-		this.setupWebviewPanel(document, webviewPanel, updateWebview, [messageDisposable]);
-		
+		this.setupWebviewPanel(document, webviewPanel, updateWebview, [
+			messageDisposable,
+		]);
+
 		// Initial render
 		updateWebview();
 	}
 
-	private getWorkflowHtml(json: any, triggerParams: any[], updatedAtStr: string, jsonStringifySafe: (obj: any) => string): string {
+	private getWorkflowHtml(
+		json: any,
+		triggerParams: any[],
+		updatedAtStr: string,
+		jsonStringifySafe: (obj: any) => string,
+	): string {
 		try {
-			const htmlPath = path.join(this.context.extensionPath, "src", "webview", "workflow-preview.html");
+			const htmlPath = path.join(
+				this.context.extensionPath,
+				"src",
+				"webview",
+				"workflow-preview.html",
+			);
 			let htmlContent = fs.readFileSync(htmlPath, "utf-8");
 
-			const updatedAtHtml = updatedAtStr ? `<p class="text-xs text-vsc-muted mt-1 flex items-center gap-1">
+			const updatedAtHtml = updatedAtStr
+				? `<p class="text-xs text-vsc-muted mt-1 flex items-center gap-1">
 				<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 24 24"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20ZM13 12H17V14H11V7H13V12Z"></path></svg>
 				Updated At: ${updatedAtStr}
-			</p>` : '';
+			</p>`
+				: "";
 
-			const safeString = (str: any) => str ? String(str).replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$\{/g, '\\${').replace(/<\/script>/gi, '<\\/script>') : '';
+			const safeString = (str: any) =>
+				str
+					? String(str)
+							.replace(/\\/g, "\\\\")
+							.replace(/`/g, "\\`")
+							.replace(/\$\{/g, "\\${")
+							.replace(/<\/script>/gi, "<\\/script>")
+					: "";
 
 			const config = vscode.workspace.getConfiguration("automa");
-			const defaultKeepBrowserOpen = !config.get<boolean>("vault.run.closeBrowserOnFinish", true);
+			const defaultKeepBrowserOpen = !config.get<boolean>(
+				"vault.run.closeBrowserOnFinish",
+				true,
+			);
 
-			htmlContent = htmlContent.replace(/\{\{WORKFLOW_NAME\}\}/g, json.name || 'Untitled Workflow');
+			htmlContent = htmlContent.replace(
+				/\{\{WORKFLOW_NAME\}\}/g,
+				json.name || "Untitled Workflow",
+			);
 			htmlContent = htmlContent.replace("{{UPDATED_AT_HTML}}", updatedAtHtml);
-			htmlContent = htmlContent.replace("{{JSON_ID}}", safeString(json.id) || 'N/A');
+			htmlContent = htmlContent.replace(
+				"{{JSON_ID}}",
+				safeString(json.id) || "N/A",
+			);
 			htmlContent = htmlContent.replace("{{JSON_NAME}}", safeString(json.name));
-			htmlContent = htmlContent.replace("{{JSON_DESCRIPTION}}", safeString(json.description));
-			htmlContent = htmlContent.replace("{{JSON_VERSION}}", safeString(json.version));
-			htmlContent = htmlContent.replace("{{JSON_EXT_VERSION}}", safeString(json.extVersion));
-			htmlContent = htmlContent.replace("{{JSON_GLOBAL_DATA}}", safeString(json.globalData));
-			htmlContent = htmlContent.replace("{{JSON_TABLE}}", jsonStringifySafe(json.table));
-			htmlContent = htmlContent.replace("{{JSON_SETTINGS}}", jsonStringifySafe(json.settings));
-			htmlContent = htmlContent.replace("{{JSON_INCLUDED_WORKFLOWS}}", jsonStringifySafe(json.includedWorkflows));
-			htmlContent = htmlContent.replace("{{JSON_ICON}}", json.icon || 'riGlobalLine');
-			htmlContent = htmlContent.replace("{{INJECT_PARAMS_DATA}}", `const tParams = ${JSON.stringify(triggerParams).replace(/</g, '\\u003c')};\nconst defaultKeepBrowserOpen = ${defaultKeepBrowserOpen};`);
+			htmlContent = htmlContent.replace(
+				"{{JSON_DESCRIPTION}}",
+				safeString(json.description),
+			);
+			htmlContent = htmlContent.replace(
+				"{{JSON_VERSION}}",
+				safeString(json.version),
+			);
+			htmlContent = htmlContent.replace(
+				"{{JSON_EXT_VERSION}}",
+				safeString(json.extVersion),
+			);
+			htmlContent = htmlContent.replace(
+				"{{JSON_GLOBAL_DATA}}",
+				safeString(json.globalData),
+			);
+			htmlContent = htmlContent.replace(
+				"{{JSON_TABLE}}",
+				jsonStringifySafe(json.table),
+			);
+			htmlContent = htmlContent.replace(
+				"{{JSON_SETTINGS}}",
+				jsonStringifySafe(json.settings),
+			);
+			htmlContent = htmlContent.replace(
+				"{{JSON_INCLUDED_WORKFLOWS}}",
+				jsonStringifySafe(json.includedWorkflows),
+			);
+			htmlContent = htmlContent.replace(
+				"{{JSON_ICON}}",
+				json.icon || "riGlobalLine",
+			);
+			htmlContent = htmlContent.replace(
+				"{{INJECT_PARAMS_DATA}}",
+				`const tParams = ${JSON.stringify(triggerParams).replace(/</g, "\\u003c")};\nconst defaultKeepBrowserOpen = ${defaultKeepBrowserOpen};`,
+			);
 
 			return htmlContent;
 		} catch (error: any) {
@@ -175,33 +295,73 @@ export class WorkflowPreviewEditorProvider extends BaseCustomEditorProvider impl
 		}
 	}
 
-	private getPackageHtml(json: any, pkgInputs: any[], pkgOutputs: any[], pkgVars: any[], triggerParams: any[], updatedAtStr: string, jsonStringifySafe: (obj: any) => string): string {
+	private getPackageHtml(
+		json: any,
+		pkgInputs: any[],
+		pkgOutputs: any[],
+		pkgVars: any[],
+		triggerParams: any[],
+		updatedAtStr: string,
+		jsonStringifySafe: (obj: any) => string,
+	): string {
 		try {
-			const htmlPath = path.join(this.context.extensionPath, "src", "webview", "package-preview.html");
+			const htmlPath = path.join(
+				this.context.extensionPath,
+				"src",
+				"webview",
+				"package-preview.html",
+			);
 			let htmlContent = fs.readFileSync(htmlPath, "utf-8");
 
-			const updatedAtHtml = updatedAtStr ? `<p class="text-xs text-vsc-muted mt-1 flex items-center gap-1">
+			const updatedAtHtml = updatedAtStr
+				? `<p class="text-xs text-vsc-muted mt-1 flex items-center gap-1">
 				<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 24 24"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20ZM13 12H17V14H11V7H13V12Z"></path></svg>
 				Updated At: ${updatedAtStr}
-			</p>` : '';
+			</p>`
+				: "";
 
-			const safeString = (str: any) => str ? String(str).replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$\{/g, '\\${').replace(/<\/script>/gi, '<\\/script>') : '';
+			const safeString = (str: any) =>
+				str
+					? String(str)
+							.replace(/\\/g, "\\\\")
+							.replace(/`/g, "\\`")
+							.replace(/\$\{/g, "\\${")
+							.replace(/<\/script>/gi, "<\\/script>")
+					: "";
 
-			htmlContent = htmlContent.replace(/\{\{WORKFLOW_NAME\}\}/g, json.name || 'Untitled Package');
+			htmlContent = htmlContent.replace(
+				/\{\{WORKFLOW_NAME\}\}/g,
+				json.name || "Untitled Package",
+			);
 			htmlContent = htmlContent.replace("{{UPDATED_AT_HTML}}", updatedAtHtml);
-			htmlContent = htmlContent.replace("{{JSON_ID}}", safeString(json.id) || 'N/A');
+			htmlContent = htmlContent.replace(
+				"{{JSON_ID}}",
+				safeString(json.id) || "N/A",
+			);
 			htmlContent = htmlContent.replace("{{JSON_NAME}}", safeString(json.name));
-			htmlContent = htmlContent.replace("{{JSON_DESCRIPTION}}", safeString(json.description));
-			htmlContent = htmlContent.replace("{{JSON_SETTINGS}}", jsonStringifySafe(json.settings));
-			htmlContent = htmlContent.replace("{{JSON_ICON}}", json.icon || 'riGlobalLine');
-			
+			htmlContent = htmlContent.replace(
+				"{{JSON_DESCRIPTION}}",
+				safeString(json.description),
+			);
+			htmlContent = htmlContent.replace(
+				"{{JSON_SETTINGS}}",
+				jsonStringifySafe(json.settings),
+			);
+			htmlContent = htmlContent.replace(
+				"{{JSON_ICON}}",
+				json.icon || "riGlobalLine",
+			);
+
 			const injectPackageData = `
 				const pInputs = ${JSON.stringify(pkgInputs)};
 				const pOutputs = ${JSON.stringify(pkgOutputs)};
 				const pVars = ${JSON.stringify(pkgVars)};
 				const tParams = ${JSON.stringify(triggerParams)};
 			`;
-			htmlContent = htmlContent.replace("{{INJECT_PACKAGE_DATA}}", injectPackageData);
+			htmlContent = htmlContent.replace(
+				"{{INJECT_PACKAGE_DATA}}",
+				injectPackageData,
+			);
 
 			return htmlContent;
 		} catch (error: any) {
@@ -209,14 +369,42 @@ export class WorkflowPreviewEditorProvider extends BaseCustomEditorProvider impl
 		}
 	}
 
-	private getHtmlContent(json: any, triggerParams: any[], updatedAt: number, isPackage: boolean = false, pkgInputs: any[] = [], pkgOutputs: any[] = [], pkgVars: any[] = []): string {
-		const jsonStringifySafe = (obj: any) => obj ? JSON.stringify(obj, null, 2).replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$\{/g, '\\${').replace(/<\/script>/gi, '<\\/script>') : '';
-		const updatedAtStr = updatedAt ? new Date(updatedAt).toLocaleString() : '';
+	private getHtmlContent(
+		json: any,
+		triggerParams: any[],
+		updatedAt: number,
+		isPackage: boolean = false,
+		pkgInputs: any[] = [],
+		pkgOutputs: any[] = [],
+		pkgVars: any[] = [],
+	): string {
+		const jsonStringifySafe = (obj: any) =>
+			obj
+				? JSON.stringify(obj, null, 2)
+						.replace(/\\/g, "\\\\")
+						.replace(/`/g, "\\`")
+						.replace(/\$\{/g, "\\${")
+						.replace(/<\/script>/gi, "<\\/script>")
+				: "";
+		const updatedAtStr = updatedAt ? new Date(updatedAt).toLocaleString() : "";
 
 		if (isPackage) {
-			return this.getPackageHtml(json, pkgInputs, pkgOutputs, pkgVars, triggerParams, updatedAtStr, jsonStringifySafe);
+			return this.getPackageHtml(
+				json,
+				pkgInputs,
+				pkgOutputs,
+				pkgVars,
+				triggerParams,
+				updatedAtStr,
+				jsonStringifySafe,
+			);
 		} else {
-			return this.getWorkflowHtml(json, triggerParams, updatedAtStr, jsonStringifySafe);
+			return this.getWorkflowHtml(
+				json,
+				triggerParams,
+				updatedAtStr,
+				jsonStringifySafe,
+			);
 		}
 	}
 }

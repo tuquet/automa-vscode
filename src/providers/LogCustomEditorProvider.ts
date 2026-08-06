@@ -1,10 +1,13 @@
-import * as vscode from "vscode";
-import * as fs from "node:fs/promises";
 import * as fsSync from "node:fs";
+import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import * as vscode from "vscode";
 import { BaseCustomEditorProvider } from "./BaseCustomEditorProvider";
 
-export class LogCustomEditorProvider extends BaseCustomEditorProvider implements vscode.CustomReadonlyEditorProvider {
+export class LogCustomEditorProvider
+	extends BaseCustomEditorProvider
+	implements vscode.CustomReadonlyEditorProvider
+{
 	public static readonly viewType = "automa.logEditor";
 
 	constructor(context: vscode.ExtensionContext) {
@@ -14,17 +17,20 @@ export class LogCustomEditorProvider extends BaseCustomEditorProvider implements
 	public async openCustomDocument(
 		uri: vscode.Uri,
 		openContext: vscode.CustomDocumentOpenContext,
-		token: vscode.CancellationToken
+		token: vscode.CancellationToken,
 	): Promise<vscode.CustomDocument> {
 		return { uri, dispose: () => {} };
 	}
 
-	public static async showLogForJobId(context: vscode.ExtensionContext, jobId: string) {
+	public static async showLogForJobId(
+		context: vscode.ExtensionContext,
+		jobId: string,
+	) {
 		const panel = vscode.window.createWebviewPanel(
 			LogCustomEditorProvider.viewType,
 			`Log: ${jobId}`,
 			vscode.ViewColumn.Active,
-			{ enableScripts: true }
+			{ enableScripts: true },
 		);
 
 		panel.webview.html = `
@@ -37,15 +43,24 @@ export class LogCustomEditorProvider extends BaseCustomEditorProvider implements
 
 		try {
 			const { DaemonManager } = require("../core/DaemonManager");
-			const { stdout, stderr } = await DaemonManager.getInstance().executeRawCliCommand(['log', jobId, '--json']);
+			const { stdout, stderr } =
+				await DaemonManager.getInstance().executeRawCliCommand([
+					"log",
+					jobId,
+					"--json",
+				]);
 			const parsed = JSON.parse(stdout);
-			
+
 			if (parsed.error) {
 				panel.webview.html = `<body><h2>Error</h2><pre>${parsed.error}</pre></body>`;
 				return;
 			}
-			
-			const job = parsed.job || { name: "Unknown", id: jobId, status: "unknown" };
+
+			const job = parsed.job || {
+				name: "Unknown",
+				id: jobId,
+				status: "unknown",
+			};
 			const logs = parsed.logs || [];
 			const results = parsed.results || { table: [], variables: {} };
 			job.results = results;
@@ -60,9 +75,8 @@ export class LogCustomEditorProvider extends BaseCustomEditorProvider implements
 	public async resolveCustomEditor(
 		document: vscode.CustomDocument,
 		webviewPanel: vscode.WebviewPanel,
-		token: vscode.CancellationToken
+		token: vscode.CancellationToken,
 	): Promise<void> {
-		
 		let isFirstLoad = true;
 		const updateWebview = async () => {
 			const isInitial = isFirstLoad;
@@ -70,7 +84,11 @@ export class LogCustomEditorProvider extends BaseCustomEditorProvider implements
 			try {
 				const content = await fs.readFile(document.uri.fsPath, "utf-8");
 				const parsed = JSON.parse(content);
-				const job = parsed.job || { name: "Unknown Workflow", id: "N/A", status: "unknown" };
+				const job = parsed.job || {
+					name: "Unknown Workflow",
+					id: "N/A",
+					status: "unknown",
+				};
 				const logs = parsed.logs || [];
 				const results = parsed.results || { table: [], variables: {} };
 
@@ -97,45 +115,70 @@ export class LogCustomEditorProvider extends BaseCustomEditorProvider implements
 	}
 	private getWebviewContent(job: any, logs: any[]): string {
 		// Prepare data to send to webview
-		const logsJson = JSON.stringify(logs).replace(/</g, '\\u003c');
-		const jobJson = JSON.stringify(job).replace(/</g, '\\u003c');
+		const logsJson = JSON.stringify(logs).replace(/</g, "\\u003c");
+		const jobJson = JSON.stringify(job).replace(/</g, "\\u003c");
 
 		// Format created_at nicely
 		let formattedCreated = job.created_at;
 		if (job.created_at) {
 			try {
 				const date = new Date(job.created_at);
-				formattedCreated = date.toLocaleString('vi-VN', {
-					year: 'numeric',
-					month: '2-digit',
-					day: '2-digit',
-					hour: '2-digit',
-					minute: '2-digit',
-					second: '2-digit'
+				formattedCreated = date.toLocaleString("vi-VN", {
+					year: "numeric",
+					month: "2-digit",
+					day: "2-digit",
+					hour: "2-digit",
+					minute: "2-digit",
+					second: "2-digit",
 				});
 			} catch (e) {}
 		}
 
-		let jobStatusColor = 'text-vsc-fg';
-		if (job.status === 'error' || job.status === 'failed') jobStatusColor = 'text-vsc-error';
-		else if (job.status === 'success') jobStatusColor = 'text-vsc-success';
-		else if (job.status === 'stopped' || job.status === 'stop') jobStatusColor = 'text-vsc-warning';
+		let jobStatusColor = "text-vsc-fg";
+		if (job.status === "error" || job.status === "failed")
+			jobStatusColor = "text-vsc-error";
+		else if (job.status === "success") jobStatusColor = "text-vsc-success";
+		else if (job.status === "stopped" || job.status === "stop")
+			jobStatusColor = "text-vsc-warning";
 
 		try {
-			const htmlPath = path.join(this.context.extensionPath, "src", "webview", "log-editor.html");
+			const htmlPath = path.join(
+				this.context.extensionPath,
+				"src",
+				"webview",
+				"log-editor.html",
+			);
 			let htmlContent = fsSync.readFileSync(htmlPath, "utf-8");
 
-			htmlContent = htmlContent.replace("{{JOB_NAME}}", job.name || "Unknown Job");
-			htmlContent = htmlContent.replace("{{JOB_NAME}}", job.name || "Unknown Job"); // for title
+			htmlContent = htmlContent.replace(
+				"{{JOB_NAME}}",
+				job.name || "Unknown Job",
+			);
+			htmlContent = htmlContent.replace(
+				"{{JOB_NAME}}",
+				job.name || "Unknown Job",
+			); // for title
 			htmlContent = htmlContent.replace("{{JOB_STATUS_COLOR}}", jobStatusColor);
-			htmlContent = htmlContent.replace("{{JOB_STATUS}}", job.status || "Unknown");
-			htmlContent = htmlContent.replace("{{JOB_CREATED_AT}}", formattedCreated || "Unknown");
+			htmlContent = htmlContent.replace(
+				"{{JOB_STATUS}}",
+				job.status || "Unknown",
+			);
+			htmlContent = htmlContent.replace(
+				"{{JOB_CREATED_AT}}",
+				formattedCreated || "Unknown",
+			);
 			htmlContent = htmlContent.replace("{{JOB_ID}}", job.id || "N/A");
-			htmlContent = htmlContent.replace("{{WORKFLOW_ID}}", job.workflow_id || job.id || "N/A");
-			
+			htmlContent = htmlContent.replace(
+				"{{WORKFLOW_ID}}",
+				job.workflow_id || job.id || "N/A",
+			);
+
 			let durationText = "N/A";
 			if (job.duration) {
-			    durationText = job.duration < 1000 ? `${job.duration}ms` : `${(job.duration / 1000).toFixed(2)}s`;
+				durationText =
+					job.duration < 1000
+						? `${job.duration}ms`
+						: `${(job.duration / 1000).toFixed(2)}s`;
 			}
 			htmlContent = htmlContent.replace("{{JOB_DURATION}}", durationText);
 

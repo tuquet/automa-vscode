@@ -1,10 +1,13 @@
-import * as vscode from "vscode";
-import * as path from "node:path";
 import * as fs from "node:fs";
+import * as path from "node:path";
+import * as vscode from "vscode";
 import { TaskRunner } from "../core/TaskRunner";
 import { BaseCustomEditorProvider } from "./BaseCustomEditorProvider";
 
-export class FleetPreviewEditorProvider extends BaseCustomEditorProvider implements vscode.CustomTextEditorProvider {
+export class FleetPreviewEditorProvider
+	extends BaseCustomEditorProvider
+	implements vscode.CustomTextEditorProvider
+{
 	public static readonly viewType = "automa.fleetPreview";
 
 	constructor(context: vscode.ExtensionContext) {
@@ -14,11 +17,15 @@ export class FleetPreviewEditorProvider extends BaseCustomEditorProvider impleme
 	public async resolveCustomTextEditor(
 		document: vscode.TextDocument,
 		webviewPanel: vscode.WebviewPanel,
-		_token: vscode.CancellationToken
+		_token: vscode.CancellationToken,
 	): Promise<void> {
 		webviewPanel.webview.options = {
 			enableScripts: true,
-			localResourceRoots: [vscode.Uri.file(path.join(this.context.extensionPath, "src", "webview"))],
+			localResourceRoots: [
+				vscode.Uri.file(
+					path.join(this.context.extensionPath, "src", "webview"),
+				),
+			],
 		};
 
 		webviewPanel.webview.html = this.getHtmlForWebview(webviewPanel.webview);
@@ -30,7 +37,7 @@ export class FleetPreviewEditorProvider extends BaseCustomEditorProvider impleme
 				type: "update",
 				text: document.getText(),
 				workflows: workflows,
-				profiles: profiles
+				profiles: profiles,
 			});
 		};
 
@@ -38,10 +45,9 @@ export class FleetPreviewEditorProvider extends BaseCustomEditorProvider impleme
 		const telemetryListener = (telemetry: any) => {
 			webviewPanel.webview.postMessage({
 				type: "telemetry",
-				data: telemetry
+				data: telemetry,
 			});
 		};
-
 
 		TaskRunner.telemetryEmitter.on("telemetry", telemetryListener);
 
@@ -63,16 +69,21 @@ export class FleetPreviewEditorProvider extends BaseCustomEditorProvider impleme
 			}
 		});
 
-		this.setupWebviewPanel(document, webviewPanel, updateWebview, [{
-			dispose: () => TaskRunner.telemetryEmitter.off("telemetry", telemetryListener)
-		}]);
+		this.setupWebviewPanel(document, webviewPanel, updateWebview, [
+			{
+				dispose: () =>
+					TaskRunner.telemetryEmitter.off("telemetry", telemetryListener),
+			},
+		]);
 	}
-
 
 	private async getWorkflowDictionary(): Promise<Record<string, string>> {
 		const dict: Record<string, string> = {};
 		try {
-			const files = await vscode.workspace.findFiles("**/*.workflow.json", "**/node_modules/**");
+			const files = await vscode.workspace.findFiles(
+				"**/*.workflow.json",
+				"**/node_modules/**",
+			);
 			for (const file of files) {
 				try {
 					const content = await vscode.workspace.fs.readFile(file);
@@ -93,12 +104,16 @@ export class FleetPreviewEditorProvider extends BaseCustomEditorProvider impleme
 	private async getProfileDictionary(): Promise<Record<string, string>> {
 		const dict: Record<string, string> = {};
 		try {
-			const files = await vscode.workspace.findFiles("**/*.profile.json", "**/node_modules/**");
+			const files = await vscode.workspace.findFiles(
+				"**/*.profile.json",
+				"**/node_modules/**",
+			);
 			for (const file of files) {
 				try {
 					const content = await vscode.workspace.fs.readFile(file);
 					const json = JSON.parse(Buffer.from(content).toString("utf8"));
-					const id = json.id || path.basename(file.fsPath, path.extname(file.fsPath));
+					const id =
+						json.id || path.basename(file.fsPath, path.extname(file.fsPath));
 					const name = json.name || id;
 					dict[id] = name;
 				} catch (e) {
@@ -112,9 +127,14 @@ export class FleetPreviewEditorProvider extends BaseCustomEditorProvider impleme
 	}
 
 	private getHtmlForWebview(webview: vscode.Webview): string {
-		const htmlPath = path.join(this.context.extensionPath, "src", "webview", "fleet-preview.html");
+		const htmlPath = path.join(
+			this.context.extensionPath,
+			"src",
+			"webview",
+			"fleet-preview.html",
+		);
 		if (fs.existsSync(htmlPath)) {
-			let html = fs.readFileSync(htmlPath, "utf-8");
+			const html = fs.readFileSync(htmlPath, "utf-8");
 			// Replace any standard vs-code assets if needed
 			return html;
 		}

@@ -10,7 +10,8 @@ export class WorkflowParser {
 		}
 
 		// 2. Scan for automaRefData('variables', 'xyz')
-		const varRegex2 = /automaRefData\(\s*['"]variables['"]\s*,\s*['"]([a-zA-Z0-9_$]+)['"]\s*\)/g;
+		const varRegex2 =
+			/automaRefData\(\s*['"]variables['"]\s*,\s*['"]([a-zA-Z0-9_$]+)['"]\s*\)/g;
 		while ((match = varRegex2.exec(content)) !== null) {
 			implicitVars.add(match[1]);
 		}
@@ -18,17 +19,28 @@ export class WorkflowParser {
 		return implicitVars;
 	}
 
-	public static extractTriggerParameters(json: any, implicitVars: Set<string>): any[] {
+	public static extractTriggerParameters(
+		json: any,
+		implicitVars: Set<string>,
+	): any[] {
 		const triggerParams: any[] = [];
 		if (json.drawflow && json.drawflow.nodes && json.drawflow.edges) {
 			const nodesList = json.drawflow.nodes;
 			for (const node of nodesList) {
-				if ((node.label === "trigger" || node.name === "trigger" || node.type === "BlockTrigger") && Array.isArray(node.data?.parameters)) {
+				if (
+					(node.label === "trigger" ||
+						node.name === "trigger" ||
+						node.type === "BlockTrigger") &&
+					Array.isArray(node.data?.parameters)
+				) {
 					for (const param of node.data.parameters) {
-						if (param.name && !triggerParams.some((p) => p.name === param.name)) {
+						if (
+							param.name &&
+							!triggerParams.some((p) => p.name === param.name)
+						) {
 							triggerParams.push({
 								...param,
-								isImplicit: false
+								isImplicit: false,
 							});
 							implicitVars.delete(param.name);
 						}

@@ -8,7 +8,9 @@ export async function killRunner(execution: vscode.TaskExecution) {
 
 	try {
 		execution.terminate();
-		vscode.window.showInformationMessage(`Stopped runner: ${execution.task.name}`);
+		vscode.window.showInformationMessage(
+			`Stopped runner: ${execution.task.name}`,
+		);
 	} catch (error: any) {
 		vscode.window.showErrorMessage(`Failed to stop runner: ${error.message}`);
 	}

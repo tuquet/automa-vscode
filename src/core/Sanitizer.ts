@@ -1,7 +1,8 @@
 import * as crypto from "node:crypto";
 
 function generateShortId(): string {
-	const chars = "useandom-26T198340PX75pxJACKVERYMINDBUSHWOLF_GQZbfghjklqvwyzrict";
+	const chars =
+		"useandom-26T198340PX75pxJACKVERYMINDBUSHWOLF_GQZbfghjklqvwyzrict";
 	let id = "";
 	const bytes = crypto.randomBytes(21);
 	for (let i = 0; i < 21; i++) {
@@ -37,30 +38,49 @@ export class WorkflowSanitizer {
 			if (Array.isArray(json.drawflow.nodes)) nodes = json.drawflow.nodes;
 			if (Array.isArray(json.drawflow.edges)) edges = json.drawflow.edges;
 			// Fallback for object-based nodes
-			if (!Array.isArray(json.drawflow.nodes) && json.drawflow.Home && json.drawflow.Home.data) {
-				Object.entries(json.drawflow.Home.data).forEach(([key, node]: [string, any]) => {
-					if (!node.id) node.id = key;
-					nodes.push(node);
-				});
+			if (
+				!Array.isArray(json.drawflow.nodes) &&
+				json.drawflow.Home &&
+				json.drawflow.Home.data
+			) {
+				Object.entries(json.drawflow.Home.data).forEach(
+					([key, node]: [string, any]) => {
+						if (!node.id) node.id = key;
+						nodes.push(node);
+					},
+				);
 				json.drawflow.nodes = nodes; // normalize to array
 				isModified = true;
 			}
 		}
 
 		const idRegex = /^[A-Za-z0-9_-]{4,21}$/;
-		const validTypes = ["BlockBasic", "BlockDelay", "BlockRepeatTask", "BlockConditions", "BlockElementExists", "BlockBasicWithFallback", "BlockLoopBreakpoint", "BlockGroup", "BlockGroup2", "BlockPackage", "BlockNote", "BlockWebhook"];
+		const validTypes = [
+			"BlockBasic",
+			"BlockDelay",
+			"BlockRepeatTask",
+			"BlockConditions",
+			"BlockElementExists",
+			"BlockBasicWithFallback",
+			"BlockLoopBreakpoint",
+			"BlockGroup",
+			"BlockGroup2",
+			"BlockPackage",
+			"BlockNote",
+			"BlockWebhook",
+		];
 
 		const sanitizeNodesAndEdges = (nList: any[], eList: any[]) => {
 			// Sanitize Nodes
 			nList.forEach((node: any) => {
-				let originalId = node.id;
+				const originalId = node.id;
 				if (!node.id || !idRegex.test(node.id)) {
 					const newId = generateShortId();
 					node.id = newId;
 					if (originalId) idMap.set(originalId, newId);
 					isModified = true;
 				}
-				
+
 				if (!node.type || !validTypes.includes(node.type)) {
 					node.type = "BlockBasic";
 					isModified = true;
@@ -71,10 +91,14 @@ export class WorkflowSanitizer {
 						node.data.disableBlock = false;
 						isModified = true;
 					}
-					
+
 					// Recursively sanitize nested nodes/edges (e.g. in BlockPackage/BlockGroup)
 					const nestedData = node.data.data ? node.data.data : node.data;
-					if (nestedData && Array.isArray(nestedData.nodes) && Array.isArray(nestedData.edges)) {
+					if (
+						nestedData &&
+						Array.isArray(nestedData.nodes) &&
+						Array.isArray(nestedData.edges)
+					) {
 						sanitizeNodesAndEdges(nestedData.nodes, nestedData.edges);
 					}
 				}
@@ -90,7 +114,10 @@ export class WorkflowSanitizer {
 				if (edge.source && idMap.has(edge.source)) {
 					const newSource = idMap.get(edge.source)!;
 					if (edge.sourceHandle) {
-						edge.sourceHandle = edge.sourceHandle.replace(edge.source, newSource);
+						edge.sourceHandle = edge.sourceHandle.replace(
+							edge.source,
+							newSource,
+						);
 					}
 					edge.source = newSource;
 					isModified = true;
@@ -99,7 +126,10 @@ export class WorkflowSanitizer {
 				if (edge.target && idMap.has(edge.target)) {
 					const newTarget = idMap.get(edge.target)!;
 					if (edge.targetHandle) {
-						edge.targetHandle = edge.targetHandle.replace(edge.target, newTarget);
+						edge.targetHandle = edge.targetHandle.replace(
+							edge.target,
+							newTarget,
+						);
 					}
 					edge.target = newTarget;
 					isModified = true;

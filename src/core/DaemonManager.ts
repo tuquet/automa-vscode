@@ -1,10 +1,10 @@
-import * as vscode from "vscode";
-import { spawn, ChildProcess, exec } from "node:child_process";
-import { Logger } from "./Logger";
-import * as path from "node:path";
+import { type ChildProcess, exec, spawn } from "node:child_process";
 import * as fs from "node:fs";
 import * as net from "node:net";
+import * as path from "node:path";
 import { promisify } from "node:util";
+import * as vscode from "vscode";
+import { Logger } from "./Logger";
 
 const execAsync = promisify(exec);
 
@@ -16,7 +16,10 @@ export class DaemonManager {
 	private statusBarItem: vscode.StatusBarItem;
 
 	private constructor() {
-		this.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
+		this.statusBarItem = vscode.window.createStatusBarItem(
+			vscode.StatusBarAlignment.Right,
+			100,
+		);
 		this.statusBarItem.text = "$(circle-slash) Automa: Idle";
 		this.statusBarItem.tooltip = "Automa CLI Daemon is not running";
 		this.statusBarItem.command = "automa.toggleDaemon";
@@ -36,10 +39,24 @@ export class DaemonManager {
 		if (userCliPath && fs.existsSync(userCliPath)) {
 			return userCliPath;
 		}
-		if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
+		if (
+			vscode.workspace.workspaceFolders &&
+			vscode.workspace.workspaceFolders.length > 0
+		) {
 			const workspaceRoot = vscode.workspace.workspaceFolders[0].uri.fsPath;
-			const localCliPathSibling = path.join(workspaceRoot, "..", "automa-cli", "dist", "cli.js");
-			const localCliPathChild = path.join(workspaceRoot, "automa-cli", "dist", "cli.js");
+			const localCliPathSibling = path.join(
+				workspaceRoot,
+				"..",
+				"automa-cli",
+				"dist",
+				"cli.js",
+			);
+			const localCliPathChild = path.join(
+				workspaceRoot,
+				"automa-cli",
+				"dist",
+				"cli.js",
+			);
 			if (fs.existsSync(localCliPathSibling)) {
 				return localCliPathSibling;
 			} else if (fs.existsSync(localCliPathChild)) {
@@ -49,7 +66,10 @@ export class DaemonManager {
 		return "npx tuquet-automa-cli";
 	}
 
-	public resolveCommandAndArgs(baseArgs: string[]): { cmd: string, args: string[] } {
+	public resolveCommandAndArgs(baseArgs: string[]): {
+		cmd: string;
+		args: string[];
+	} {
 		const config = vscode.workspace.getConfiguration("automa");
 		const userCliPath = config.get<string>("cliPath");
 		const isWin = process.platform === "win32";
@@ -57,11 +77,25 @@ export class DaemonManager {
 		if (userCliPath && fs.existsSync(userCliPath)) {
 			return { cmd: "node", args: [userCliPath, ...baseArgs] };
 		}
-		
-		if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
+
+		if (
+			vscode.workspace.workspaceFolders &&
+			vscode.workspace.workspaceFolders.length > 0
+		) {
 			const workspaceRoot = vscode.workspace.workspaceFolders[0].uri.fsPath;
-			const localCliPathSibling = path.join(workspaceRoot, "..", "automa-cli", "dist", "cli.js");
-			const localCliPathChild = path.join(workspaceRoot, "automa-cli", "dist", "cli.js");
+			const localCliPathSibling = path.join(
+				workspaceRoot,
+				"..",
+				"automa-cli",
+				"dist",
+				"cli.js",
+			);
+			const localCliPathChild = path.join(
+				workspaceRoot,
+				"automa-cli",
+				"dist",
+				"cli.js",
+			);
 			if (fs.existsSync(localCliPathSibling)) {
 				return { cmd: "node", args: [localCliPathSibling, ...baseArgs] };
 			} else if (fs.existsSync(localCliPathChild)) {
@@ -71,30 +105,34 @@ export class DaemonManager {
 
 		return {
 			cmd: isWin ? "npx.cmd" : "npx",
-			args: ["-y", "tuquet-automa-cli@latest", ...baseArgs]
+			args: ["-y", "tuquet-automa-cli@latest", ...baseArgs],
 		};
 	}
 
 	public async executeCliCommand(args: string[]): Promise<any> {
 		const cliPath = this.resolveCliPath();
-		
-		const argsStr = args.includes('--json') ? args.join(' ') : [...args, '--json'].join(' ');
-		
-		let execCmd = '';
-		if (cliPath.startsWith('npx ')) {
+
+		const argsStr = args.includes("--json")
+			? args.join(" ")
+			: [...args, "--json"].join(" ");
+
+		let execCmd = "";
+		if (cliPath.startsWith("npx ")) {
 			execCmd = `${cliPath} ${argsStr}`;
 		} else {
-			const cmd = cliPath.endsWith('.ts') ? 'npx tsx' : 'node';
+			const cmd = cliPath.endsWith(".ts") ? "npx tsx" : "node";
 			execCmd = `${cmd} "${cliPath}" ${argsStr}`;
 		}
-		
+
 		const { stdout } = await execAsync(execCmd);
 		return JSON.parse(stdout);
 	}
 
-	public async executeRawCliCommand(args: string[]): Promise<{stdout: string, stderr: string}> {
+	public async executeRawCliCommand(
+		args: string[],
+	): Promise<{ stdout: string; stderr: string }> {
 		const { cmd, args: finalArgs } = this.resolveCommandAndArgs(args);
-		const commandStr = `${cmd} ${finalArgs.map(a => '"' + a.replace(/"/g, '\\"') + '"').join(' ')}`;
+		const commandStr = `${cmd} ${finalArgs.map((a) => '"' + a.replace(/"/g, '\\"') + '"').join(" ")}`;
 		const { stdout, stderr } = await execAsync(commandStr);
 		return { stdout, stderr };
 	}
@@ -105,9 +143,11 @@ export class DaemonManager {
 
 	private async checkAutomaHealth(port: number): Promise<boolean> {
 		try {
-			const res = await fetch(`http://localhost:${port}/api/health`, { method: "GET" });
+			const res = await fetch(`http://localhost:${port}/api/health`, {
+				method: "GET",
+			});
 			if (res.ok) {
-				const data = await res.json() as any;
+				const data = (await res.json()) as any;
 				return data.status === "ok";
 			}
 		} catch (e) {
@@ -119,10 +159,11 @@ export class DaemonManager {
 	private async findAvailablePort(startPort: number): Promise<number> {
 		const isPortAvailable = (port: number): Promise<boolean> => {
 			return new Promise((resolve) => {
-				const tester = net.createServer()
-					.once('error', () => resolve(false))
-					.once('listening', () => {
-						tester.once('close', () => resolve(true)).close();
+				const tester = net
+					.createServer()
+					.once("error", () => resolve(false))
+					.once("listening", () => {
+						tester.once("close", () => resolve(true)).close();
 					})
 					.listen(port);
 			});
@@ -143,26 +184,29 @@ export class DaemonManager {
 			Logger.info("Automa daemon is already running.");
 			return;
 		}
-		
+
 		this.statusBarItem.text = "$(sync~spin) Automa: Starting";
 		this.statusBarItem.tooltip = "Starting Automa CLI Daemon...";
 
 		try {
 			const config = vscode.workspace.getConfiguration("automa");
-			
+
 			const basePort = config.get<number>("daemon.port", 8765);
 
 			// 0. Check if Automa is already running on the base port (e.g. from another VS Code instance)
 			if (await this.checkAutomaHealth(basePort)) {
 				if (!this.hasLoggedReuse) {
-					Logger.info(`[Daemon] Automa Server is already running on port ${basePort}. Reusing existing process.`);
+					Logger.info(
+						`[Daemon] Automa Server is already running on port ${basePort}. Reusing existing process.`,
+					);
 					this.hasLoggedReuse = true;
 				}
 				this.port = basePort;
-				
+
 				this.statusBarItem.text = `$(check) Automa: :${this.port}`;
-				this.statusBarItem.tooltip = "Automa CLI Daemon is running externally (Click to ignore)";
-				
+				this.statusBarItem.tooltip =
+					"Automa CLI Daemon is running externally (Click to ignore)";
+
 				return;
 			}
 
@@ -172,17 +216,26 @@ export class DaemonManager {
 			// 2. Smart CLI Resolve
 			const cliPath = this.resolveCliPath();
 			let cmd = "npx";
-			let args = ["-y", "tuquet-automa-cli@latest", "serve", "--port", this.port.toString()];
-			
+			let args = [
+				"-y",
+				"tuquet-automa-cli@latest",
+				"serve",
+				"--port",
+				this.port.toString(),
+			];
+
 			if (cliPath !== "npx tuquet-automa-cli") {
 				cmd = "node";
 				args = [cliPath, "serve", "--port", this.port.toString()];
 				Logger.info(`[Smart Resolve] Found CLI at ${cliPath}`);
 			}
 
-			Logger.info(`Starting Automa background daemon on port ${this.port} via ${cmd} ${args.join(" ")}...`);
-			
-			const browserPathOverride = config.get<string>("browserPathOverride") || "";
+			Logger.info(
+				`Starting Automa background daemon on port ${this.port} via ${cmd} ${args.join(" ")}...`,
+			);
+
+			const browserPathOverride =
+				config.get<string>("browserPathOverride") || "";
 			const env = { ...process.env };
 			if (browserPathOverride) {
 				env["AUTOMA_BROWSER_PATH"] = browserPathOverride;
@@ -190,9 +243,9 @@ export class DaemonManager {
 
 			this.daemonProcess = spawn(cmd, args, {
 				shell: true,
-				detached: false, 
+				detached: false,
 				stdio: "pipe",
-				env
+				env,
 			});
 
 			if (this.daemonProcess.stdout) {
@@ -227,13 +280,14 @@ export class DaemonManager {
 				this.hasLoggedReuse = false;
 				this.updateStatusStopped();
 			});
-			
+
 			// Wait a bit for server to start
-			await new Promise(resolve => setTimeout(resolve, 2000));
+			await new Promise((resolve) => setTimeout(resolve, 2000));
 			Logger.info("Automa background daemon started.");
 			this.hasLoggedReuse = false;
 			this.statusBarItem.text = `$(radio-tower) Automa: :${this.port}`;
-			this.statusBarItem.tooltip = "Automa CLI Daemon is running (Click to stop)";
+			this.statusBarItem.tooltip =
+				"Automa CLI Daemon is running (Click to stop)";
 		} catch (e: any) {
 			Logger.error(`Failed to launch daemon: ${e.message}`);
 			this.updateStatusStopped();

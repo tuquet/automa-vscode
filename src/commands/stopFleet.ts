@@ -10,7 +10,7 @@ export const stopFleetCommand = async (uri: vscode.Uri) => {
 			stopped++;
 		}
 	}
-	
+
 	if (stopped > 0) {
 		Logger.info(`Stopped ${stopped} Fleet task(s).`);
 		vscode.window.showInformationMessage(`Stopped ${stopped} active Fleet(s).`);

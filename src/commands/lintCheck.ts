@@ -3,7 +3,8 @@ import * as vscode from "vscode";
 let diagnosticCollection: vscode.DiagnosticCollection;
 
 export function activateLintDiagnostics(context: vscode.ExtensionContext) {
-	diagnosticCollection = vscode.languages.createDiagnosticCollection("automa-lint");
+	diagnosticCollection =
+		vscode.languages.createDiagnosticCollection("automa-lint");
 	context.subscriptions.push(diagnosticCollection);
 }
 
@@ -22,7 +23,9 @@ export async function lintCheckCommand(nodeOrUri?: any, nodesOrUris?: any[]) {
 	}
 
 	if (urisToProcess.length === 0) {
-		vscode.window.showInformationMessage("No workflow files selected for linting.");
+		vscode.window.showInformationMessage(
+			"No workflow files selected for linting.",
+		);
 		return;
 	}
 
@@ -30,35 +33,41 @@ export async function lintCheckCommand(nodeOrUri?: any, nodesOrUris?: any[]) {
 		{
 			location: vscode.ProgressLocation.Window,
 			title: "Linting Automa Workflow(s)...",
-			cancellable: false
+			cancellable: false,
 		},
 		async () => {
 			for (const uri of urisToProcess) {
 				const filePath = uri.fsPath;
-				
+
 				// Read file to find lines for diagnostics
 				const document = await vscode.workspace.openTextDocument(uri);
 				const content = document.getText();
-				const lines = content.split('\n');
+				const lines = content.split("\n");
 
 				// Execute automa lint
 				try {
 					const { DaemonManager } = require("../core/DaemonManager");
-					const { stdout, stderr } = await DaemonManager.getInstance().executeRawCliCommand(["lint", filePath]);
+					const { stdout, stderr } =
+						await DaemonManager.getInstance().executeRawCliCommand([
+							"lint",
+							filePath,
+						]);
 					const output = stdout + "\n" + stderr;
-					
+
 					const diagnostics: vscode.Diagnostic[] = [];
-					
+
 					// Parse output for errors
-					const linesOut = output.split('\n');
+					const linesOut = output.split("\n");
 					for (const line of linesOut) {
 						const trimmed = line.trim();
-						if (trimmed.startsWith('- [')) {
-							const isError = !trimmed.includes('[Variable Warning]');
-							const severity = isError ? vscode.DiagnosticSeverity.Error : vscode.DiagnosticSeverity.Warning;
-							
+						if (trimmed.startsWith("- [")) {
+							const isError = !trimmed.includes("[Variable Warning]");
+							const severity = isError
+								? vscode.DiagnosticSeverity.Error
+								: vscode.DiagnosticSeverity.Warning;
+
 							let range = new vscode.Range(0, 0, 0, 0);
-							
+
 							// Try to find exact line
 							let searchString = "";
 							if (trimmed.includes("Node ID '")) {
@@ -73,13 +82,18 @@ export async function lintCheckCommand(nodeOrUri?: any, nodesOrUris?: any[]) {
 								for (let i = 0; i < lines.length; i++) {
 									const col = lines[i].indexOf(searchString);
 									if (col !== -1) {
-										range = new vscode.Range(i, col, i, col + searchString.length);
+										range = new vscode.Range(
+											i,
+											col,
+											i,
+											col + searchString.length,
+										);
 										break;
 									}
 								}
 							}
 
-							const msg = trimmed.replace(/^- \[.*?\] /, '');
+							const msg = trimmed.replace(/^- \[.*?\] /, "");
 							const diagnostic = new vscode.Diagnostic(range, msg, severity);
 							diagnostics.push(diagnostic);
 						}
@@ -88,16 +102,24 @@ export async function lintCheckCommand(nodeOrUri?: any, nodesOrUris?: any[]) {
 					diagnosticCollection.set(uri, diagnostics);
 
 					if (diagnostics.length === 0) {
-						vscode.window.showInformationMessage(`Lint passed for ${filePath.split(/\\|\//).pop()}`);
+						vscode.window.showInformationMessage(
+							`Lint passed for ${filePath.split(/\\|\//).pop()}`,
+						);
 					} else {
-						const errorCount = diagnostics.filter(d => d.severity === vscode.DiagnosticSeverity.Error).length;
+						const errorCount = diagnostics.filter(
+							(d) => d.severity === vscode.DiagnosticSeverity.Error,
+						).length;
 						const warnCount = diagnostics.length - errorCount;
-						vscode.window.showErrorMessage(`Lint failed: ${errorCount} error(s), ${warnCount} warning(s) in ${filePath.split(/\\|\//).pop()}`);
+						vscode.window.showErrorMessage(
+							`Lint failed: ${errorCount} error(s), ${warnCount} warning(s) in ${filePath.split(/\\|\//).pop()}`,
+						);
 					}
 				} catch (error: any) {
-					vscode.window.showErrorMessage(`Failed to run linter: ${error.message}`);
+					vscode.window.showErrorMessage(
+						`Failed to run linter: ${error.message}`,
+					);
 				}
 			}
-		}
+		},
 	);
 }
