@@ -526,6 +526,8 @@
   },
   "scripts": {
     "vscode:prepublish": "pnpm run package",
+    "build": "pnpm run compile",
+    "dev": "pnpm run watch",
     "compile": "tsup src/extension.ts --format cjs --external vscode --sourcemap",
     "watch": "tsup src/extension.ts --format cjs --external vscode --watch --sourcemap",
     "package": "tsup src/extension.ts --format cjs --external vscode --minify --sourcemap",
