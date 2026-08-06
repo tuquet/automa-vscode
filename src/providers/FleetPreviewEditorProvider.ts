@@ -2,11 +2,14 @@ import * as vscode from "vscode";
 import * as path from "node:path";
 import * as fs from "node:fs";
 import { TaskRunner } from "../core/TaskRunner";
+import { BaseCustomEditorProvider } from "./BaseCustomEditorProvider";
 
-export class FleetPreviewEditorProvider implements vscode.CustomTextEditorProvider {
+export class FleetPreviewEditorProvider extends BaseCustomEditorProvider implements vscode.CustomTextEditorProvider {
 	public static readonly viewType = "automa.fleetPreview";
 
-	constructor(private readonly context: vscode.ExtensionContext) {}
+	constructor(context: vscode.ExtensionContext) {
+		super(context);
+	}
 
 	public async resolveCustomTextEditor(
 		document: vscode.TextDocument,
@@ -31,18 +34,6 @@ export class FleetPreviewEditorProvider implements vscode.CustomTextEditorProvid
 			});
 		};
 
-		// Watch for changes in the document
-		const changeDocumentSubscription = vscode.workspace.onDidChangeTextDocument((e) => {
-			if (e.document.uri.toString() === document.uri.toString()) {
-				updateWebview();
-			}
-		});
-
-		webviewPanel.onDidDispose(() => {
-			changeDocumentSubscription.dispose();
-			TaskRunner.telemetryEmitter.off("telemetry", telemetryListener);
-		});
-
 		// Listen to telemetry
 		const telemetryListener = (telemetry: any) => {
 			webviewPanel.webview.postMessage({
@@ -50,6 +41,8 @@ export class FleetPreviewEditorProvider implements vscode.CustomTextEditorProvid
 				data: telemetry
 			});
 		};
+
+
 		TaskRunner.telemetryEmitter.on("telemetry", telemetryListener);
 
 		// Listen to messages from webview
@@ -70,19 +63,13 @@ export class FleetPreviewEditorProvider implements vscode.CustomTextEditorProvid
 			}
 		});
 
-		updateWebview();
+		});
+
+		this.setupWebviewPanel(document, webviewPanel, updateWebview, [{
+			dispose: () => TaskRunner.telemetryEmitter.off("telemetry", telemetryListener)
+		}]);
 	}
 
-	private async saveDocument(document: vscode.TextDocument, content: string) {
-		const edit = new vscode.WorkspaceEdit();
-		edit.replace(
-			document.uri,
-			new vscode.Range(0, 0, document.lineCount, 0),
-			content
-		);
-		await vscode.workspace.applyEdit(edit);
-		await document.save();
-	}
 
 	private async getWorkflowDictionary(): Promise<Record<string, string>> {
 		const dict: Record<string, string> = {};

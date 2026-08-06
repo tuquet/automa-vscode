@@ -2,19 +2,20 @@ import * as vscode from "vscode";
 import * as path from "node:path";
 import * as fs from "node:fs";
 import { runWorkflowCommand } from "../commands/runWorkflow";
+import { BaseCustomEditorProvider } from "./BaseCustomEditorProvider";
 
-export class WorkflowPreviewEditorProvider implements vscode.CustomTextEditorProvider {
+export class WorkflowPreviewEditorProvider extends BaseCustomEditorProvider implements vscode.CustomTextEditorProvider {
 	public static readonly viewType = "automa.workflowPreview";
 
-	constructor(private readonly context: vscode.ExtensionContext) {}
+	constructor(context: vscode.ExtensionContext) {
+		super(context);
+	}
 
 	public async resolveCustomTextEditor(
 		document: vscode.TextDocument,
 		webviewPanel: vscode.WebviewPanel,
 		_token: vscode.CancellationToken
 	): Promise<void> {
-		webviewPanel.webview.options = { enableScripts: true };
-
 		const updateWebview = async () => {
 			try {
 				const content = document.getText();
@@ -39,40 +40,11 @@ export class WorkflowPreviewEditorProvider implements vscode.CustomTextEditorPro
 					});
 				}
 
-				let triggerParams: any[] = [];
-				const implicitVars = new Set<string>();
+				const { WorkflowParser } = await import("../core/WorkflowParser");
+				const implicitVars = WorkflowParser.extractImplicitVariables(content);
+				let triggerParams = WorkflowParser.extractTriggerParameters(json, implicitVars);
 
-				// 1. Scan for {{variables.xyz}}
-				const varRegex1 = /\{\{\s*variables\.([a-zA-Z0-9_$]+)\s*\}\}/g;
-				let match;
-				while ((match = varRegex1.exec(content)) !== null) {
-					implicitVars.add(match[1]);
-				}
-
-				// 2. Scan for automaRefData('variables', 'xyz')
-				const varRegex2 = /automaRefData\(\s*['"]variables['"]\s*,\s*['"]([a-zA-Z0-9_$]+)['"]\s*\)/g;
-				while ((match = varRegex2.exec(content)) !== null) {
-					implicitVars.add(match[1]);
-				}
-
-				if (json.drawflow && json.drawflow.nodes && json.drawflow.edges) {
-					const nodesList = json.drawflow.nodes;
-					
-					// Extract trigger parameters
-					for (const node of nodesList) {
-						if ((node.label === "trigger" || node.name === "trigger" || node.type === "BlockTrigger") && Array.isArray(node.data?.parameters)) {
-							for (const param of node.data.parameters) {
-								if (param.name && !triggerParams.some((p) => p.name === param.name)) {
-									triggerParams.push({
-										...param,
-										isImplicit: false
-									});
-									implicitVars.delete(param.name);
-								}
-							}
-						}
-					}
-				} else if (Array.isArray(json)) {
+				if (!(json.drawflow && json.drawflow.nodes && json.drawflow.edges) && Array.isArray(json)) {
 					webviewPanel.webview.html = `<body><h2>Not an Automa workflow</h2><p>This JSON file does not appear to be an Automa workflow.</p></body>`;
 					return;
 				}
@@ -139,14 +111,7 @@ export class WorkflowPreviewEditorProvider implements vscode.CustomTextEditorPro
 					try { if (updateData.includedWorkflows) json.includedWorkflows = JSON.parse(updateData.includedWorkflows); } catch(e){}
 					
 					// Apply edits to document
-					const edit = new vscode.WorkspaceEdit();
-					edit.replace(
-						document.uri,
-						new vscode.Range(0, 0, document.lineCount, 0),
-						JSON.stringify(json, null, 4)
-					);
-					await vscode.workspace.applyEdit(edit);
-					await document.save();
+					await this.saveDocument(document, JSON.stringify(json, null, 4));
 
 					vscode.window.showInformationMessage("Workflow saved successfully!");
 				} catch (e: any) {
@@ -157,32 +122,7 @@ export class WorkflowPreviewEditorProvider implements vscode.CustomTextEditorPro
 			}
 		});
 
-		const changeDocumentDisposable = vscode.workspace.onDidChangeTextDocument((e) => {
-			if (e.document.uri.toString() === document.uri.toString()) {
-				// Prevent infinite loop if we just modified it via Auto-Sanitizer
-				// Actually, since sanitize(json) returns false if already sanitized, it's safe!
-				updateWebview();
-			}
-		});
-
-		webviewPanel.onDidDispose(() => {
-			messageDisposable.dispose();
-			changeDocumentDisposable.dispose();
-		});
-
-		// Initial load
-		updateWebview();
-
-		// Watch for changes in the document
-		const changeDocumentSubscription = vscode.workspace.onDidChangeTextDocument(e => {
-			if (e.document.uri.toString() === document.uri.toString()) {
-				updateWebview();
-			}
-		});
-
-		webviewPanel.onDidDispose(() => {
-			changeDocumentSubscription.dispose();
-		});
+		this.setupWebviewPanel(document, webviewPanel, updateWebview, [messageDisposable]);
 	}
 
 	private getWorkflowHtml(json: any, triggerParams: any[], updatedAtStr: string, jsonStringifySafe: (obj: any) => string): string {

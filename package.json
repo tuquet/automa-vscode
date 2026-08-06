@@ -202,16 +202,16 @@
           "contextualTitle": "Automa Execution History"
         },
         {
-          "id": "automa.browserProfiles",
-          "name": "Profiles",
-          "icon": "$(account)",
-          "contextualTitle": "Automa Profiles"
-        },
-        {
           "id": "automa.workflows",
           "name": "Workflows",
           "icon": "$(file-code)",
           "contextualTitle": "Automa Workflows"
+        },
+        {
+          "id": "automa.browserProfiles",
+          "name": "Profiles",
+          "icon": "$(account)",
+          "contextualTitle": "Automa Profiles"
         },
         {
           "id": "automa.packages",

@@ -9,7 +9,6 @@ import { killRunner } from "./killRunner";
 import { showRunnerLogCommand } from "./showRunnerLog";
 import { DaemonManager } from "../core/DaemonManager";
 import { WelcomePanel } from "../panels/WelcomePanel";
-import { exec } from "child_process";
 
 export class CommandManager {
 	private readonly context: vscode.ExtensionContext;
@@ -29,17 +28,13 @@ export class CommandManager {
 					title: "Installing Automa Browser...",
 					cancellable: false
 				}, async (progress) => {
-					return new Promise<void>((resolve, reject) => {
-						exec("npx tuquet-automa-cli install-browser", (err, stdout, stderr) => {
-							if (err) {
-								vscode.window.showErrorMessage(`Failed to install browser: ${stderr}`);
-								reject(err);
-							} else {
-								vscode.window.showInformationMessage("Browser installed successfully!");
-								resolve();
-							}
-						});
-					});
+					try {
+						await DaemonManager.getInstance().executeRawCliCommand(['install-browser']);
+						vscode.window.showInformationMessage("Browser installed successfully!");
+					} catch (err: any) {
+						vscode.window.showErrorMessage(`Failed to install browser: ${err.message}`);
+						throw err;
+					}
 				});
 			}),
 			vscode.commands.registerCommand("automa.showWorkflowSource", async (uri: vscode.Uri) => {
@@ -126,24 +121,17 @@ export class CommandManager {
 					title: `Encrypting secret '${secretName}'...`,
 					cancellable: false
 				}, async () => {
-					return new Promise<void>((resolve, reject) => {
-						const cliPath = DaemonManager.getInstance().resolveCliPath(this.context.extensionPath);
-						const cmd = cliPath.endsWith('.ts') ? 'npx tsx' : 'node';
-						let execCmd = `${cmd} "${cliPath}" encrypt-secret "${plaintext}" --name "${secretName}" -v "${vaultPath}"`;
+					try {
+						const args = ['encrypt-secret', plaintext, '--name', secretName, '-v', vaultPath];
 						if (passphrase) {
-							execCmd += ` -p "${passphrase}"`;
+							args.push('-p', passphrase);
 						}
-
-						exec(execCmd, (err, stdout, stderr) => {
-							if (err) {
-								vscode.window.showErrorMessage(`Encryption failed: ${stderr || err.message}`);
-								reject(err);
-							} else {
-								vscode.window.showInformationMessage(`Secret '${secretName}' encrypted and saved!`);
-								resolve();
-							}
-						});
-					});
+						await DaemonManager.getInstance().executeRawCliCommand(args);
+						vscode.window.showInformationMessage(`Secret '${secretName}' encrypted and saved!`);
+					} catch (err: any) {
+						vscode.window.showErrorMessage(`Encryption failed: ${err.message}`);
+						throw err;
+					}
 				});
 			}),
 		];

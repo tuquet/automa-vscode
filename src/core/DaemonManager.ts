@@ -1,9 +1,12 @@
 import * as vscode from "vscode";
-import { spawn, ChildProcess } from "node:child_process";
+import { spawn, ChildProcess, exec } from "node:child_process";
 import { Logger } from "./Logger";
 import * as path from "node:path";
 import * as fs from "node:fs";
 import * as net from "node:net";
+import { promisify } from "node:util";
+
+const execAsync = promisify(exec);
 
 export class DaemonManager {
 	private static instance: DaemonManager;
@@ -41,6 +44,53 @@ export class DaemonManager {
 			}
 		}
 		return "npx tuquet-automa-cli";
+	}
+
+	public resolveCommandAndArgs(baseArgs: string[]): { cmd: string, args: string[] } {
+		const config = vscode.workspace.getConfiguration("automa");
+		const userCliPath = config.get<string>("cliPath");
+		const isWin = process.platform === "win32";
+
+		if (userCliPath && fs.existsSync(userCliPath)) {
+			return { cmd: "node", args: [userCliPath, ...baseArgs] };
+		}
+		
+		if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
+			const workspaceRoot = vscode.workspace.workspaceFolders[0].uri.fsPath;
+			const localCliPath = path.join(workspaceRoot, "..", "automa-cli", "dist", "cli.js");
+			if (fs.existsSync(localCliPath)) {
+				return { cmd: "node", args: [localCliPath, ...baseArgs] };
+			}
+		}
+
+		return {
+			cmd: isWin ? "npx.cmd" : "npx",
+			args: ["-y", "tuquet-automa-cli@latest", ...baseArgs]
+		};
+	}
+
+	public async executeCliCommand(args: string[]): Promise<any> {
+		const cliPath = this.resolveCliPath();
+		
+		const argsStr = args.includes('--json') ? args.join(' ') : [...args, '--json'].join(' ');
+		
+		let execCmd = '';
+		if (cliPath.startsWith('npx ')) {
+			execCmd = `${cliPath} ${argsStr}`;
+		} else {
+			const cmd = cliPath.endsWith('.ts') ? 'npx tsx' : 'node';
+			execCmd = `${cmd} "${cliPath}" ${argsStr}`;
+		}
+		
+		const { stdout } = await execAsync(execCmd);
+		return JSON.parse(stdout);
+	}
+
+	public async executeRawCliCommand(args: string[]): Promise<{stdout: string, stderr: string}> {
+		const { cmd, args: finalArgs } = this.resolveCommandAndArgs(args);
+		const commandStr = `${cmd} ${finalArgs.map(a => '"' + a.replace(/"/g, '\\"') + '"').join(' ')}`;
+		const { stdout, stderr } = await execAsync(commandStr);
+		return { stdout, stderr };
 	}
 
 	public getPort(): number {

@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { spawn } from "child_process";
 import { EventEmitter } from "events";
+import { DaemonManager } from "./DaemonManager";
 
 export interface TaskOptions {
 	id: string;
@@ -16,6 +17,22 @@ export interface TaskOptions {
 
 export class TaskRunner {
 	public static telemetryEmitter = new EventEmitter();
+
+	public static runAutomaCli(cliArgs: string[], taskConfig: Omit<TaskOptions, 'command' | 'args'> & { useTelemetry?: boolean }): void {
+		const { cmd, args } = DaemonManager.getInstance().resolveCommandAndArgs(cliArgs);
+		
+		const options: TaskOptions = {
+			...taskConfig,
+			command: cmd,
+			args: args
+		};
+
+		if (taskConfig.useTelemetry) {
+			this.runWithTelemetry(options);
+		} else {
+			this.run(options);
+		}
+	}
 
 	public static run(options: TaskOptions): void {
 		if (options.startMessage) {

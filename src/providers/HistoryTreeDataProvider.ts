@@ -1,9 +1,5 @@
 import * as vscode from "vscode";
-import { exec } from "child_process";
-import { promisify } from "util";
 import { DaemonManager } from "../core/DaemonManager";
-
-const execAsync = promisify(exec);
 
 export class HistoryTreeDataProvider implements vscode.TreeDataProvider<vscode.TreeItem> {
 	private _onDidChangeTreeData: vscode.EventEmitter<vscode.TreeItem | undefined | void> = new vscode.EventEmitter<vscode.TreeItem | undefined | void>();
@@ -40,16 +36,12 @@ export class HistoryTreeDataProvider implements vscode.TreeDataProvider<vscode.T
 			return Promise.resolve([]);
 		} else {
 			try {
-				const cliPath = DaemonManager.getInstance().resolveCliPath(this.context.extensionPath);
-				const cmd = cliPath.endsWith('.ts') ? 'npx tsx' : 'node';
-				
-				let execCmd = `${cmd} "${cliPath}" history --json --limit 50`;
+				const args = ['history', '--limit', '50'];
 				if (this.taskIdFilter) {
-					execCmd += ` --task-id ${this.taskIdFilter}`;
+					args.push('--task-id', this.taskIdFilter);
 				}
 				
-				const { stdout } = await execAsync(execCmd);
-				const jobs = JSON.parse(stdout);
+				const jobs = await DaemonManager.getInstance().executeCliCommand(args);
 
 				if (!jobs || jobs.length === 0) {
 					const msg = this.taskIdFilter ? `No jobs found for Task ID: ${this.taskIdFilter}` : "No history found";

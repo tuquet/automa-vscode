@@ -3,14 +3,10 @@ import { LogCustomEditorProvider } from "./LogCustomEditorProvider";
 import { WorkflowPreviewEditorProvider } from "./WorkflowPreviewEditorProvider";
 import { FleetPreviewEditorProvider } from "./FleetPreviewEditorProvider";
 import { BrowserProfileEditorProvider } from "./BrowserProfileEditorProvider";
-import { exec } from "child_process";
-import { promisify } from "util";
 import { RunnersTreeDataProvider } from "./RunnersTreeDataProvider";
 import { HistoryTreeDataProvider } from "./HistoryTreeDataProvider";
 import { AutomaFilesProvider } from "./AutomaFilesProvider";
 import { DaemonManager } from "../core/DaemonManager";
-
-const execAsync = promisify(exec);
 
 export class ProviderManager {
 	private readonly context: vscode.ExtensionContext;
@@ -125,10 +121,8 @@ export class ProviderManager {
 				const confirm = await vscode.window.showWarningMessage(`Are you sure you want to delete this log?`, "Yes", "No");
 				if (confirm !== "Yes") return;
 
-				const cliPath = DaemonManager.getInstance().resolveCliPath(this.context.extensionPath);
-				const cmd = cliPath.endsWith('.ts') ? 'npx tsx' : 'node';
 				try {
-					await execAsync(`${cmd} "${cliPath}" history --delete "${item.id}" --json`);
+					await DaemonManager.getInstance().executeCliCommand(['history', '--delete', item.id]);
 					historyProvider.refresh();
 				} catch (err: any) {
 					vscode.window.showErrorMessage(`Failed to delete log: ${err.message}`);
@@ -140,10 +134,8 @@ export class ProviderManager {
 				const confirm = await vscode.window.showWarningMessage(`Are you sure you want to clear all execution history?`, "Yes", "No");
 				if (confirm !== "Yes") return;
 
-				const cliPath = DaemonManager.getInstance().resolveCliPath(this.context.extensionPath);
-				const cmd = cliPath.endsWith('.ts') ? 'npx tsx' : 'node';
 				try {
-					await execAsync(`${cmd} "${cliPath}" history --clear --json`);
+					await DaemonManager.getInstance().executeCliCommand(['history', '--clear']);
 					historyProvider.refresh();
 				} catch (err: any) {
 					vscode.window.showErrorMessage(`Failed to clear history: ${err.message}`);

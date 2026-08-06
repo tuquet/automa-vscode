@@ -1,5 +1,4 @@
 import * as vscode from "vscode";
-import { exec } from "node:child_process";
 
 let diagnosticCollection: vscode.DiagnosticCollection;
 
@@ -27,9 +26,6 @@ export async function lintCheckCommand(nodeOrUri?: any, nodesOrUris?: any[]) {
 		return;
 	}
 
-	const isWin = process.platform === "win32";
-	const npxCmd = isWin ? "npx.cmd" : "npx";
-
 	vscode.window.withProgress(
 		{
 			location: vscode.ProgressLocation.Window,
@@ -46,61 +42,61 @@ export async function lintCheckCommand(nodeOrUri?: any, nodesOrUris?: any[]) {
 				const lines = content.split('\n');
 
 				// Execute automa lint
-				await new Promise<void>((resolve) => {
-					exec(`"${npxCmd}" automa lint "${filePath}"`, (error, stdout, stderr) => {
-						const output = stdout + "\n" + stderr;
-						
-						const diagnostics: vscode.Diagnostic[] = [];
-						
-						// Parse output for errors
-						const linesOut = output.split('\n');
-						for (const line of linesOut) {
-							const trimmed = line.trim();
-							if (trimmed.startsWith('- [')) {
-								const isError = !trimmed.includes('[Variable Warning]');
-								const severity = isError ? vscode.DiagnosticSeverity.Error : vscode.DiagnosticSeverity.Warning;
-								
-								let range = new vscode.Range(0, 0, 0, 0);
-								
-								// Try to find exact line
-								let searchString = "";
-								if (trimmed.includes("Node ID '")) {
-									const idMatch = trimmed.match(/Node ID '([^']+)'/);
-									if (idMatch) searchString = `"${idMatch[1]}"`;
-								} else if (trimmed.includes("Variable '")) {
-									const varMatch = trimmed.match(/Variable '([^']+)'/);
-									if (varMatch) searchString = varMatch[1];
-								}
+				try {
+					const { DaemonManager } = require("../core/DaemonManager");
+					const { stdout, stderr } = await DaemonManager.getInstance().executeRawCliCommand(["lint", filePath]);
+					const output = stdout + "\n" + stderr;
+					
+					const diagnostics: vscode.Diagnostic[] = [];
+					
+					// Parse output for errors
+					const linesOut = output.split('\n');
+					for (const line of linesOut) {
+						const trimmed = line.trim();
+						if (trimmed.startsWith('- [')) {
+							const isError = !trimmed.includes('[Variable Warning]');
+							const severity = isError ? vscode.DiagnosticSeverity.Error : vscode.DiagnosticSeverity.Warning;
+							
+							let range = new vscode.Range(0, 0, 0, 0);
+							
+							// Try to find exact line
+							let searchString = "";
+							if (trimmed.includes("Node ID '")) {
+								const idMatch = trimmed.match(/Node ID '([^']+)'/);
+								if (idMatch) searchString = `"${idMatch[1]}"`;
+							} else if (trimmed.includes("Variable '")) {
+								const varMatch = trimmed.match(/Variable '([^']+)'/);
+								if (varMatch) searchString = varMatch[1];
+							}
 
-								if (searchString) {
-									for (let i = 0; i < lines.length; i++) {
-										const col = lines[i].indexOf(searchString);
-										if (col !== -1) {
-											range = new vscode.Range(i, col, i, col + searchString.length);
-											break;
-										}
+							if (searchString) {
+								for (let i = 0; i < lines.length; i++) {
+									const col = lines[i].indexOf(searchString);
+									if (col !== -1) {
+										range = new vscode.Range(i, col, i, col + searchString.length);
+										break;
 									}
 								}
-
-								const msg = trimmed.replace(/^- \[.*?\] /, '');
-								const diagnostic = new vscode.Diagnostic(range, msg, severity);
-								diagnostics.push(diagnostic);
 							}
-						}
 
-						diagnosticCollection.set(uri, diagnostics);
-
-						if (diagnostics.length === 0) {
-							vscode.window.showInformationMessage(`Lint passed for ${filePath.split(/\\|\//).pop()}`);
-						} else {
-							const errorCount = diagnostics.filter(d => d.severity === vscode.DiagnosticSeverity.Error).length;
-							const warnCount = diagnostics.length - errorCount;
-							vscode.window.showErrorMessage(`Lint failed: ${errorCount} error(s), ${warnCount} warning(s) in ${filePath.split(/\\|\//).pop()}`);
+							const msg = trimmed.replace(/^- \[.*?\] /, '');
+							const diagnostic = new vscode.Diagnostic(range, msg, severity);
+							diagnostics.push(diagnostic);
 						}
-						
-						resolve();
-					});
-				});
+					}
+
+					diagnosticCollection.set(uri, diagnostics);
+
+					if (diagnostics.length === 0) {
+						vscode.window.showInformationMessage(`Lint passed for ${filePath.split(/\\|\//).pop()}`);
+					} else {
+						const errorCount = diagnostics.filter(d => d.severity === vscode.DiagnosticSeverity.Error).length;
+						const warnCount = diagnostics.length - errorCount;
+						vscode.window.showErrorMessage(`Lint failed: ${errorCount} error(s), ${warnCount} warning(s) in ${filePath.split(/\\|\//).pop()}`);
+					}
+				} catch (error: any) {
+					vscode.window.showErrorMessage(`Failed to run linter: ${error.message}`);
+				}
 			}
 		}
 	);

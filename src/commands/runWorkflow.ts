@@ -48,22 +48,7 @@ export async function runWorkflowCommand(nodeOrUri?: any, params?: any, runOptio
 		variables: params ? params : undefined,
 	};
 
-	const isWin = process.platform === "win32";
-	let cmd = isWin ? "npx.cmd" : "npx";
-	let args = ["-y", "tuquet-automa-cli@latest", "run", targetPath];
-
-	const userCliPath = config.get<string>("cliPath");
-	if (userCliPath && fs.existsSync(userCliPath)) {
-		cmd = "node";
-		args = [userCliPath, "run", targetPath];
-	} else if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
-		const workspaceRoot = vscode.workspace.workspaceFolders[0].uri.fsPath;
-		const localCliPath = path.join(workspaceRoot, "..", "automa-cli", "dist", "cli.js");
-		if (fs.existsSync(localCliPath)) {
-			cmd = "node";
-			args = [localCliPath, "run", targetPath];
-		}
-	}
+	const args: string[] = ["run", targetPath];
 
 	if (params && Object.keys(params).length > 0) {
 		args.push("--variables", JSON.stringify(params));
@@ -89,15 +74,14 @@ export async function runWorkflowCommand(nodeOrUri?: any, params?: any, runOptio
 		args.push("--keep-browser-open");
 	}
 
-	TaskRunner.run({
+	TaskRunner.runAutomaCli(args, {
 		id: `workflow-${Date.now()}`,
 		name: `Workflow: ${displayName}`,
-		command: cmd,
 		source: "Automa",
-		args: args,
 		startMessage: `Running Workflow: ${displayName}`,
 		successMessage: `Workflow finished: ${displayName}`,
 		errorMessage: `Workflow failed: ${displayName}`,
-		statusBarText: `Running: ${displayName}`
+		statusBarText: `Running: ${displayName}`,
+		useTelemetry: false
 	});
 }

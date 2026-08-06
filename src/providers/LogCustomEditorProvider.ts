@@ -2,11 +2,14 @@ import * as vscode from "vscode";
 import * as fs from "node:fs/promises";
 import * as fsSync from "node:fs";
 import * as path from "node:path";
+import { BaseCustomEditorProvider } from "./BaseCustomEditorProvider";
 
-export class LogCustomEditorProvider implements vscode.CustomReadonlyEditorProvider {
+export class LogCustomEditorProvider extends BaseCustomEditorProvider implements vscode.CustomReadonlyEditorProvider {
 	public static readonly viewType = "automa.logEditor";
 
-	constructor(private readonly context: vscode.ExtensionContext) {}
+	constructor(context: vscode.ExtensionContext) {
+		super(context);
+	}
 
 	public async openCustomDocument(
 		uri: vscode.Uri,
@@ -33,18 +36,8 @@ export class LogCustomEditorProvider implements vscode.CustomReadonlyEditorProvi
 		`;
 
 		try {
-			const { exec } = require("child_process");
-			const { promisify } = require("util");
-			const execAsync = promisify(exec);
-			
-			// Resolve CLI path using daemon manager logic or just assume automa is in PATH
-			// But for reliability, we can use the same resolveCliPath logic.
-			// For now, let's just use 'automa' assuming it's linked, or we can require DaemonManager.
 			const { DaemonManager } = require("../core/DaemonManager");
-			const cliPath = DaemonManager.getInstance().resolveCliPath(context.extensionPath);
-			const cmd = cliPath.endsWith('.ts') ? 'npx tsx' : 'node';
-			
-			const { stdout } = await execAsync(`${cmd} "${cliPath}" log ${jobId} --json`);
+			const { stdout, stderr } = await DaemonManager.getInstance().executeRawCliCommand(['log', jobId, '--json']);
 			const parsed = JSON.parse(stdout);
 			
 			if (parsed.error) {
@@ -69,9 +62,11 @@ export class LogCustomEditorProvider implements vscode.CustomReadonlyEditorProvi
 		webviewPanel: vscode.WebviewPanel,
 		token: vscode.CancellationToken
 	): Promise<void> {
-		webviewPanel.webview.options = { enableScripts: true };
 		
-		const updateWebview = async (isInitial = false) => {
+		let isFirstLoad = true;
+		const updateWebview = async () => {
+			const isInitial = isFirstLoad;
+			isFirstLoad = false;
 			try {
 				const content = await fs.readFile(document.uri.fsPath, "utf-8");
 				const parsed = JSON.parse(content);
@@ -98,28 +93,9 @@ export class LogCustomEditorProvider implements vscode.CustomReadonlyEditorProvi
 			}
 		};
 
-		await updateWebview(true);
+		};
 
-		// Watch the file for real-time updates
-		try {
-			const watcher = vscode.workspace.createFileSystemWatcher(document.uri.fsPath);
-			
-			const handleChange = () => {
-				// Small delay to allow file write to finish
-				setTimeout(() => updateWebview(false), 50);
-			};
-
-			const changeDisposable = watcher.onDidChange(handleChange);
-			const createDisposable = watcher.onDidCreate(handleChange);
-
-			webviewPanel.onDidDispose(() => {
-				changeDisposable.dispose();
-				createDisposable.dispose();
-				watcher.dispose();
-			});
-		} catch (watchErr) {
-			console.warn("Failed to watch log file for real-time updates:", watchErr);
-		}
+		this.setupWebviewPanel(document, webviewPanel, updateWebview);
 	}
 	private getWebviewContent(job: any, logs: any[]): string {
 		// Prepare data to send to webview
