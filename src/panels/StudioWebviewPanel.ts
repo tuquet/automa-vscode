@@ -18,9 +18,11 @@ export class StudioWebviewPanel {
 		this._panel.webview.onDidReceiveMessage(
 			(message) => {
 				switch (message.type) {
-					case "runtime-message":
-						console.log("Message from Vue app:", message.data);
-						break;
+					case 'runtime-message':
+                        this.handleRuntimeMessage(message.data).then(result => {
+                            this._panel.webview.postMessage({ type: 'runtime-message-response', id: message.id, data: result });
+                        });
+                        break;
 					case "storage-get":
 						this.handleStorageGet(message.keys).then((data) => {
 							this._panel.webview.postMessage({
@@ -77,6 +79,94 @@ export class StudioWebviewPanel {
 		);
 		StudioWebviewPanel.currentPanel._update();
 	}
+
+    private async handleRuntimeMessage(message: any): Promise<any> {
+        if (!message || !message.name) return null;
+        
+        try {
+            switch (message.name) {
+                case 'background--fetch':
+                case 'background--fetch:text': {
+                    let url = '';
+                    let options: any = {};
+                    
+                    if (typeof message.data === 'string') {
+                        url = message.data;
+                    } else if (message.data && message.data.resource) {
+                        url = message.data.resource.url || message.data.resource;
+                        options = message.data.resource;
+                    }
+                    
+                    if (!url) throw new Error("Fetch URL missing");
+                    
+                    const res = await fetch(url, options);
+                    if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+                    
+                    if (message.name === 'background--fetch:text') {
+                        return await res.text();
+                    }
+                    
+                    const type = message.data?.type || 'json';
+                    if (type === 'json') return await res.json();
+                    if (type === 'text') return await res.text();
+                    
+                    // base64 handling for images
+                    if (type === 'base64') {
+                        const buffer = await res.arrayBuffer();
+                        return Buffer.from(buffer).toString('base64');
+                    }
+                    
+                    return await res.text();
+                }
+                
+                case 'background--workflow:execute': {
+                    const { DaemonManager } = require("../core/DaemonManager");
+                    const daemon = DaemonManager.getInstance();
+                    
+                    const workflowData = message.data?.workflowData || message.data;
+                    if (!workflowData || !workflowData.id) return { success: false, error: "Missing workflow ID" };
+                    
+                    try {
+                        const port = daemon.getPort();
+                        const executeUrl = `http://localhost:${port}/api/jobs/run`;
+                        const res = await fetch(executeUrl, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ workflowData, options: message.data?.options || {} })
+                        });
+                        if (!res.ok) throw new Error(`Daemon responded with ${res.status}`);
+                        return await res.json();
+                    } catch (e: any) {
+                        // Fallback to CLI if Daemon isn't reachable
+                        try {
+                            const result = await daemon.executeCliCommand(["run", workflowData.id]);
+                            return result;
+                        } catch (cliErr: any) {
+                            Logger.error(`Workflow execution failed: ${cliErr.message}`);
+                            return { success: false, error: cliErr.message };
+                        }
+                    }
+                }
+                
+                case 'background--open:dashboard': {
+                    // For VS Code, we are already the dashboard. Just tell the webview to push route!
+                    // This is slightly tricky. The webview Vue Router handles hash routing.
+                    // We can return a specific command, but since this resolves a promise,
+                    // the webview caller might not be able to navigate themselves if they expect us to.
+                    // Let's just log it for now since they are in the dashboard.
+                    Logger.info("Open Dashboard requested: " + message.data);
+                    return true;
+                }
+                
+                default:
+                    Logger.info(`Unhandled runtime message: ${message.name}`);
+                    return null;
+            }
+        } catch (e: any) {
+            Logger.error(`Runtime Message Error [${message.name}]: ${e.message}`);
+            return null;
+        }
+    }
 
 	private async handleStorageGet(_keys: any): Promise<any> {
 		const result: any = {};
