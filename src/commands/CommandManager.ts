@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { runWorkflowCommand } from "./runWorkflow";
+import { runWorkflowCommand, runWorkflowWithParamsCommand } from "./runWorkflow";
 import { runFleetCommand } from "./runFleet";
 import { openInStudioCommand } from "./openInStudio";
 import { fixWorkflowIdCommand } from "./fixWorkflowId";
@@ -7,8 +7,11 @@ import { lintCheckCommand } from "./lintCheck";
 import { stopFleetCommand } from "./stopFleet";
 import { killRunner } from "./killRunner";
 import { showRunnerLogCommand } from "./showRunnerLog";
+import { addVariableCommand, addCredentialCommand } from "./vaultCommands";
 import { DaemonManager } from "../core/DaemonManager";
 import { WelcomePanel } from "../panels/WelcomePanel";
+import { LiveLogEditorProvider } from "../providers/LiveLogEditorProvider";
+import { createWorkflowCommand, createPackageCommand, createProfileCommand } from "./createItem";
 
 export class CommandManager {
 	private readonly context: vscode.ExtensionContext;
@@ -60,6 +63,7 @@ export class CommandManager {
 				}
 			}),
 			vscode.commands.registerCommand("automa.runWorkflow", runWorkflowCommand),
+			vscode.commands.registerCommand("automa.runWorkflowWithParams", runWorkflowWithParamsCommand),
 			vscode.commands.registerCommand("automa.runFleet", runFleetCommand),
 			vscode.commands.registerCommand("automa.stopFleet", stopFleetCommand),
 			vscode.commands.registerCommand("automa.showLogSource", (uri: vscode.Uri) => {
@@ -79,6 +83,9 @@ export class CommandManager {
 			}
 		}),
 			vscode.commands.registerCommand("automa.openInStudio", openInStudioCommand),
+			vscode.commands.registerCommand("automa.createWorkflow", createWorkflowCommand),
+			vscode.commands.registerCommand("automa.createPackage", createPackageCommand),
+			vscode.commands.registerCommand("automa.createProfile", createProfileCommand),
 			vscode.commands.registerCommand("automa.fixWorkflowId", fixWorkflowIdCommand),
 			vscode.commands.registerCommand("automa.lintCheck", lintCheckCommand),
 			vscode.commands.registerCommand("automa.toggleDaemon", () => {
@@ -91,6 +98,14 @@ export class CommandManager {
 			}),
 			vscode.commands.registerCommand("automa.killRunner", killRunner),
 			vscode.commands.registerCommand("automa.showRunnerLog", showRunnerLogCommand),
+			vscode.commands.registerCommand("automa.addVariable", addVariableCommand),
+			vscode.commands.registerCommand("automa.addCredential", addCredentialCommand),
+			vscode.commands.registerCommand("automa.showLiveLog", (execution: vscode.TaskExecution) => {
+				if (execution) {
+					const taskId = execution.task.definition.id || execution.task.name;
+					LiveLogEditorProvider.showLiveLog(this.context, taskId, execution.task.name);
+				}
+			}),
 			vscode.commands.registerCommand("automa.vault.encryptSecret", async () => {
 				const secretName = await vscode.window.showInputBox({
 					prompt: "Enter the name for this credential",

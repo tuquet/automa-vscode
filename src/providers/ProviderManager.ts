@@ -6,6 +6,7 @@ import { BrowserProfileEditorProvider } from "./BrowserProfileEditorProvider";
 import { RunnersTreeDataProvider } from "./RunnersTreeDataProvider";
 import { HistoryTreeDataProvider } from "./HistoryTreeDataProvider";
 import { AutomaFilesProvider } from "./AutomaFilesProvider";
+import { VaultTreeDataProvider } from "./VaultTreeDataProvider";
 import { DaemonManager } from "../core/DaemonManager";
 
 export class ProviderManager {
@@ -198,5 +199,14 @@ export class ProviderManager {
 			if (query !== undefined) fleetsProvider.setSearchQuery(query);
 		}));
 		this.context.subscriptions.push(vscode.commands.registerCommand("automa.clearSearchFleets", () => fleetsProvider.setSearchQuery('')));
+
+		// 6. Global Vault Panel
+		const vaultProvider = new VaultTreeDataProvider();
+		this.context.subscriptions.push(
+			vscode.window.createTreeView("automa.globalVault", { treeDataProvider: vaultProvider })
+		);
+		this.context.subscriptions.push(vscode.commands.registerCommand("automa.refreshVault", () => {
+			vaultProvider.refresh();
+		}));
 	}
 }

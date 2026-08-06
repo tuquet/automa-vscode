@@ -63,8 +63,6 @@ export class FleetPreviewEditorProvider extends BaseCustomEditorProvider impleme
 			}
 		});
 
-		});
-
 		this.setupWebviewPanel(document, webviewPanel, updateWebview, [{
 			dispose: () => TaskRunner.telemetryEmitter.off("telemetry", telemetryListener)
 		}]);

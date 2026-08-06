@@ -157,7 +157,10 @@
 
                     <!-- Explicit Parameters -->
                     <div v-if="explicitParams.length > 0">
-                        <h3 class="text-xs font-semibold text-vsc-muted uppercase tracking-wider mb-3">Workflow Parameters</h3>
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="text-xs font-semibold text-vsc-muted uppercase tracking-wider">Workflow Parameters</h3>
+                            <span class="text-[10px] text-vsc-muted italic">Values entered here will run the workflow and be saved as defaults when you click Save.</span>
+                        </div>
                         <div v-for="param in explicitParams" :key="param.name" class="flex flex-col gap-1 mb-4">
                             <label class="text-sm font-medium text-vsc-fg">
                                 {{ param.name }}
@@ -372,9 +375,20 @@
                 const paramsForm = ref(null);
 
                 const saveWorkflow = () => {
+                    const dataToSave = JSON.parse(JSON.stringify(workflow));
+                    
+                    // Allow saving current explicit parameter values as defaultValue in workflow
+                    const explicitParamsData = {};
+                    triggerParams.forEach(p => {
+                        if (!p.isImplicit) {
+                            explicitParamsData[p.name] = paramValues[p.name];
+                        }
+                    });
+                    dataToSave.triggerParams = explicitParamsData;
+
                     vscode.postMessage({
                         command: 'saveWorkflow',
-                        data: JSON.parse(JSON.stringify(workflow))
+                        data: dataToSave
                     });
                 };
 

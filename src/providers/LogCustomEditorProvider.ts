@@ -93,8 +93,6 @@ export class LogCustomEditorProvider extends BaseCustomEditorProvider implements
 			}
 		};
 
-		};
-
 		this.setupWebviewPanel(document, webviewPanel, updateWebview);
 	}
 	private getWebviewContent(job: any, logs: any[]): string {

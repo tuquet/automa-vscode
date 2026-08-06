@@ -29,6 +29,12 @@ export async function runFleetCommand(nodeOrUri?: any) {
 		args.push("--run-now");
 	}
 
+	const config = vscode.workspace.getConfiguration("automa");
+	const gridSystem = config.get<boolean>("vault.run.fleetGridSystem", true);
+	if (gridSystem) {
+		args.push("--grid");
+	}
+
 	TaskRunner.runAutomaCli(args, {
 		id: `fleet-orchestrator-${Date.now()}`,
 		name: `Fleet: ${displayName}`,

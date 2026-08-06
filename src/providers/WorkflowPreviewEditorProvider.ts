@@ -110,6 +110,18 @@ export class WorkflowPreviewEditorProvider extends BaseCustomEditorProvider impl
 					try { if (updateData.table) json.table = JSON.parse(updateData.table); } catch(e){}
 					try { if (updateData.includedWorkflows) json.includedWorkflows = JSON.parse(updateData.includedWorkflows); } catch(e){}
 					
+					// Update Trigger Parameters Default Values
+					if (updateData.triggerParams !== undefined && json.drawflow && json.drawflow.nodes) {
+						const triggerNode = json.drawflow.nodes.find((n: any) => n.label === "trigger" || n.name === "trigger" || n.type === "BlockTrigger");
+						if (triggerNode && Array.isArray(triggerNode.data?.parameters)) {
+							for (const param of triggerNode.data.parameters) {
+								if (updateData.triggerParams[param.name] !== undefined) {
+									param.defaultValue = updateData.triggerParams[param.name];
+								}
+							}
+						}
+					}
+					
 					// Apply edits to document
 					await this.saveDocument(document, JSON.stringify(json, null, 4));
 
@@ -123,6 +135,9 @@ export class WorkflowPreviewEditorProvider extends BaseCustomEditorProvider impl
 		});
 
 		this.setupWebviewPanel(document, webviewPanel, updateWebview, [messageDisposable]);
+		
+		// Initial render
+		updateWebview();
 	}
 
 	private getWorkflowHtml(json: any, triggerParams: any[], updatedAtStr: string, jsonStringifySafe: (obj: any) => string): string {

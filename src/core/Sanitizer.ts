@@ -50,54 +50,64 @@ export class WorkflowSanitizer {
 		const idRegex = /^[A-Za-z0-9_-]{4,21}$/;
 		const validTypes = ["BlockBasic", "BlockDelay", "BlockRepeatTask", "BlockConditions", "BlockElementExists", "BlockBasicWithFallback", "BlockLoopBreakpoint", "BlockGroup", "BlockGroup2", "BlockPackage", "BlockNote", "BlockWebhook"];
 
-		// 3. Sanitize Nodes
-		nodes.forEach((node: any) => {
-			let originalId = node.id;
-			if (!node.id || !idRegex.test(node.id)) {
-				const newId = generateShortId();
-				node.id = newId;
-				if (originalId) idMap.set(originalId, newId);
-				isModified = true;
-			}
-			
-			if (!node.type || !validTypes.includes(node.type)) {
-				node.type = "BlockBasic";
-				isModified = true;
-			}
-
-			if (node.data) {
-				if (typeof node.data.disableBlock !== "boolean") {
-					node.data.disableBlock = false;
+		const sanitizeNodesAndEdges = (nList: any[], eList: any[]) => {
+			// Sanitize Nodes
+			nList.forEach((node: any) => {
+				let originalId = node.id;
+				if (!node.id || !idRegex.test(node.id)) {
+					const newId = generateShortId();
+					node.id = newId;
+					if (originalId) idMap.set(originalId, newId);
 					isModified = true;
 				}
-			}
-		});
-
-		// 4. Sanitize Edges
-		edges.forEach((edge: any) => {
-			if (!edge.id || !idRegex.test(edge.id)) {
-				edge.id = generateShortId();
-				isModified = true;
-			}
-
-			if (edge.source && idMap.has(edge.source)) {
-				const newSource = idMap.get(edge.source)!;
-				if (edge.sourceHandle) {
-					edge.sourceHandle = edge.sourceHandle.replace(edge.source, newSource);
+				
+				if (!node.type || !validTypes.includes(node.type)) {
+					node.type = "BlockBasic";
+					isModified = true;
 				}
-				edge.source = newSource;
-				isModified = true;
-			}
 
-			if (edge.target && idMap.has(edge.target)) {
-				const newTarget = idMap.get(edge.target)!;
-				if (edge.targetHandle) {
-					edge.targetHandle = edge.targetHandle.replace(edge.target, newTarget);
+				if (node.data) {
+					if (typeof node.data.disableBlock !== "boolean") {
+						node.data.disableBlock = false;
+						isModified = true;
+					}
+					
+					// Recursively sanitize nested nodes/edges (e.g. in BlockPackage/BlockGroup)
+					const nestedData = node.data.data ? node.data.data : node.data;
+					if (nestedData && Array.isArray(nestedData.nodes) && Array.isArray(nestedData.edges)) {
+						sanitizeNodesAndEdges(nestedData.nodes, nestedData.edges);
+					}
 				}
-				edge.target = newTarget;
-				isModified = true;
-			}
-		});
+			});
+
+			// Sanitize Edges
+			eList.forEach((edge: any) => {
+				if (!edge.id || !idRegex.test(edge.id)) {
+					edge.id = generateShortId();
+					isModified = true;
+				}
+
+				if (edge.source && idMap.has(edge.source)) {
+					const newSource = idMap.get(edge.source)!;
+					if (edge.sourceHandle) {
+						edge.sourceHandle = edge.sourceHandle.replace(edge.source, newSource);
+					}
+					edge.source = newSource;
+					isModified = true;
+				}
+
+				if (edge.target && idMap.has(edge.target)) {
+					const newTarget = idMap.get(edge.target)!;
+					if (edge.targetHandle) {
+						edge.targetHandle = edge.targetHandle.replace(edge.target, newTarget);
+					}
+					edge.target = newTarget;
+					isModified = true;
+				}
+			});
+		};
+
+		sanitizeNodesAndEdges(nodes, edges);
 
 		return isModified;
 	}

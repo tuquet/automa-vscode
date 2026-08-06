@@ -27,6 +27,11 @@
           "group": "automa@1"
         },
         {
+          "command": "automa.runWorkflowWithParams",
+          "when": "resourceExtname == .json && resourceFilename =~ /^(?!.*automa-log).*$/",
+          "group": "automa@1_5"
+        },
+        {
           "command": "automa.runFleet",
           "when": "resourceExtname == .json && resourceFilename =~ /.*\\.fleets\\.json$/",
           "group": "automa@2"
@@ -45,6 +50,11 @@
       "editor/title/run": [
         {
           "command": "automa.runWorkflow",
+          "when": "resourceExtname == .json && resourceFilename =~ /^(?!.*automa-log).*$/",
+          "group": "navigation"
+        },
+        {
+          "command": "automa.runWorkflowWithParams",
           "when": "resourceExtname == .json && resourceFilename =~ /^(?!.*automa-log).*$/",
           "group": "navigation"
         },
@@ -130,6 +140,11 @@
           "group": "navigation@1"
         },
         {
+          "command": "automa.createProfile",
+          "when": "view == automa.browserProfiles",
+          "group": "navigation@0"
+        },
+        {
           "command": "automa.clearSearchProfiles",
           "when": "view == automa.browserProfiles && automa.browserProfiles.isFiltered",
           "group": "navigation@2"
@@ -140,6 +155,11 @@
           "group": "navigation@1"
         },
         {
+          "command": "automa.createWorkflow",
+          "when": "view == automa.workflows",
+          "group": "navigation@0"
+        },
+        {
           "command": "automa.clearSearchWorkflows",
           "when": "view == automa.workflows && automa.workflows.isFiltered",
           "group": "navigation@2"
@@ -148,6 +168,11 @@
           "command": "automa.searchPackages",
           "when": "view == automa.packages",
           "group": "navigation@1"
+        },
+        {
+          "command": "automa.createPackage",
+          "when": "view == automa.packages",
+          "group": "navigation@0"
         },
         {
           "command": "automa.clearSearchPackages",
@@ -163,11 +188,31 @@
           "command": "automa.clearSearchFleets",
           "when": "view == automa.fleets && automa.fleets.isFiltered",
           "group": "navigation@2"
+        },
+        {
+          "command": "automa.refreshVault",
+          "when": "view == automa.globalVault",
+          "group": "navigation@1"
+        },
+        {
+          "command": "automa.addVariable",
+          "when": "view == automa.globalVault",
+          "group": "navigation@2"
+        },
+        {
+          "command": "automa.addCredential",
+          "when": "view == automa.globalVault",
+          "group": "navigation@3"
         }
       ],
       "view/item/context": [
         {
           "command": "automa.killRunner",
+          "when": "view == automa.activeRunners",
+          "group": "inline"
+        },
+        {
+          "command": "automa.showLiveLog",
           "when": "view == automa.activeRunners",
           "group": "inline"
         },
@@ -224,6 +269,12 @@
           "name": "Fleets",
           "icon": "$(rocket)",
           "contextualTitle": "Automa Fleets"
+        },
+        {
+          "id": "automa.globalVault",
+          "name": "Global Vault",
+          "icon": "$(shield)",
+          "contextualTitle": "Automa Global Vault"
         }
       ]
     },
@@ -269,6 +320,11 @@
         "icon": "$(play)"
       },
       {
+        "command": "automa.runWorkflowWithParams",
+        "title": "Automa: Run Workflow with Parameters",
+        "icon": "$(play-circle)"
+      },
+      {
         "command": "automa.runFleet",
         "title": "Automa: Run Fleet",
         "icon": "$(play)"
@@ -297,6 +353,21 @@
         "command": "automa.openInStudio",
         "title": "Open in Studio",
         "icon": "$(link-external)"
+      },
+      {
+        "command": "automa.createWorkflow",
+        "title": "Create Workflow",
+        "icon": "$(add)"
+      },
+      {
+        "command": "automa.createPackage",
+        "title": "Create Package",
+        "icon": "$(add)"
+      },
+      {
+        "command": "automa.createProfile",
+        "title": "Create Profile",
+        "icon": "$(add)"
       },
       {
         "command": "automa.refreshRunners",
@@ -339,6 +410,11 @@
         "category": "Automa Vault"
       },
       {
+        "command": "automa.showLiveLog",
+        "title": "Live Log",
+        "icon": "$(output)"
+      },
+      {
         "command": "automa.searchProfiles",
         "title": "Search",
         "icon": "$(search)"
@@ -377,6 +453,21 @@
         "command": "automa.clearSearchFleets",
         "title": "Clear Search",
         "icon": "$(clear-all)"
+      },
+      {
+        "command": "automa.addVariable",
+        "title": "Add Variable",
+        "icon": "$(add)"
+      },
+      {
+        "command": "automa.addCredential",
+        "title": "Add Credential",
+        "icon": "$(key)"
+      },
+      {
+        "command": "automa.refreshVault",
+        "title": "Refresh",
+        "icon": "$(refresh)"
       }
     ],
     "customEditors": [
@@ -485,7 +576,7 @@
           "automa.vault.run.fleetGridSystem": {
             "type": "boolean",
             "default": true,
-            "description": "Bật tính năng chia lưới màn hình (Grid System) tự động phân bổ cửa sổ trình duyệt khi chạy Automa Fleet."
+            "description": "Enable Grid System to automatically allocate and position browser windows when running Automa Fleet."
           },
           "automa.cliPath": {
             "type": "string",
@@ -501,6 +592,11 @@
             "type": "number",
             "default": 8765,
             "description": "Base port for the Automa background daemon. The extension will automatically find the next available port if this one is in use."
+          },
+          "automa.encryptionPassphrase": {
+            "type": "string",
+            "default": "",
+            "description": "Passphrase used to encrypt credentials in the Automa Global Vault."
           }
         }
       },
@@ -514,11 +610,6 @@
             "additionalProperties": {
               "type": "string"
             }
-          },
-          "automa.vault.run.logPath": {
-            "type": "string",
-            "default": "",
-            "description": "Absolute path to store workflow execution logs. If left empty, logs will use the default path."
           }
         }
       }
@@ -526,7 +617,8 @@
   },
   "scripts": {
     "vscode:prepublish": "pnpm run package",
-    "build": "pnpm run compile",
+    "typecheck": "tsc --noEmit",
+    "build": "pnpm run typecheck && pnpm run compile",
     "dev": "pnpm run watch",
     "compile": "tsup src/extension.ts --format cjs --external vscode --sourcemap",
     "watch": "tsup src/extension.ts --format cjs --external vscode --watch --sourcemap",

@@ -133,8 +133,8 @@
                 </div>
 
                 <!-- Members -->
-                <div class="space-y-4">
-                    <div class="flex justify-between items-center">
+                <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 items-start">
+                    <div class="flex justify-between items-center col-span-full mb-2">
                         <h2 class="text-lg font-semibold flex items-center gap-2"><i class="ri-group-line"></i> Browser Members ({{ members.length }})</h2>
                         <button @click="addMember" class="text-xs text-vsc-buttonText bg-vsc-button hover:bg-vsc-buttonHover px-2 py-1 rounded shadow-sm transition-colors flex items-center gap-1">
                             <i class="ri-add-line"></i> Add Member

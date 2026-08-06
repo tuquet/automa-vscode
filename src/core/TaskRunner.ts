@@ -53,7 +53,13 @@ export class TaskRunner {
 		const config = vscode.workspace.getConfiguration("automa");
 		const browserPathOverride = config.get<string>("browserPathOverride") || "";
 		
-		const env = { ...process.env };
+		const env: { [key: string]: string } = {};
+		for (const key in process.env) {
+			if (process.env[key] !== undefined) {
+				env[key] = process.env[key] as string;
+			}
+		}
+		
 		if (browserPathOverride) {
 			env["AUTOMA_BROWSER_PATH"] = browserPathOverride;
 		}

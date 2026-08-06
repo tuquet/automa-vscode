@@ -38,9 +38,12 @@ export class DaemonManager {
 		}
 		if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
 			const workspaceRoot = vscode.workspace.workspaceFolders[0].uri.fsPath;
-			const localCliPath = path.join(workspaceRoot, "..", "automa-cli", "dist", "cli.js");
-			if (fs.existsSync(localCliPath)) {
-				return localCliPath;
+			const localCliPathSibling = path.join(workspaceRoot, "..", "automa-cli", "dist", "cli.js");
+			const localCliPathChild = path.join(workspaceRoot, "automa-cli", "dist", "cli.js");
+			if (fs.existsSync(localCliPathSibling)) {
+				return localCliPathSibling;
+			} else if (fs.existsSync(localCliPathChild)) {
+				return localCliPathChild;
 			}
 		}
 		return "npx tuquet-automa-cli";
@@ -57,9 +60,12 @@ export class DaemonManager {
 		
 		if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
 			const workspaceRoot = vscode.workspace.workspaceFolders[0].uri.fsPath;
-			const localCliPath = path.join(workspaceRoot, "..", "automa-cli", "dist", "cli.js");
-			if (fs.existsSync(localCliPath)) {
-				return { cmd: "node", args: [localCliPath, ...baseArgs] };
+			const localCliPathSibling = path.join(workspaceRoot, "..", "automa-cli", "dist", "cli.js");
+			const localCliPathChild = path.join(workspaceRoot, "automa-cli", "dist", "cli.js");
+			if (fs.existsSync(localCliPathSibling)) {
+				return { cmd: "node", args: [localCliPathSibling, ...baseArgs] };
+			} else if (fs.existsSync(localCliPathChild)) {
+				return { cmd: "node", args: [localCliPathChild, ...baseArgs] };
 			}
 		}
 
