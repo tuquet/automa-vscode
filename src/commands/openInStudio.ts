@@ -43,7 +43,7 @@ export async function openInStudioCommand(uri: vscode.Uri) {
 		}
 	}
 
-	TaskRunner.run({
+	await TaskRunner.run({
 		id: displayName,
 		name: `Open Studio: ${displayName}`,
 		command: cmd,
