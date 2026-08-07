@@ -205,6 +205,21 @@ export class DaemonManager {
 				return JSON.parse(str);
 			} catch (_e: unknown) {}
 
+			// Split by newline and try to parse the last non-empty line
+			// This handles cases where npm warnings or console.log are printed before JSON
+			const lines = str.split("\n");
+			for (let i = lines.length - 1; i >= 0; i--) {
+				const line = lines[i].trim();
+				if (
+					(line.startsWith("{") && line.endsWith("}")) ||
+					(line.startsWith("[") && line.endsWith("]"))
+				) {
+					try {
+						return JSON.parse(line);
+					} catch (_e: unknown) {}
+				}
+			}
+
 			// Fallback: try to find the outer boundaries of a JSON object/array
 			const startObject = str.indexOf("{");
 			const lastObject = str.lastIndexOf("}");
