@@ -317,11 +317,12 @@
                     }
                     this.viewMode = 'form';
                 },
-                syncToJson() {
+                async syncToJson() {
                     this.isInternalSync = true;
                     this.profileDataStr = JSON.stringify(this.formData, null, 2);
                     this.jsonError = null;
-                    setTimeout(() => { this.isInternalSync = false; }, 50);
+                    await Vue.nextTick();
+                    this.isInternalSync = false;
                 },
                 addArrayItem() {
                     if (!Array.isArray(this.formData)) {
