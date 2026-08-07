@@ -2,7 +2,11 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as vscode from "vscode";
 import { runWorkflowCommand } from "../commands/runWorkflow";
-import { isRecord } from "../utils/typeGuards";
+import {
+	isObjectHasData,
+	isObjectHasDrawflow,
+	isRecord,
+} from "../utils/typeGuards";
 import { BaseCustomEditorProvider } from "./BaseCustomEditorProvider";
 
 export class WorkflowPreviewEditorProvider
@@ -231,7 +235,7 @@ export class WorkflowPreviewEditorProvider
 				let nodesList: Record<string, unknown>[] = [];
 				if (
 					json.data &&
-					typeof json.data === "object" &&
+					isObjectHasData(json) &&
 					json.data !== null &&
 					Array.isArray((json.data as Record<string, unknown>).nodes)
 				) {
@@ -241,7 +245,7 @@ export class WorkflowPreviewEditorProvider
 					>[];
 				} else if (
 					json.drawflow &&
-					typeof json.drawflow === "object" &&
+					isObjectHasDrawflow(json) &&
 					json.drawflow !== null
 				) {
 					if (Array.isArray((json.drawflow as Record<string, unknown>).nodes)) {
@@ -270,7 +274,7 @@ export class WorkflowPreviewEditorProvider
 				);
 				if (
 					triggerNode?.data &&
-					typeof triggerNode.data === "object" &&
+					isObjectHasData(triggerNode) &&
 					Array.isArray(
 						(triggerNode.data as Record<string, unknown>).parameters,
 					)

@@ -1,4 +1,5 @@
 import * as crypto from "node:crypto";
+import { isBoolean } from "../utils/typeGuards";
 
 function generateShortId(): string {
 	const chars =
@@ -112,7 +113,7 @@ export const WorkflowSanitizer = {
 
 				if (node.data) {
 					const nodeData = node.data as Record<string, unknown>;
-					if (typeof nodeData.disableBlock !== "boolean") {
+					if (!isBoolean(nodeData.disableBlock)) {
 						nodeData.disableBlock = false;
 						isModified = true;
 					}

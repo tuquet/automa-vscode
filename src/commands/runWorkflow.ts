@@ -2,7 +2,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as vscode from "vscode";
 import { TaskRunner } from "../core/TaskRunner";
-import { extractFsPath } from "../utils/typeGuards";
+import { extractFsPath, isString } from "../utils/typeGuards";
 
 let _automaOutputChannel: vscode.OutputChannel;
 
@@ -78,7 +78,7 @@ function buildBaseArgs(
 			args.push(mapping.flag);
 		} else if (
 			mapping.type === "string" &&
-			typeof val === "string" &&
+			isString(val) &&
 			val.trim() !== ""
 		) {
 			args.push(mapping.flag, val);

@@ -1,7 +1,7 @@
 import * as crypto from "node:crypto";
 import * as fs from "node:fs";
 import * as vscode from "vscode";
-import { extractFsPath } from "../utils/typeGuards";
+import { extractFsPath, isString } from "../utils/typeGuards";
 
 function generateShortId(): string {
 	// Standard nanoid alphabet
@@ -16,7 +16,7 @@ function generateShortId(): string {
 }
 
 function isValidNanoId(id: unknown): boolean {
-	if (!id || typeof id !== "string") return false;
+	if (!id || !isString(id)) return false;
 	return /^[A-Za-z0-9_-]{21}$/.test(id);
 }
 

@@ -1,3 +1,4 @@
+import { isObjectHasData, isObjectHasDrawflow } from "../utils/typeGuards";
 export const WorkflowParser = {
 	extractImplicitVariables(content: string): Set<string> {
 		const implicitVars = new Set<string>();
@@ -29,14 +30,14 @@ export const WorkflowParser = {
 
 		if (
 			json.data &&
-			typeof json.data === "object" &&
+			isObjectHasData(json) &&
 			Array.isArray((json.data as Record<string, unknown>).nodes)
 		) {
 			nodesList = (json.data as Record<string, unknown>).nodes as Record<
 				string,
 				unknown
 			>[];
-		} else if (json.drawflow && typeof json.drawflow === "object") {
+		} else if (json.drawflow && isObjectHasDrawflow(json)) {
 			const drawflow = json.drawflow as Record<string, unknown>;
 			if (Array.isArray(drawflow.nodes)) {
 				nodesList = drawflow.nodes as Record<string, unknown>[];
@@ -61,7 +62,7 @@ export const WorkflowParser = {
 						node.name === "trigger" ||
 						node.type === "BlockTrigger") &&
 					node.data &&
-					typeof node.data === "object" &&
+					isObjectHasData(node) &&
 					Array.isArray((node.data as Record<string, unknown>).parameters)
 				) {
 					for (const param of (node.data as Record<string, unknown>)

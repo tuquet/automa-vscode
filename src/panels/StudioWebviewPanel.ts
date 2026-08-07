@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import * as vscode from "vscode";
 import { Logger } from "../core/Logger";
+import { isString } from "../utils/typeGuards";
 
 export class StudioWebviewPanel {
 	public static currentPanel: StudioWebviewPanel | undefined;
@@ -96,7 +97,7 @@ export class StudioWebviewPanel {
 					let url = "";
 					let options: Record<string, unknown> = {};
 
-					if (typeof message.data === "string") {
+					if (isString(message.data)) {
 						url = message.data;
 					} else if ((message.data as Record<string, unknown>)?.resource) {
 						const res = (message.data as Record<string, unknown>)
@@ -184,7 +185,7 @@ export class StudioWebviewPanel {
 							if (reqOptions.variables) {
 								args.push(
 									"--variables",
-									typeof reqOptions.variables === "string"
+									isString(reqOptions.variables)
 										? reqOptions.variables
 										: JSON.stringify(reqOptions.variables),
 								);

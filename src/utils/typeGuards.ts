@@ -8,6 +8,30 @@ export function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+export function isString(value: unknown): value is string {
+	return typeof value === "string";
+}
+
+export function isBoolean(value: unknown): value is boolean {
+	return typeof value === "boolean";
+}
+
+export function isNumber(value: unknown): value is number {
+	return typeof value === "number";
+}
+
+export function isObjectHasData(
+	value: unknown,
+): value is { data: Record<string, unknown> } {
+	return isRecord(value) && isRecord(value.data);
+}
+
+export function isObjectHasDrawflow(
+	value: unknown,
+): value is { drawflow: Record<string, unknown> } {
+	return isRecord(value) && isRecord(value.drawflow);
+}
+
 /**
  * Checks if an object has a string `fsPath` property.
  */
