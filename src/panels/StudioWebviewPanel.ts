@@ -130,7 +130,8 @@ export class StudioWebviewPanel {
 					const { DaemonManager } = require("../core/DaemonManager");
 					const daemon = DaemonManager.getInstance();
 
-					const workflowData = (message.data as any)?.workflowData || message.data;
+					const workflowData =
+						(message.data as any)?.workflowData || message.data;
 					if (!workflowData?.id)
 						return { success: false, error: "Missing workflow ID" };
 

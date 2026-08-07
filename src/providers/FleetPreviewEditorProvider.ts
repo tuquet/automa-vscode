@@ -146,7 +146,9 @@ export class FleetPreviewEditorProvider
 		return this.buildDictionaryFromFiles(
 			"**/*.workflow.json",
 			(json) => {
-				return json.id ? { id: String(json.id), name: String(json.name) } : undefined;
+				return json.id
+					? { id: String(json.id), name: String(json.name) }
+					: undefined;
 			},
 			"workflows",
 		);
@@ -157,8 +159,12 @@ export class FleetPreviewEditorProvider
 			"**/*.{profile,bprofile}.json",
 			(json, filePath) => {
 				return {
-					id: String(json.id || path.basename(filePath, path.extname(filePath))),
-					name: String(json.name || path.basename(filePath, path.extname(filePath))),
+					id: String(
+						json.id || path.basename(filePath, path.extname(filePath)),
+					),
+					name: String(
+						json.name || path.basename(filePath, path.extname(filePath)),
+					),
 				};
 			},
 			"profiles",
