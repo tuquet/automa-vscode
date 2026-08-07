@@ -334,9 +334,106 @@ export class StudioWebviewPanel {
 					);
 				}
 			}
+
+			if (items.variables && Array.isArray(items.variables)) {
+				await this.saveGroupedData(
+					workspaceRoot,
+					items.variables,
+					"**/*.variable.json",
+					"studio.variable.json",
+					"variables",
+					EXCLUDE_PATTERN,
+				);
+			}
+
+			if (items.credentials && Array.isArray(items.credentials)) {
+				await this.saveGroupedData(
+					workspaceRoot,
+					items.credentials,
+					"**/*.credential.json",
+					"studio.credential.json",
+					"credentials",
+					EXCLUDE_PATTERN,
+				);
+			}
+
+			if (items.tables && Array.isArray(items.tables)) {
+				await this.saveGroupedData(
+					workspaceRoot,
+					items.tables,
+					"**/*.table.json",
+					"studio.table.json",
+					"tables",
+					EXCLUDE_PATTERN,
+				);
+			}
 		} catch (error: unknown) {
 			const e = error instanceof Error ? error : new Error(String(error));
 			Logger.error(`Failed to handle storage set: ${e.message}`);
+		}
+	}
+
+	private async saveGroupedData(
+		workspaceRoot: vscode.Uri,
+		itemsList: unknown[],
+		globPattern: string,
+		defaultFileName: string,
+		folderName: string,
+		excludePattern: string,
+	) {
+		const allFiles = await vscode.workspace.findFiles(
+			globPattern,
+			excludePattern,
+		);
+
+		const idToUriMap = new Map<string, vscode.Uri>();
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const uriToItemsMap = new Map<string, any[]>();
+
+		for (const file of allFiles) {
+			try {
+				const content = await vscode.workspace.fs.readFile(file);
+				const data = JSON.parse(Buffer.from(content).toString("utf-8"));
+				const arr = Array.isArray(data) ? data : [];
+				uriToItemsMap.set(file.toString(), arr);
+				for (const item of arr) {
+					if (item && item.id) idToUriMap.set(item.id, file);
+				}
+			} catch (_e) {}
+		}
+
+		for (const rawItem of itemsList) {
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			const item = rawItem as any;
+			if (!item || !item.id) continue;
+			let targetUri = idToUriMap.get(item.id);
+			if (!targetUri) {
+				targetUri = vscode.Uri.joinPath(
+					workspaceRoot,
+					folderName,
+					defaultFileName,
+				);
+			}
+
+			let itemsInFile = uriToItemsMap.get(targetUri.toString());
+			if (!itemsInFile) {
+				itemsInFile = [];
+				uriToItemsMap.set(targetUri.toString(), itemsInFile);
+			}
+
+			const existingIdx = itemsInFile.findIndex((x) => x.id === item.id);
+			if (existingIdx !== -1) {
+				itemsInFile[existingIdx] = item;
+			} else {
+				itemsInFile.push(item);
+			}
+		}
+
+		for (const [uriStr, arr] of uriToItemsMap.entries()) {
+			await vscode.workspace.fs.writeFile(
+				vscode.Uri.parse(uriStr),
+				Buffer.from(JSON.stringify(arr, null, 2), "utf-8"),
+			);
 		}
 	}
 
