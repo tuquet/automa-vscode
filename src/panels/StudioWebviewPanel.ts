@@ -189,8 +189,14 @@ export class StudioWebviewPanel {
 										: JSON.stringify(reqOptions.variables),
 								);
 							}
-							const result = await daemon.executeCliCommand(args);
-							fs.unlinkSync(tempFile);
+							let result: unknown;
+							try {
+								result = await daemon.executeCliCommand(args);
+							} finally {
+								if (fs.existsSync(tempFile)) {
+									fs.unlinkSync(tempFile);
+								}
+							}
 							return result;
 						} catch (cliErr: unknown) {
 							const ce =
