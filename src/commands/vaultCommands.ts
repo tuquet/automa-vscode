@@ -6,9 +6,9 @@ import { DaemonManager } from "../core/DaemonManager";
 export interface ITable {
 	id: string | number;
 	name: string;
-	columns: any[];
-	items: any[];
-	columnsIndex: Record<string, any>;
+	columns: Record<string, unknown>[];
+	items: Record<string, unknown>[];
+	columnsIndex: Record<string, string>;
 	createdAt?: number;
 	modifiedAt?: number;
 }
@@ -37,7 +37,9 @@ function getGlobalsFilePath(filename: string): string | undefined {
 	return path.join(globalsDir, filename);
 }
 
-function loadVariables(varsPath: string): any[] {
+function loadVariables(
+	varsPath: string,
+): Array<{ name?: string; key?: string; value: unknown }> {
 	if (!fs.existsSync(varsPath)) return [];
 	try {
 		const content = fs.readFileSync(varsPath, "utf8");
@@ -71,7 +73,7 @@ function loadTables(tablesPath: string): ITable[] {
 	return [];
 }
 
-function writeJsonFile(filePath: string, data: any): void {
+function writeJsonFile(filePath: string, data: unknown): void {
 	fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf8");
 }
 // ------------------------------------------------
@@ -87,7 +89,7 @@ export async function addVariableCommand() {
 	});
 	if (value === undefined) return;
 
-	const varsPath = getGlobalsFilePath("variables.json");
+	const varsPath = getGlobalsFilePath("globals.variable.json");
 	if (!varsPath) return;
 
 	const variables = loadVariables(varsPath);
@@ -147,7 +149,7 @@ export async function addTableCommand() {
 	});
 	if (!name) return;
 
-	const tablesPath = getGlobalsFilePath("tables.json");
+	const tablesPath = getGlobalsFilePath("globals.table.json");
 	if (!tablesPath) return;
 
 	const tables = loadTables(tablesPath);
