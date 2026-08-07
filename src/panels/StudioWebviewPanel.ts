@@ -243,33 +243,7 @@ export class StudioWebviewPanel {
 					files.map(async (file) => {
 						try {
 							const bytes = await vscode.workspace.fs.readFile(file);
-							let parsed = JSON.parse(Buffer.from(bytes).toString("utf-8"));
-
-							if (shouldSanitize) {
-								try {
-									const res = await fetch(
-										`http://localhost:${port}/api/sanitize`,
-										{
-											method: "POST",
-											headers: { "Content-Type": "application/json" },
-											body: JSON.stringify({ content: JSON.stringify(parsed) }),
-										},
-									);
-									if (res.ok) {
-										const data = (await res.json()) as {
-											success: boolean;
-											data: unknown;
-										};
-										if (data.success && data.data) {
-											parsed = data.data;
-										}
-									}
-								} catch (e) {
-									// Ignore fetch error, just use un-sanitized data
-								}
-							}
-
-							return parsed;
+							return JSON.parse(Buffer.from(bytes).toString("utf-8"));
 						} catch (e: unknown) {
 							const msg = e instanceof Error ? e.message : String(e);
 							const path = require("node:path");
@@ -278,7 +252,34 @@ export class StudioWebviewPanel {
 						}
 					}),
 				);
-				return contents.filter((item) => item !== null);
+
+				let validParsed = contents.filter((item) => item !== null);
+
+				if (shouldSanitize && validParsed.length > 0) {
+					try {
+						const res = await fetch(
+							`http://localhost:${port}/api/sanitize/batch`,
+							{
+								method: "POST",
+								headers: { "Content-Type": "application/json" },
+								body: JSON.stringify({ workflows: validParsed }),
+							},
+						);
+						if (res.ok) {
+							const data = (await res.json()) as {
+								success: boolean;
+								data: any[];
+							};
+							if (data.success && data.data) {
+								validParsed = data.data;
+							}
+						}
+					} catch (e) {
+						// Ignore fetch error, just use un-sanitized data
+					}
+				}
+
+				return validParsed;
 			};
 
 			const [workflows, rawVars, rawCreds, rawTables] = await Promise.all([
