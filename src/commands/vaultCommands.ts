@@ -241,7 +241,7 @@ export async function deleteVaultItemCommand(
 		for (const p of patterns) {
 			const files = await vscode.workspace.findFiles(
 				p.pattern,
-				"**/node_modules/**",
+				"**/{node_modules,.git,dist,out,.gemini,tmp,build}/**",
 			);
 			for (const file of files) {
 				const { data, success } = readVaultFileSafely(file.fsPath);
