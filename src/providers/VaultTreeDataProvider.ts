@@ -178,10 +178,10 @@ export class VaultTreeDataProvider
 		errorMsg: string,
 		noFilesMsg: string,
 		extractValue: (
-			item: any,
+			item: Record<string, unknown>,
 			isArray: boolean,
 			key?: string,
-			val?: any,
+			val?: unknown,
 		) => string | undefined,
 		allowObjects: boolean,
 	): Promise<VaultItem[]> {
