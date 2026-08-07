@@ -98,9 +98,10 @@ export class StudioWebviewPanel {
 
 					if (typeof message.data === "string") {
 						url = message.data;
-					} else if ((message.data as any)?.resource) {
-						const res = (message.data as any).resource;
-						url = res.url || res;
+					} else if ((message.data as Record<string, unknown>)?.resource) {
+						const res = (message.data as Record<string, unknown>)
+							.resource as Record<string, unknown>;
+						url = (res.url as string) || (res as unknown as string);
 						options = res;
 					}
 
@@ -113,7 +114,8 @@ export class StudioWebviewPanel {
 						return await res.text();
 					}
 
-					const type = (message.data as any)?.type || "json";
+					const type =
+						(message.data as Record<string, unknown>)?.type || "json";
 					if (type === "json") return await res.json();
 					if (type === "text") return await res.text();
 
@@ -131,11 +133,13 @@ export class StudioWebviewPanel {
 					const daemon = DaemonManager.getInstance();
 
 					const workflowData =
-						(message.data as any)?.workflowData || message.data;
-					if (!workflowData?.id)
+						(message.data as Record<string, unknown>)?.workflowData ||
+						message.data;
+					if (!(workflowData as Record<string, unknown>)?.id)
 						return { success: false, error: "Missing workflow ID" };
 
-					const reqOptions = (message.data as any)?.options || {};
+					const reqOptions =
+						(message.data as Record<string, unknown>)?.options || {};
 					try {
 						const port = daemon.getPort();
 						const executeUrl = `http://localhost:${port}/api/jobs/run`;
@@ -454,7 +458,7 @@ export class StudioWebviewPanel {
 
 		const idToUriMap = new Map<string, vscode.Uri>();
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		const uriToItemsMap = new Map<string, any[]>();
+		const uriToItemsMap = new Map<string, Record<string, unknown>[]>();
 
 		for (const file of allFiles) {
 			try {

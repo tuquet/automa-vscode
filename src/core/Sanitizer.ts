@@ -33,28 +33,44 @@ export class WorkflowSanitizer {
 
 		if (isPackage && json.data) {
 			if (Array.isArray((json.data as Record<string, unknown>).nodes))
-				nodes = (json.data as Record<string, unknown>).nodes as Record<string, unknown>[];
+				nodes = (json.data as Record<string, unknown>).nodes as Record<
+					string,
+					unknown
+				>[];
 			if (Array.isArray((json.data as Record<string, unknown>).edges))
-				edges = (json.data as Record<string, unknown>).edges as Record<string, unknown>[];
+				edges = (json.data as Record<string, unknown>).edges as Record<
+					string,
+					unknown
+				>[];
 		} else if (!isPackage && json.drawflow) {
 			if (Array.isArray((json.drawflow as Record<string, unknown>).nodes))
-				nodes = (json.drawflow as Record<string, unknown>).nodes as Record<string, unknown>[];
+				nodes = (json.drawflow as Record<string, unknown>).nodes as Record<
+					string,
+					unknown
+				>[];
 			if (Array.isArray((json.drawflow as Record<string, unknown>).edges))
-				edges = (json.drawflow as Record<string, unknown>).edges as Record<string, unknown>[];
+				edges = (json.drawflow as Record<string, unknown>).edges as Record<
+					string,
+					unknown
+				>[];
+			const drawflow = json.drawflow as Record<string, unknown>;
 			// Fallback for object-based nodes
 			if (
-				!Array.isArray((json.drawflow as any).nodes) &&
-				(json.drawflow as any).Home &&
-				(json.drawflow as any).Home.data
+				!Array.isArray(drawflow.nodes) &&
+				drawflow.Home &&
+				(drawflow.Home as Record<string, unknown>).data
 			) {
-				Object.entries((json.drawflow as any).Home.data).forEach(
-					([key, node]) => {
-						const n = node as Record<string, unknown>;
-						if (!n.id) n.id = key;
-						nodes.push(n);
-					},
-				);
-				(json.drawflow as any).nodes = nodes; // normalize to array
+				Object.entries(
+					(drawflow.Home as Record<string, unknown>).data as Record<
+						string,
+						unknown
+					>,
+				).forEach(([key, node]) => {
+					const n = node as Record<string, unknown>;
+					if (!n.id) n.id = key;
+					nodes.push(n);
+				});
+				drawflow.nodes = nodes; // normalize to array
 				isModified = true;
 			}
 		}
@@ -95,21 +111,25 @@ export class WorkflowSanitizer {
 				}
 
 				if (node.data) {
-					if (typeof (node.data as any).disableBlock !== "boolean") {
-						(node.data as any).disableBlock = false;
+					const nodeData = node.data as Record<string, unknown>;
+					if (typeof nodeData.disableBlock !== "boolean") {
+						nodeData.disableBlock = false;
 						isModified = true;
 					}
 
 					// Recursively sanitize nested nodes/edges (e.g. in BlockPackage/BlockGroup)
-					const nestedData = (node.data as any).data
-						? (node.data as any).data
-						: node.data;
+					const nestedData = nodeData.data
+						? (nodeData.data as Record<string, unknown>)
+						: nodeData;
 					if (
 						nestedData &&
 						Array.isArray(nestedData.nodes) &&
 						Array.isArray(nestedData.edges)
 					) {
-						sanitizeNodesAndEdges(nestedData.nodes, nestedData.edges);
+						sanitizeNodesAndEdges(
+							nestedData.nodes as Record<string, unknown>[],
+							nestedData.edges as Record<string, unknown>[],
+						);
 					}
 				}
 			});

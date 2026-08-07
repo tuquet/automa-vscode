@@ -94,7 +94,7 @@ export async function addVariableCommand() {
 	const varsPath = getGlobalsFilePath("globals.variable.json");
 	if (!varsPath) return;
 
-	let data: any = [];
+	let data: Record<string, unknown>[] | Record<string, unknown> = [];
 	if (fs.existsSync(varsPath)) {
 		try {
 			const content = fs.readFileSync(varsPath, "utf8");
@@ -107,7 +107,7 @@ export async function addVariableCommand() {
 
 	if (Array.isArray(data)) {
 		const existingIndex = data.findIndex(
-			(v: any) => v.name === key || v.key === key,
+			(v: Record<string, unknown>) => v.name === key || v.key === key,
 		);
 		if (existingIndex >= 0) {
 			data[existingIndex].value = value;
@@ -169,7 +169,7 @@ export async function addTableCommand() {
 	const tablesPath = getGlobalsFilePath("globals.table.json");
 	if (!tablesPath) return;
 
-	let data: any = [];
+	let data: Record<string, unknown>[] | Record<string, unknown> = [];
 	if (fs.existsSync(tablesPath)) {
 		try {
 			const content = fs.readFileSync(tablesPath, "utf8");

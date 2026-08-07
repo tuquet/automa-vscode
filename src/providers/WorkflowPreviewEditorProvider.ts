@@ -279,7 +279,7 @@ export class WorkflowPreviewEditorProvider
 						unknown
 					>;
 					for (const param of (triggerNode.data as Record<string, unknown>)
-						.parameters as any[]) {
+						.parameters as Record<string, unknown>[]) {
 						if (
 							triggerParamsData &&
 							triggerParamsData[param.name] !== undefined
