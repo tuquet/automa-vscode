@@ -132,70 +132,61 @@ export class VaultTreeDataProvider
 	}
 
 	private async getVariables(): Promise<VaultItem[]> {
-		const files = await vscode.workspace.findFiles(
+		return this.parseVaultFiles(
 			"**/*.variable.json",
-			"**/{node_modules,.git,dist,out,.gemini,tmp,build}/**",
+			"Variable",
+			"symbol-variable",
+			"Unnamed",
+			"Error reading variables",
+			"No *.variable.json found",
+			(item, isArray, _key, val) => (isArray ? item.value : String(val)),
+			true,
 		);
-		if (files.length > 0) {
-			try {
-				const items: VaultItem[] = [];
-				for (const file of files) {
-					try {
-						const content = await vscode.workspace.fs.readFile(file);
-						const data = JSON.parse(Buffer.from(content).toString("utf-8"));
-						if (Array.isArray(data)) {
-							for (const item of data) {
-								const name = item.name || item.key || "Unnamed";
-								items.push(
-									new VaultItem(
-										name,
-										vscode.TreeItemCollapsibleState.None,
-										"Variable",
-										"symbol-variable",
-										item.value,
-									),
-								);
-							}
-						} else if (typeof data === "object" && data !== null) {
-							for (const [key, value] of Object.entries(data)) {
-								items.push(
-									new VaultItem(
-										key,
-										vscode.TreeItemCollapsibleState.None,
-										"Variable",
-										"symbol-variable",
-										String(value),
-									),
-								);
-							}
-						}
-					} catch (_e) {}
-				}
-				return items;
-			} catch (_e) {
-				return [
-					new VaultItem(
-						"Error reading variables",
-						vscode.TreeItemCollapsibleState.None,
-						"Error",
-						"error",
-					),
-				];
-			}
-		}
-		return [
-			new VaultItem(
-				"No *.variable.json found",
-				vscode.TreeItemCollapsibleState.None,
-				"Info",
-				"info",
-			),
-		];
 	}
 
 	private async getCredentials(): Promise<VaultItem[]> {
-		const files = await vscode.workspace.findFiles(
+		return this.parseVaultFiles(
 			"**/*.credential.json",
+			"Credential",
+			"key",
+			"Unnamed",
+			"Error reading credentials",
+			"No *.credential.json found",
+			() => "********",
+			true,
+		);
+	}
+
+	private async getTables(): Promise<VaultItem[]> {
+		return this.parseVaultFiles(
+			"**/*.table.json",
+			"Table",
+			"list-flat",
+			"Unnamed Table",
+			"Error reading tables",
+			"No *.table.json found",
+			(item) => (item.id ? `ID: ${item.id}` : "Table"),
+			false,
+		);
+	}
+
+	private async parseVaultFiles(
+		pattern: string,
+		type: "Variable" | "Credential" | "Table",
+		iconName: string,
+		defaultName: string,
+		errorMsg: string,
+		noFilesMsg: string,
+		extractValue: (
+			item: any,
+			isArray: boolean,
+			key?: string,
+			val?: any,
+		) => string | undefined,
+		allowObjects: boolean,
+	): Promise<VaultItem[]> {
+		const files = await vscode.workspace.findFiles(
+			pattern,
 			"**/{node_modules,.git,dist,out,.gemini,tmp,build}/**",
 		);
 		if (files.length > 0) {
@@ -207,26 +198,32 @@ export class VaultTreeDataProvider
 						const data = JSON.parse(Buffer.from(content).toString("utf-8"));
 						if (Array.isArray(data)) {
 							for (const item of data) {
-								const name = item.name || item.id || "Unnamed";
+								const name = item.name || item.id || item.key || defaultName;
+								const value = extractValue(item, true);
 								items.push(
 									new VaultItem(
 										name,
 										vscode.TreeItemCollapsibleState.None,
-										"Credential",
-										"key",
-										"********",
+										type,
+										iconName,
+										value,
 									),
 								);
 							}
-						} else if (typeof data === "object" && data !== null) {
-							for (const key of Object.keys(data)) {
+						} else if (
+							allowObjects &&
+							typeof data === "object" &&
+							data !== null
+						) {
+							for (const [key, val] of Object.entries(data)) {
+								const value = extractValue(data, false, key, val);
 								items.push(
 									new VaultItem(
 										key,
 										vscode.TreeItemCollapsibleState.None,
-										"Credential",
-										"key",
-										"********",
+										type,
+										iconName,
+										value,
 									),
 								);
 							}
@@ -237,7 +234,7 @@ export class VaultTreeDataProvider
 			} catch (_e) {
 				return [
 					new VaultItem(
-						"Error reading credentials",
+						errorMsg,
 						vscode.TreeItemCollapsibleState.None,
 						"Error",
 						"error",
@@ -247,57 +244,7 @@ export class VaultTreeDataProvider
 		}
 		return [
 			new VaultItem(
-				"No *.credential.json found",
-				vscode.TreeItemCollapsibleState.None,
-				"Info",
-				"info",
-			),
-		];
-	}
-
-	private async getTables(): Promise<VaultItem[]> {
-		const files = await vscode.workspace.findFiles(
-			"**/*.table.json",
-			"**/{node_modules,.git,dist,out,.gemini,tmp,build}/**",
-		);
-		if (files.length > 0) {
-			try {
-				const items: VaultItem[] = [];
-				for (const file of files) {
-					try {
-						const content = await vscode.workspace.fs.readFile(file);
-						const data = JSON.parse(Buffer.from(content).toString("utf-8"));
-						if (Array.isArray(data)) {
-							for (const item of data) {
-								const name = item.name || item.id || "Unnamed Table";
-								items.push(
-									new VaultItem(
-										name,
-										vscode.TreeItemCollapsibleState.None,
-										"Table",
-										"list-flat",
-										item.id ? `ID: ${item.id}` : "Table",
-									),
-								);
-							}
-						}
-					} catch (_e) {}
-				}
-				return items;
-			} catch (_e) {
-				return [
-					new VaultItem(
-						"Error reading tables",
-						vscode.TreeItemCollapsibleState.None,
-						"Error",
-						"error",
-					),
-				];
-			}
-		}
-		return [
-			new VaultItem(
-				"No *.table.json found",
+				noFilesMsg,
 				vscode.TreeItemCollapsibleState.None,
 				"Info",
 				"info",

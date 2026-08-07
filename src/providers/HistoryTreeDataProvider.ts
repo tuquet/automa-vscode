@@ -70,52 +70,58 @@ export class HistoryTreeDataProvider
 		this.context.subscriptions.push(
 			vscode.commands.registerCommand(
 				"automa.deleteHistoryItem",
-				async (item: vscode.TreeItem) => {
-					if (!item?.id) return;
-					const confirm = await vscode.window.showWarningMessage(
-						`Are you sure you want to delete this log?`,
-						"Yes",
-						"No",
-					);
-					if (confirm !== "Yes") return;
-
-					try {
-						await DaemonManager.getInstance().executeCliCommand([
-							"history",
-							"--delete",
-							item.id,
-						]);
-						this.refresh();
-					} catch (err: any) {
-						vscode.window.showErrorMessage(
-							`Failed to delete log: ${err.message}`,
-						);
-					}
-				},
+				(item: vscode.TreeItem) => this.handleDeleteHistoryItem(item),
 			),
 		);
 		this.context.subscriptions.push(
-			vscode.commands.registerCommand("automa.clearHistory", async () => {
-				const confirm = await vscode.window.showWarningMessage(
-					`Are you sure you want to clear all execution history?`,
-					"Yes",
-					"No",
-				);
-				if (confirm !== "Yes") return;
-
-				try {
-					await DaemonManager.getInstance().executeCliCommand([
-						"history",
-						"--clear",
-					]);
-					this.refresh();
-				} catch (err: any) {
-					vscode.window.showErrorMessage(
-						`Failed to clear history: ${err.message}`,
-					);
-				}
-			}),
+			vscode.commands.registerCommand("automa.clearHistory", () =>
+				this.handleClearHistory(),
+			),
 		);
+	}
+
+	private async handleDeleteHistoryItem(item: vscode.TreeItem) {
+		if (!item?.id) return;
+		const confirm = await vscode.window.showWarningMessage(
+			`Are you sure you want to delete this log?`,
+			"Yes",
+			"No",
+		);
+		if (confirm !== "Yes") return;
+
+		try {
+			await DaemonManager.getInstance().executeCliCommand([
+				"history",
+				"--delete",
+				item.id,
+			]);
+			this.refresh();
+		} catch (err: any) {
+			vscode.window.showErrorMessage(
+				`Failed to delete log: ${err.message}`,
+			);
+		}
+	}
+
+	private async handleClearHistory() {
+		const confirm = await vscode.window.showWarningMessage(
+			`Are you sure you want to clear all execution history?`,
+			"Yes",
+			"No",
+		);
+		if (confirm !== "Yes") return;
+
+		try {
+			await DaemonManager.getInstance().executeCliCommand([
+				"history",
+				"--clear",
+			]);
+			this.refresh();
+		} catch (err: any) {
+			vscode.window.showErrorMessage(
+				`Failed to clear history: ${err.message}`,
+			);
+		}
 	}
 
 	loadMore() {
