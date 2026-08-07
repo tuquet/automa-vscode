@@ -173,21 +173,25 @@ export class DaemonManager {
 				if (line.startsWith("{") || line.startsWith("[")) {
 					try {
 						return JSON.parse(line);
-					} catch (e) {}
+					} catch (_e) {}
 				}
 			}
 
-			// Strategy 2: Multi-line JSON extraction from the end
-			// Find the last closing brace or bracket
-			const lastCharIdx = Math.max(str.lastIndexOf("}"), str.lastIndexOf("]"));
-			if (lastCharIdx !== -1) {
-				// Search backwards for the opening brace or bracket
-				for (let i = lastCharIdx - 1; i >= 0; i--) {
-					if (str[i] === "{" || str[i] === "[") {
+			// Strategy 2: Multi-line JSON extraction
+			// Search for the first line that starts with { or [ to avoid O(N^2) character-by-character search
+			for (let i = 0; i < lines.length; i++) {
+				const line = lines[i].trim();
+				if (line.startsWith("{") || line.startsWith("[")) {
+					const potentialJson = lines.slice(i).join("\n");
+					const lastCharIdx = Math.max(
+						potentialJson.lastIndexOf("}"),
+						potentialJson.lastIndexOf("]"),
+					);
+					if (lastCharIdx !== -1) {
 						try {
-							return JSON.parse(str.substring(i, lastCharIdx + 1));
-						} catch (e) {
-							// Continue earlier to find the true matching opening bracket
+							return JSON.parse(potentialJson.substring(0, lastCharIdx + 1));
+						} catch (_e) {
+							// Continue checking next lines if parsing fails
 						}
 					}
 				}

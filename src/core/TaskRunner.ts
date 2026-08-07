@@ -27,10 +27,14 @@ export class TaskRunner {
 		const { cmd, args } =
 			DaemonManager.getInstance().resolveCommandAndArgs(cliArgs);
 
+		const cmdParts = cmd.split(" ");
+		const executable = cmdParts[0];
+		const finalArgs = [...cmdParts.slice(1), ...args];
+
 		const options: TaskOptions = {
 			...taskConfig,
-			command: cmd,
-			args: args,
+			command: executable,
+			args: finalArgs,
 		};
 
 		if (taskConfig.useTelemetry) {
