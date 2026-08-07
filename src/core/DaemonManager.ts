@@ -240,17 +240,6 @@ export class DaemonManager {
 				} catch (_e: unknown) {}
 			}
 
-			// Final fallback: line by line
-			const lines = str.split("\n");
-			for (let i = lines.length - 1; i >= 0; i--) {
-				const line = lines[i].trim();
-				if (line.startsWith("{") || line.startsWith("[")) {
-					try {
-						return JSON.parse(line);
-					} catch (_e2: unknown) {}
-				}
-			}
-
 			throw new Error("No valid JSON found in output");
 		};
 
