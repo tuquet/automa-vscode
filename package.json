@@ -230,7 +230,7 @@
 				},
 				{
 					"command": "automa.deleteHistoryItem",
-					"when": "view == automa.executionHistory",
+					"when": "viewItem == automaHistoryLog",
 					"group": "inline"
 				},
 				{
