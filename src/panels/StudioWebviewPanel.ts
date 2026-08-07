@@ -268,7 +268,7 @@ export class StudioWebviewPanel {
 						if (res.ok) {
 							const data = (await res.json()) as {
 								success: boolean;
-								data: any[];
+								data: Record<string, unknown>[];
 							};
 							if (data.success && data.data) {
 								validParsed = data.data;

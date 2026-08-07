@@ -172,9 +172,12 @@ export async function lintCheckCommand(
 							(d) => d.severity === vscode.DiagnosticSeverity.Error,
 						).length;
 						const warnCount = diagnostics.length - errorCount;
-						vscode.window.showErrorMessage(
-							`Lint finished: ${errorCount} error(s), ${warnCount} warning(s) in ${filePath.split(/\\|\//).pop()}`,
-						);
+						const msg = `Lint finished: ${errorCount} error(s), ${warnCount} warning(s) in ${filePath.split(/\\|\//).pop()}`;
+						if (errorCount > 0) {
+							vscode.window.showErrorMessage(msg);
+						} else {
+							vscode.window.showWarningMessage(msg);
+						}
 					}
 				} catch (error: unknown) {
 					const e = error instanceof Error ? error : new Error(String(error));

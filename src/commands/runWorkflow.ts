@@ -42,7 +42,7 @@ async function resolveTarget(
 
 	if (!targetPath.endsWith(".json")) {
 		vscode.window.showErrorMessage(
-			"Cloud workflows are not supported yet via API.",
+			"Invalid file type. Only local JSON workflows (.json) are supported.",
 		);
 		return null;
 	}

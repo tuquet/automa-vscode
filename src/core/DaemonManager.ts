@@ -179,8 +179,10 @@ export class DaemonManager {
 			const firstBracket = str.indexOf("[");
 			const lastBracket = str.lastIndexOf("]");
 
-			const isObject = firstBrace !== -1 && lastBrace !== -1 && firstBrace < lastBrace;
-			const isArray = firstBracket !== -1 && lastBracket !== -1 && firstBracket < lastBracket;
+			const isObject =
+				firstBrace !== -1 && lastBrace !== -1 && firstBrace < lastBrace;
+			const isArray =
+				firstBracket !== -1 && lastBracket !== -1 && firstBracket < lastBracket;
 
 			let jsonStr = "";
 			if (isObject && isArray) {
