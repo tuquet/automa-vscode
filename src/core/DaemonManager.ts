@@ -115,9 +115,10 @@ export class DaemonManager {
 		const executable = cmdParts[0];
 		const spawnArgs = [...cmdParts.slice(1), ...finalArgs];
 
-		let output = "";
+		let outputBuf: Buffer;
+		let outputErr = "";
 		try {
-			const result = await new Promise<{ stdout: string; stderr: string }>(
+			const result = await new Promise<{ stdout: Buffer; stderr: string }>(
 				(resolve, reject) => {
 					const child = spawn(executable, spawnArgs, {
 						env,
@@ -141,7 +142,7 @@ export class DaemonManager {
 
 					child.on("close", (_code) => {
 						resolve({
-							stdout: Buffer.concat(stdoutChunks).toString("utf-8").trim(),
+							stdout: Buffer.concat(stdoutChunks),
 							stderr: Buffer.concat(stderrChunks).toString("utf-8").trim(),
 						});
 					});
@@ -151,30 +152,38 @@ export class DaemonManager {
 			if (result.stderr) {
 				Logger.debug(`[CLI] stderr: ${result.stderr}`);
 			}
-			output = result.stdout || result.stderr;
+			outputBuf = result.stdout;
+			outputErr = result.stderr;
 		} catch (error: unknown) {
 			const e = toError(error);
-			output = e.message || String(e);
+			outputErr = e.message || String(e);
+			outputBuf = Buffer.from(outputErr);
 		}
 
-		const extractJSON = (str: string) => {
-			try {
-				return JSON.parse(str);
-			} catch (_e: unknown) {}
+		const extractJSONFromBuffer = (buf: Buffer) => {
+			// Fast path for small outputs (< 10MB)
+			if (buf.length < 10 * 1024 * 1024) {
+				const str = buf.toString("utf-8").trim();
+				try {
+					return JSON.parse(str);
+				} catch (_e: unknown) {}
+			}
 
-			str = str.trim();
-
-			// CLI commands always output their final --json data as a single unformatted line.
-			// Logs might be printed before it.
-			// To avoid a memory bottleneck from str.split('\n') on massive outputs (e.g. 100MB+ logs),
-			// we scan backwards line by line using lastIndexOf.
-			let currentIdx = str.length;
+			let currentIdx = buf.length;
 			let linesChecked = 0;
 			// Limit to the last 1000 lines to prevent long blockages
 			while (currentIdx > 0 && linesChecked < 1000) {
-				const nextIdx = str.lastIndexOf("\n", currentIdx - 1);
-				const line = str
-					.substring(nextIdx === -1 ? 0 : nextIdx + 1, currentIdx)
+				let nextIdx = -1;
+				for (let i = currentIdx - 1; i >= 0; i--) {
+					if (buf[i] === 0x0a) {
+						nextIdx = i;
+						break;
+					}
+				}
+
+				const line = buf
+					.subarray(nextIdx === -1 ? 0 : nextIdx + 1, currentIdx)
+					.toString("utf-8")
 					.trim();
 
 				if (
@@ -195,14 +204,17 @@ export class DaemonManager {
 			throw new Error("No valid JSON found in output");
 		};
 
-		let parsed: unknown;
 		try {
-			parsed = extractJSON(output);
-			return parsed;
+			return extractJSONFromBuffer(outputBuf);
 		} catch (error: unknown) {
 			const e = toError(error);
+			// Only slice a small portion to prevent massive memory usage on error logs
+			const outputPreview =
+				outputBuf.length > 5000
+					? outputBuf.subarray(outputBuf.length - 5000).toString("utf-8")
+					: outputBuf.toString("utf-8");
 			throw new Error(
-				`Failed to parse CLI JSON output: ${e.message}\nOutput was: ${output}`,
+				`Failed to parse CLI JSON output: ${e.message}\nOutput preview was: ...${outputPreview}`,
 			);
 		}
 	}
@@ -223,21 +235,33 @@ export class DaemonManager {
 						(executable === "npx" || executable === "npx.cmd"),
 				});
 
-				let stdoutData = "";
-				let stderrData = "";
+				const stdoutChunks: Buffer[] = [];
+				const stderrChunks: Buffer[] = [];
 
 				child.stdout?.on("data", (data) => {
-					stdoutData += data.toString();
+					stdoutChunks.push(Buffer.isBuffer(data) ? data : Buffer.from(data));
 				});
 
 				child.stderr?.on("data", (data) => {
-					stderrData += data.toString();
+					stderrChunks.push(Buffer.isBuffer(data) ? data : Buffer.from(data));
 				});
 
 				child.on("error", reject);
 
 				child.on("close", () => {
-					resolve({ stdout: stdoutData || "", stderr: stderrData || "" });
+					let stdoutStr = "";
+					let stderrStr = "";
+					try {
+						stdoutStr = Buffer.concat(stdoutChunks).toString("utf-8");
+					} catch (_e) {
+						stdoutStr = "[Stdout exceeded string length limit]";
+					}
+					try {
+						stderrStr = Buffer.concat(stderrChunks).toString("utf-8");
+					} catch (_e) {
+						stderrStr = "[Stderr exceeded string length limit]";
+					}
+					resolve({ stdout: stdoutStr || "", stderr: stderrStr || "" });
 				});
 			});
 		} catch (error: unknown) {
