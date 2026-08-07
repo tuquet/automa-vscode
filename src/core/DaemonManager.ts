@@ -4,6 +4,7 @@ import * as net from "node:net";
 import * as path from "node:path";
 import { promisify } from "node:util";
 import * as vscode from "vscode";
+import { toError } from "../utils/typeGuards";
 import { Logger } from "./Logger";
 
 const _execAsync = promisify(exec);
@@ -152,7 +153,7 @@ export class DaemonManager {
 			}
 			output = result.stdout || result.stderr;
 		} catch (error: unknown) {
-			const e = error instanceof Error ? error : new Error(String(error));
+			const e = toError(error);
 			output = e.message || String(e);
 		}
 
@@ -187,7 +188,7 @@ export class DaemonManager {
 			parsed = extractJSON(output);
 			return parsed;
 		} catch (error: unknown) {
-			const e = error instanceof Error ? error : new Error(String(error));
+			const e = toError(error);
 			throw new Error(
 				`Failed to parse CLI JSON output: ${e.message}\nOutput was: ${output}`,
 			);
@@ -228,7 +229,7 @@ export class DaemonManager {
 				});
 			});
 		} catch (error: unknown) {
-			const e = error instanceof Error ? error : new Error(String(error));
+			const e = toError(error);
 			return { stdout: "", stderr: e.message || String(e) };
 		}
 	}
@@ -330,7 +331,7 @@ export class DaemonManager {
 			this.statusBarItem.tooltip =
 				"Automa CLI Daemon is running (Click to stop)";
 		} catch (error: unknown) {
-			const e = error instanceof Error ? error : new Error(String(error));
+			const e = toError(error);
 			Logger.error(`Failed to launch daemon: ${e.message}`);
 			this.updateStatusStopped();
 		}

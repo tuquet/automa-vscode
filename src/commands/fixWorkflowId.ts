@@ -1,7 +1,7 @@
 import * as crypto from "node:crypto";
 import * as fs from "node:fs";
 import * as vscode from "vscode";
-import { extractFsPath, isString } from "../utils/typeGuards";
+import { extractFsPath, isString, toError } from "../utils/typeGuards";
 
 function generateShortId(): string {
 	// Standard nanoid alphabet
@@ -79,7 +79,7 @@ export async function fixWorkflowIdCommand(
 				skippedCount++;
 			}
 		} catch (error: unknown) {
-			const e = error instanceof Error ? error : new Error(String(error));
+			const e = toError(error);
 			errorCount++;
 			console.error(`Error fixing ${uri.fsPath}: ${e.message}`);
 		}

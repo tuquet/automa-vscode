@@ -74,3 +74,11 @@ export function extractFsPath(nodeOrUri: unknown): string | null {
 	}
 	return null;
 }
+
+export function getErrorMessage(error: unknown): string {
+	return getErrorMessage(error);
+}
+
+export function toError(error: unknown): Error {
+	return toError(error);
+}

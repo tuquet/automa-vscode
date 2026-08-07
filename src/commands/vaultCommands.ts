@@ -2,7 +2,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as vscode from "vscode";
 import { DaemonManager } from "../core/DaemonManager";
-import { isRecord } from "../utils/typeGuards";
+import { isRecord, toError } from "../utils/typeGuards";
 
 export interface ITable {
 	id: string | number;
@@ -204,7 +204,7 @@ async function executeEncryption(
 					`Credential ${name} encrypted and added successfully.`,
 				);
 			} catch (error: unknown) {
-				const e = error instanceof Error ? error : new Error(String(error));
+				const e = toError(error);
 				vscode.window.showErrorMessage(
 					`Failed to add credential: ${e.message}`,
 				);
@@ -257,7 +257,7 @@ export async function deleteVaultItemCommand(
 			);
 		}
 	} catch (error: unknown) {
-		const e = error instanceof Error ? error : new Error(String(error));
+		const e = toError(error);
 		vscode.window.showErrorMessage(
 			`Failed to delete ${item.type.toLowerCase()}: ${e.message}`,
 		);

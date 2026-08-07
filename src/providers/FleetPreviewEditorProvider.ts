@@ -2,6 +2,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as vscode from "vscode";
 import { TaskRunner } from "../core/TaskRunner";
+import { getErrorMessage } from "../utils/typeGuards";
 import { BaseCustomEditorProvider } from "./BaseCustomEditorProvider";
 
 export class FleetPreviewEditorProvider
@@ -119,7 +120,7 @@ export class FleetPreviewEditorProvider
 							dict[item.id] = item.name;
 						}
 					} catch (e: unknown) {
-						const msg = e instanceof Error ? e.message : String(e);
+						const msg = getErrorMessage(e);
 						parseErrors.push(`${path.basename(file.fsPath)}: ${msg}`);
 					}
 				}),

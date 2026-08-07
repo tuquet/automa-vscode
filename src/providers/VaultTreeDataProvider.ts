@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { isRecord } from "../utils/typeGuards";
+import { getErrorMessage, isRecord } from "../utils/typeGuards";
 
 export class VaultTreeDataProvider
 	implements vscode.TreeDataProvider<VaultItem>
@@ -237,7 +237,7 @@ export class VaultTreeDataProvider
 							}
 						}
 					} catch (e: unknown) {
-						const msg = e instanceof Error ? e.message : String(e);
+						const msg = getErrorMessage(e);
 						parseErrors.push(
 							`Failed to parse vault file ${file.fsPath}: ${msg}`,
 						);

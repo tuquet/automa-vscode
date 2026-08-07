@@ -6,6 +6,7 @@ import {
 	isObjectHasData,
 	isObjectHasDrawflow,
 	isRecord,
+	toError,
 } from "../utils/typeGuards";
 import { BaseCustomEditorProvider } from "./BaseCustomEditorProvider";
 
@@ -175,7 +176,7 @@ export class WorkflowPreviewEditorProvider
 				pkgVars,
 			);
 		} catch (error: unknown) {
-			const e = error instanceof Error ? error : new Error(String(error));
+			const e = toError(error);
 			webviewPanel.webview.html = `<body><h2>Error reading workflow</h2><p>${e.message}</p></body>`;
 		}
 	}
@@ -206,7 +207,7 @@ export class WorkflowPreviewEditorProvider
 					json.settings =
 						settingsStr.trim() === "" ? {} : JSON.parse(settingsStr);
 				} catch (error: unknown) {
-					const e = error instanceof Error ? error : new Error(String(error));
+					const e = toError(error);
 					throw new Error(`Invalid JSON in Settings: ${e.message}`);
 				}
 			}
@@ -215,7 +216,7 @@ export class WorkflowPreviewEditorProvider
 					const tableStr = String(updateData.table);
 					json.table = tableStr.trim() === "" ? [] : JSON.parse(tableStr);
 				} catch (error: unknown) {
-					const e = error instanceof Error ? error : new Error(String(error));
+					const e = toError(error);
 					throw new Error(`Invalid JSON in Table: ${e.message}`);
 				}
 			}
@@ -225,7 +226,7 @@ export class WorkflowPreviewEditorProvider
 					json.includedWorkflows =
 						workflowsStr.trim() === "" ? {} : JSON.parse(workflowsStr);
 				} catch (error: unknown) {
-					const e = error instanceof Error ? error : new Error(String(error));
+					const e = toError(error);
 					throw new Error(`Invalid JSON in Included Workflows: ${e.message}`);
 				}
 			}
@@ -300,7 +301,7 @@ export class WorkflowPreviewEditorProvider
 
 			vscode.window.showInformationMessage("Workflow saved successfully!");
 		} catch (error: unknown) {
-			const e = error instanceof Error ? error : new Error(String(error));
+			const e = toError(error);
 			vscode.window.showErrorMessage(`Failed to save workflow: ${e.message}`);
 		}
 	}
@@ -385,7 +386,7 @@ export class WorkflowPreviewEditorProvider
 
 			return htmlContent;
 		} catch (error: unknown) {
-			const e = error instanceof Error ? error : new Error(String(error));
+			const e = toError(error);
 			return `<body><h2>Error loading HTML template</h2><pre>${e.message}</pre></body>`;
 		}
 	}

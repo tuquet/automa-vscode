@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { DaemonManager } from "../core/DaemonManager";
-import { extractFsPath } from "../utils/typeGuards";
+import { extractFsPath, toError } from "../utils/typeGuards";
 
 let diagnosticCollection: vscode.DiagnosticCollection;
 
@@ -183,7 +183,7 @@ export async function lintCheckCommand(
 						totalWarnings += warnCount;
 					}
 				} catch (error: unknown) {
-					const e = error instanceof Error ? error : new Error(String(error));
+					const e = toError(error);
 					vscode.window.showErrorMessage(
 						`Failed to run linter on ${filePath.split(/\\|\//).pop()}: ${e.message}`,
 					);

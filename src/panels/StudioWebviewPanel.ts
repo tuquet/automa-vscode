@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import * as vscode from "vscode";
 import { Logger } from "../core/Logger";
-import { isString } from "../utils/typeGuards";
+import { getErrorMessage, isString, toError } from "../utils/typeGuards";
 
 export class StudioWebviewPanel {
 	public static currentPanel: StudioWebviewPanel | undefined;
@@ -166,8 +166,7 @@ export class StudioWebviewPanel {
 						if (!res.ok) throw new Error(`Daemon responded with ${res.status}`);
 						return await res.json();
 					} catch (error: unknown) {
-						const _e =
-							error instanceof Error ? error : new Error(String(error));
+						const _e = toError(error);
 						// Fallback to CLI if Daemon isn't reachable
 						try {
 							const os = require("node:os");
@@ -203,8 +202,7 @@ export class StudioWebviewPanel {
 							}
 							return result;
 						} catch (cliErr: unknown) {
-							const ce =
-								cliErr instanceof Error ? cliErr : new Error(String(cliErr));
+							const ce = toError(cliErr);
 							Logger.error(`Workflow execution failed: ${ce.message}`);
 							return { success: false, error: ce.message };
 						}
@@ -226,7 +224,7 @@ export class StudioWebviewPanel {
 					return null;
 			}
 		} catch (error: unknown) {
-			const e = error instanceof Error ? error : new Error(String(error));
+			const e = toError(error);
 			Logger.error(`Runtime Message Error [${message.name}]: ${e.message}`);
 			return null;
 		}
@@ -262,7 +260,7 @@ export class StudioWebviewPanel {
 							const bytes = await vscode.workspace.fs.readFile(file);
 							return JSON.parse(Buffer.from(bytes).toString("utf-8"));
 						} catch (e: unknown) {
-							const msg = e instanceof Error ? e.message : String(e);
+							const msg = getErrorMessage(e);
 							const path = require("node:path");
 							parseErrors.push(`${path.basename(file.fsPath)}: ${msg}`);
 							return null;
@@ -324,7 +322,7 @@ export class StudioWebviewPanel {
 			result.tables = rawTables.flat();
 			result.workflowStates = {}; // Initial state
 		} catch (error: unknown) {
-			const e = error instanceof Error ? error : new Error(String(error));
+			const e = toError(error);
 			Logger.error(`Failed to fetch storage get: ${e.message}`);
 		}
 
@@ -360,7 +358,7 @@ export class StudioWebviewPanel {
 								idToUriMap.set(data.id, file);
 							}
 						} catch (e: unknown) {
-							const msg = e instanceof Error ? e.message : String(e);
+							const msg = getErrorMessage(e);
 							const path = require("node:path");
 							parseErrors.push(`${path.basename(file.fsPath)}: ${msg}`);
 						}
@@ -447,7 +445,7 @@ export class StudioWebviewPanel {
 				);
 			}
 		} catch (error: unknown) {
-			const e = error instanceof Error ? error.message : String(error);
+			const e = getErrorMessage(error);
 			Logger.error(`Failed to handle storage set: ${e}`);
 		}
 	}
@@ -479,7 +477,7 @@ export class StudioWebviewPanel {
 					if (item?.id) idToUriMap.set(item.id, file);
 				}
 			} catch (e: unknown) {
-				const msg = e instanceof Error ? e.message : String(e);
+				const msg = getErrorMessage(e);
 				const path = require("node:path");
 				parseErrors.push(`${path.basename(file.fsPath)}: ${msg}`);
 			}

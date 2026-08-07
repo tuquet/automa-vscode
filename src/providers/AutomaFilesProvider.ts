@@ -1,5 +1,6 @@
 import * as path from "node:path";
 import * as vscode from "vscode";
+import { getErrorMessage } from "../utils/typeGuards";
 
 export class AutomaFilesProvider implements vscode.TreeDataProvider<FileItem> {
 	private _onDidChangeTreeData: vscode.EventEmitter<
@@ -119,7 +120,7 @@ export class AutomaFilesProvider implements vscode.TreeDataProvider<FileItem> {
 						if (this.filterType === "package") return isPackage;
 						if (this.filterType === "workflow") return !isPackage;
 					} catch (e: unknown) {
-						const msg = e instanceof Error ? e.message : String(e);
+						const msg = getErrorMessage(e);
 						parseErrors.push(`${path.basename(file.fsPath)}: ${msg}`);
 						// If parsing fails, consider it a normal workflow by default
 						return this.filterType === "workflow";

@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as vscode from "vscode";
+import { toError } from "../utils/typeGuards";
 import { BaseCustomEditorProvider } from "./BaseCustomEditorProvider";
 
 export class BrowserProfileEditorProvider
@@ -74,7 +75,7 @@ export class BrowserProfileEditorProvider
 				isTable,
 			);
 		} catch (error: unknown) {
-			const e = error instanceof Error ? error : new Error(String(error));
+			const e = toError(error);
 			webviewPanel.webview.html = `<body><h2>Error reading profile</h2><p>${e.message}</p></body>`;
 		}
 	}
@@ -90,7 +91,7 @@ export class BrowserProfileEditorProvider
 				"Browser Profile saved successfully!",
 			);
 		} catch (error: unknown) {
-			const e = error instanceof Error ? error : new Error(String(error));
+			const e = toError(error);
 			vscode.window.showErrorMessage(`Failed to save profile: ${e.message}`);
 		}
 	}
@@ -134,7 +135,7 @@ export class BrowserProfileEditorProvider
 
 			return htmlContent;
 		} catch (error: unknown) {
-			const e = error instanceof Error ? error : new Error(String(error));
+			const e = toError(error);
 			return `<body><h2>Error loading HTML template</h2><pre>${e.message}</pre></body>`;
 		}
 	}

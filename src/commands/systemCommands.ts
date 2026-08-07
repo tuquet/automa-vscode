@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { DaemonManager } from "../core/DaemonManager";
 import { WelcomePanel } from "../panels/WelcomePanel";
+import { toError } from "../utils/typeGuards";
 
 export function welcomeCommand(context: vscode.ExtensionContext) {
 	return () => {
@@ -25,7 +26,7 @@ export function installBrowserCommand() {
 						"Browser installed successfully!",
 					);
 				} catch (err: unknown) {
-					const e = err instanceof Error ? err : new Error(String(err));
+					const e = toError(err);
 					vscode.window.showErrorMessage(
 						`Failed to install browser: ${e.message}`,
 					);

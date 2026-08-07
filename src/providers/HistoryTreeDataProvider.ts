@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import { DaemonManager } from "../core/DaemonManager";
+import { getErrorMessage } from "../utils/typeGuards";
 
 interface AutomaJob {
 	id: string;
@@ -115,7 +116,7 @@ export class HistoryTreeDataProvider
 				]);
 				this.refresh();
 			} catch (cliErr: unknown) {
-				const msg = cliErr instanceof Error ? cliErr.message : String(cliErr);
+				const msg = getErrorMessage(cliErr);
 				vscode.window.showErrorMessage(`Failed to delete log: ${msg}`);
 			}
 		}
@@ -145,7 +146,7 @@ export class HistoryTreeDataProvider
 				]);
 				this.refresh();
 			} catch (cliErr: unknown) {
-				const msg = cliErr instanceof Error ? cliErr.message : String(cliErr);
+				const msg = getErrorMessage(cliErr);
 				vscode.window.showErrorMessage(`Failed to clear history: ${msg}`);
 			}
 		}
@@ -289,7 +290,7 @@ export class HistoryTreeDataProvider
 
 			return treeItems;
 		} catch (err: unknown) {
-			const msg = err instanceof Error ? err.message : String(err);
+			const msg = getErrorMessage(err);
 			const errorItem = new vscode.TreeItem(
 				"Error loading history",
 				vscode.TreeItemCollapsibleState.None,
