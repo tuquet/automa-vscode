@@ -81,6 +81,9 @@ export class FleetPreviewEditorProvider
 					await this.saveDocument(document, e.data);
 					break;
 			}
+			if (e.command === "error" || e.type === "error") {
+				vscode.window.showErrorMessage(e.text || "Webview Error");
+			}
 		});
 
 		this.setupWebviewPanel(document, webviewPanel, updateWebview, [

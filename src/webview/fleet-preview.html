@@ -289,13 +289,14 @@
 
         const app = createApp({
             data() {
+                const state = vscode.getState() || {};
                 return {
                     fleetData: null,
                     workflowDict: {},
                     profileDict: {},
                     isRunning: false,
                     isModified: false,
-                    collapsedMembers: [],
+                    collapsedMembers: state.collapsedMembers || [],
                     globalVariablesStr: '{}',
                     isInternalVarUpdate: false,
                     jsonError: null
@@ -317,6 +318,26 @@
                 }
             },
             watch: {
+                fleetData: {
+                    deep: true,
+                    handler(newVal) {
+                        const state = vscode.getState() || {};
+                        if (newVal) {
+                            vscode.setState({ ...state, fleetData: JSON.parse(JSON.stringify(newVal)) });
+                        }
+                    }
+                },
+                collapsedMembers: {
+                    deep: true,
+                    handler(newVal) {
+                        const state = vscode.getState() || {};
+                        vscode.setState({ ...state, collapsedMembers: [...newVal] });
+                    }
+                },
+                isModified(newVal) {
+                    const state = vscode.getState() || {};
+                    vscode.setState({ ...state, isModified: newVal });
+                },
                 globalVariablesStr(newVal) {
                     if (this.isInternalVarUpdate) return;
                     try {
@@ -380,7 +401,7 @@
                 },
                 saveChanges() {
                     if (this.jsonError) {
-                        vscode.postMessage({ command: 'error', text: 'Cannot save: Global Variables contains invalid JSON.' });
+                        vscode.postMessage({ type: 'error', text: 'Cannot save: Global Variables contains invalid JSON.' });
                         return;
                     }
                     this.isModified = false;
@@ -447,7 +468,19 @@
                     switch (message.type) {
                         case 'update':
                             try {
-                                this.fleetData = JSON.parse(message.text);
+                                const newFleetData = JSON.parse(message.text);
+                                const state = vscode.getState() || {};
+
+                                if (state.lastDocumentData === message.text && state.fleetData) {
+                                    this.fleetData = state.fleetData;
+                                    this.isModified = state.isModified || false;
+                                } else {
+                                    this.fleetData = newFleetData;
+                                    this.isModified = false;
+                                }
+                                
+                                vscode.setState({ ...state, lastDocumentData: message.text, fleetData: JSON.parse(JSON.stringify(this.fleetData)), isModified: this.isModified });
+
                                 if (message.workflows) {
                                     this.workflowDict = message.workflows;
                                 }
