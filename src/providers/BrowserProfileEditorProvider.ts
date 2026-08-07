@@ -141,7 +141,7 @@ export class BrowserProfileEditorProvider
 							.replace(/\\/g, "\\\\")
 							.replace(/`/g, "\\`")
 							.replace(/\$\{/g, "\\${")
-							.replace(/<\/script>/gi, "<\\/script>")
+							.replace(/</g, "\\u003c")
 					: "";
 
 			htmlContent = htmlContent.replace(/\{\{PROFILE_DATA\}\}/g, () =>

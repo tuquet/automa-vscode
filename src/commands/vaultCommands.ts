@@ -2,7 +2,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as vscode from "vscode";
 import { DaemonManager } from "../core/DaemonManager";
-import { castRecord, isRecord, toError } from "../utils/typeGuards";
+import { isRecord, toError } from "../utils/typeGuards";
 
 export interface ITable {
 	id: string | number;
