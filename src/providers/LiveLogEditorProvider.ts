@@ -135,7 +135,7 @@ export const LiveLogEditorProvider = {
                 if (status === 'success') statusClass = 'log-success';
                 else if (status === 'error' || status === 'failed') statusClass = 'log-error';
 
-                headerHTML = \`<span class="log-header \${statusClass}">[\${name}]</span><span class="status-badge">\${status}</span>\`;
+                headerHTML = \`<span class="log-header \${statusClass}">[\${escapeHtml(name)}]</span><span class="status-badge">\${escapeHtml(status)}</span>\`;
                 
                 if (message.message) {
                     bodyHTML = \`<div class="log-body">\${escapeHtml(message.message)}</div>\`;
