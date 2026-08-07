@@ -6,7 +6,7 @@ import { promisify } from "node:util";
 import * as vscode from "vscode";
 import { Logger } from "./Logger";
 
-const execAsync = promisify(exec);
+const _execAsync = promisify(exec);
 
 export class DaemonManager {
 	private static instance: DaemonManager;
@@ -138,7 +138,7 @@ export class DaemonManager {
 
 					child.on("error", reject);
 
-					child.on("close", (code) => {
+					child.on("close", (_code) => {
 						resolve({
 							stdout: stdoutData.trim(),
 							stderr: stderrData.trim(),
@@ -161,50 +161,21 @@ export class DaemonManager {
 				return JSON.parse(str);
 			} catch (_e) {}
 
-			// The CLI might output trailing logs (e.g. info/warn logs).
-			// We search for the first valid JSON block from the beginning.
-			const firstBrace = str.indexOf("{");
-			const firstBracket = str.indexOf("[");
-			let startIndex = -1;
-			let isArray = false;
-
-			if (firstBrace !== -1 && firstBracket !== -1) {
-				if (firstBrace < firstBracket) {
-					startIndex = firstBrace;
-				} else {
-					startIndex = firstBracket;
-					isArray = true;
-				}
-			} else if (firstBrace !== -1) {
-				startIndex = firstBrace;
-			} else if (firstBracket !== -1) {
-				startIndex = firstBracket;
-				isArray = true;
+			// To handle trailing/preceding logs gracefully without regex bugs:
+			// We find all possible start and end brackets, and try to parse the substring.
+			const starts = [];
+			const ends = [];
+			for (let i = 0; i < str.length; i++) {
+				if (str[i] === "{" || str[i] === "[") starts.push(i);
+				if (str[i] === "}" || str[i] === "]") ends.push(i);
 			}
 
-			if (startIndex !== -1) {
-				const endIndex = isArray ? str.lastIndexOf("]") : str.lastIndexOf("}");
-
-				if (endIndex > startIndex) {
+			// Optimization: only test reasonable pairs (starts before ends)
+			for (let i = 0; i < starts.length; i++) {
+				for (let j = ends.length - 1; j >= 0; j--) {
+					if (ends[j] < starts[i]) break;
 					try {
-						return JSON.parse(str.substring(startIndex, endIndex + 1));
-					} catch (_e) {}
-				}
-			}
-
-			// Fallback line-by-line assembly in case of weird formatting
-			const lines = str.split("\n");
-			for (let start = 0; start < lines.length; start++) {
-				let current = "";
-				for (let end = lines.length - 1; end >= start; end--) {
-					current = lines
-						.slice(start, end + 1)
-						.join("\n")
-						.trim();
-					if (!current.startsWith("{") && !current.startsWith("[")) break;
-					if (!current.endsWith("}") && !current.endsWith("]")) continue;
-					try {
-						return JSON.parse(current);
+						return JSON.parse(str.substring(starts[i], ends[j] + 1));
 					} catch (_e) {}
 				}
 			}
