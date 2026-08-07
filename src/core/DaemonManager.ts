@@ -161,57 +161,57 @@ export class DaemonManager {
 				return JSON.parse(str);
 			} catch (_e) {}
 
-			const lines = str.trim().split("\n");
+			str = str.trim();
 
-			// Strategy 1: Check the last few lines for a single-line complete JSON object/array
+			// Extract single object {} or array [] efficiently from the bottom up
+			// Many CLI logs have JSON at the end, so scanning backwards is fast
+			const lastCloseBrace = str.lastIndexOf("}");
+			const lastCloseBracket = str.lastIndexOf("]");
+
+			if (lastCloseBrace !== -1 && lastCloseBrace > lastCloseBracket) {
+				let openBraces = 0;
+				for (let i = lastCloseBrace; i >= 0; i--) {
+					if (str[i] === "}") openBraces++;
+					else if (str[i] === "{") {
+						openBraces--;
+						if (openBraces === 0) {
+							try {
+								return JSON.parse(str.substring(i, lastCloseBrace + 1));
+							} catch (_e) {}
+						}
+					}
+				}
+			} else if (lastCloseBracket !== -1) {
+				let openBrackets = 0;
+				for (let i = lastCloseBracket; i >= 0; i--) {
+					if (str[i] === "]") openBrackets++;
+					else if (str[i] === "[") {
+						openBrackets--;
+						if (openBrackets === 0) {
+							try {
+								return JSON.parse(str.substring(i, lastCloseBracket + 1));
+							} catch (_e) {}
+						}
+					}
+				}
+			}
+
+			// Fallback: Check last few lines for a complete JSON
+			const lines = str.split("\n");
 			for (
 				let i = lines.length - 1;
 				i >= Math.max(0, lines.length - 100);
 				i--
 			) {
 				const line = lines[i].trim();
-				if (line.startsWith("{") || line.startsWith("[")) {
+				if (
+					(line.startsWith("{") && line.endsWith("}")) ||
+					(line.startsWith("[") && line.endsWith("]"))
+				) {
 					try {
 						return JSON.parse(line);
-					} catch (e) {}
+					} catch (_e) {}
 				}
-			}
-
-			// Strategy 2: Two-pointer JSON extraction (Robust and Fast)
-			let startIdx = -1;
-			const firstBrace = str.indexOf("{");
-			const firstBracket = str.indexOf("[");
-			if (firstBrace !== -1 && firstBracket !== -1)
-				startIdx = Math.min(firstBrace, firstBracket);
-			else startIdx = Math.max(firstBrace, firstBracket);
-
-			let attempts = 0;
-			while (startIdx !== -1 && attempts < 50) {
-				let endIdx = -1;
-				const lastBrace = str.lastIndexOf("}");
-				const lastBracket = str.lastIndexOf("]");
-				if (lastBrace !== -1 && lastBracket !== -1)
-					endIdx = Math.max(lastBrace, lastBracket);
-				else endIdx = Math.max(lastBrace, lastBracket);
-
-				let endAttempts = 0;
-				while (endIdx > startIdx && endAttempts < 50) {
-					try {
-						return JSON.parse(str.substring(startIdx, endIdx + 1));
-					} catch (e) {
-						const nextLastBrace = str.lastIndexOf("}", endIdx - 1);
-						const nextLastBracket = str.lastIndexOf("]", endIdx - 1);
-						endIdx = Math.max(nextLastBrace, nextLastBracket);
-						endAttempts++;
-					}
-				}
-
-				const nextFirstBrace = str.indexOf("{", startIdx + 1);
-				const nextFirstBracket = str.indexOf("[", startIdx + 1);
-				if (nextFirstBrace !== -1 && nextFirstBracket !== -1)
-					startIdx = Math.min(nextFirstBrace, nextFirstBracket);
-				else startIdx = Math.max(nextFirstBrace, nextFirstBracket);
-				attempts++;
 			}
 
 			throw new Error("No valid JSON found in output");
