@@ -9,6 +9,15 @@ export function showWorkflowSourceCommand() {
 				: (nodeOrUri as { resourceUri?: vscode.Uri })?.resourceUri;
 		if (!uri) uri = vscode.window.activeTextEditor?.document.uri;
 
+		if (!uri) {
+			const uris = await vscode.window.showOpenDialog({
+				canSelectMany: false,
+				openLabel: "Select Workflow Source",
+				filters: { "JSON files": ["json"] },
+			});
+			if (uris && uris.length > 0) uri = uris[0];
+		}
+
 		if (uri) {
 			await vscode.workspace
 				.getConfiguration("automa")
@@ -29,6 +38,15 @@ export function showWorkflowPreviewCommand() {
 				? nodeOrUri
 				: (nodeOrUri as { resourceUri?: vscode.Uri })?.resourceUri;
 		if (!uri) uri = vscode.window.activeTextEditor?.document.uri;
+
+		if (!uri) {
+			const uris = await vscode.window.showOpenDialog({
+				canSelectMany: false,
+				openLabel: "Select Workflow to Preview",
+				filters: { "JSON files": ["json"] },
+			});
+			if (uris && uris.length > 0) uri = uris[0];
+		}
 
 		if (uri) {
 			await vscode.workspace
@@ -55,6 +73,15 @@ export function showFleetSourceCommand() {
 				: (nodeOrUri as { resourceUri?: vscode.Uri })?.resourceUri;
 		if (!uri) uri = vscode.window.activeTextEditor?.document.uri;
 
+		if (!uri) {
+			const uris = await vscode.window.showOpenDialog({
+				canSelectMany: false,
+				openLabel: "Select Fleet Source",
+				filters: { "Fleet files": ["fleets.json"], "JSON files": ["json"] },
+			});
+			if (uris && uris.length > 0) uri = uris[0];
+		}
+
 		if (uri) {
 			await vscode.commands.executeCommand("vscode.openWith", uri, "default");
 		}
@@ -68,6 +95,15 @@ export function showFleetPreviewCommand() {
 				? nodeOrUri
 				: (nodeOrUri as { resourceUri?: vscode.Uri })?.resourceUri;
 		if (!uri) uri = vscode.window.activeTextEditor?.document.uri;
+
+		if (!uri) {
+			const uris = await vscode.window.showOpenDialog({
+				canSelectMany: false,
+				openLabel: "Select Fleet to Preview",
+				filters: { "Fleet files": ["fleets.json"], "JSON files": ["json"] },
+			});
+			if (uris && uris.length > 0) uri = uris[0];
+		}
 
 		if (uri) {
 			await vscode.commands.executeCommand(
@@ -90,7 +126,22 @@ export function showLogSourceCommand() {
 		if (uri) {
 			await vscode.commands.executeCommand("vscode.openWith", uri, "default");
 		} else {
-			await vscode.commands.executeCommand("workbench.action.reopenTextEditor");
+			const uris = await vscode.window.showOpenDialog({
+				canSelectMany: false,
+				openLabel: "Select Log Source",
+				filters: { "Log files": ["automa-log.json"], "JSON files": ["json"] },
+			});
+			if (uris && uris.length > 0) {
+				await vscode.commands.executeCommand(
+					"vscode.openWith",
+					uris[0],
+					"default",
+				);
+			} else {
+				await vscode.commands.executeCommand(
+					"workbench.action.reopenTextEditor",
+				);
+			}
 		}
 	};
 }
@@ -115,6 +166,19 @@ export function showLogPreviewCommand(context: vscode.ExtensionContext) {
 				uri,
 				"automa.logEditor",
 			);
+		} else {
+			const uris = await vscode.window.showOpenDialog({
+				canSelectMany: false,
+				openLabel: "Select Log to Preview",
+				filters: { "Log files": ["automa-log.json"], "JSON files": ["json"] },
+			});
+			if (uris && uris.length > 0) {
+				await vscode.commands.executeCommand(
+					"vscode.openWith",
+					uris[0],
+					"automa.logEditor",
+				);
+			}
 		}
 	};
 }
