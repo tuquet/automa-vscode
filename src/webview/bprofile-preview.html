@@ -95,7 +95,7 @@
             </div>
             
             <div class="flex border border-vsc-border rounded overflow-hidden shadow-sm">
-                <button v-if="!isTable" @click="viewMode = 'form'" :class="['px-3 py-1 text-xs font-medium transition-colors flex items-center gap-1', viewMode === 'form' ? 'bg-vsc-button text-vsc-buttonText' : 'bg-vsc-bg text-vsc-fg hover:bg-vsc-widget']">
+                <button v-if="!isTable" @click="switchToForm" :class="['px-3 py-1 text-xs font-medium transition-colors flex items-center gap-1', viewMode === 'form' ? 'bg-vsc-button text-vsc-buttonText' : 'bg-vsc-bg text-vsc-fg hover:bg-vsc-widget', jsonError ? 'opacity-50 cursor-not-allowed' : '']" :title="jsonError ? 'Fix JSON errors before using Form mode' : ''">
                     <i class="ri-layout-masonry-line"></i> Form
                 </button>
                 <button @click="viewMode = 'json'" :class="['px-3 py-1 text-xs font-medium transition-colors flex items-center gap-1', (!isTable) ? 'border-l border-vsc-border' : '', viewMode === 'json' ? 'bg-vsc-button text-vsc-buttonText' : 'bg-vsc-bg text-vsc-fg hover:bg-vsc-widget']">
@@ -309,6 +309,13 @@
                     } catch(e) {
                         if (!this.formData) this.formData = {};
                     }
+                },
+                switchToForm() {
+                    if (this.jsonError) {
+                        vscode.postMessage({ command: 'error', text: 'Cannot switch to Form mode with invalid JSON.' });
+                        return;
+                    }
+                    this.viewMode = 'form';
                 },
                 syncToJson() {
                     this.isInternalSync = true;

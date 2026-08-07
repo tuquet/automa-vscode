@@ -215,7 +215,9 @@ async function executeEncryption(
 	);
 }
 
-export async function deleteVaultItemCommand(item: import("../providers/VaultTreeDataProvider").VaultItem) {
+export async function deleteVaultItemCommand(
+	item: import("../providers/VaultTreeDataProvider").VaultItem,
+) {
 	if (!item?.resourceUri || !item.label) return;
 
 	const confirm = await vscode.window.showWarningMessage(
