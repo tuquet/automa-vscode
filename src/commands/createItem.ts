@@ -73,8 +73,12 @@ export async function createProfileCommand() {
 
 	fs.writeFileSync(profilePath, JSON.stringify(profileData, null, 2), "utf8");
 
-	const doc = await vscode.workspace.openTextDocument(profilePath);
-	await vscode.window.showTextDocument(doc);
+	const docUri = vscode.Uri.file(profilePath);
+	await vscode.commands.executeCommand(
+		"vscode.openWith",
+		docUri,
+		"automa.bprofileEditor",
+	);
 	vscode.window.showInformationMessage(
 		`Profile '${profileName}' created successfully.`,
 	);

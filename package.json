@@ -142,6 +142,11 @@
 					"group": "navigation@3"
 				},
 				{
+					"command": "automa.refreshProfiles",
+					"when": "view == automa.browserProfiles",
+					"group": "navigation"
+				},
+				{
 					"command": "automa.searchProfiles",
 					"when": "view == automa.browserProfiles",
 					"group": "navigation@1"
@@ -155,6 +160,11 @@
 					"command": "automa.clearSearchProfiles",
 					"when": "view == automa.browserProfiles && automa.browserProfiles.isFiltered",
 					"group": "navigation@2"
+				},
+				{
+					"command": "automa.refreshWorkflows",
+					"when": "view == automa.workflows",
+					"group": "navigation"
 				},
 				{
 					"command": "automa.searchWorkflows",
@@ -172,6 +182,11 @@
 					"group": "navigation@2"
 				},
 				{
+					"command": "automa.refreshPackages",
+					"when": "view == automa.packages",
+					"group": "navigation"
+				},
+				{
 					"command": "automa.searchPackages",
 					"when": "view == automa.packages",
 					"group": "navigation@1"
@@ -185,6 +200,11 @@
 					"command": "automa.clearSearchPackages",
 					"when": "view == automa.packages && automa.packages.isFiltered",
 					"group": "navigation@2"
+				},
+				{
+					"command": "automa.refreshFleets",
+					"when": "view == automa.fleets",
+					"group": "navigation"
 				},
 				{
 					"command": "automa.searchFleets",
@@ -419,6 +439,26 @@
 			{
 				"command": "automa.refreshHistory",
 				"title": "Refresh History",
+				"icon": "$(refresh)"
+			},
+			{
+				"command": "automa.refreshProfiles",
+				"title": "Refresh Profiles",
+				"icon": "$(refresh)"
+			},
+			{
+				"command": "automa.refreshWorkflows",
+				"title": "Refresh Workflows",
+				"icon": "$(refresh)"
+			},
+			{
+				"command": "automa.refreshPackages",
+				"title": "Refresh Packages",
+				"icon": "$(refresh)"
+			},
+			{
+				"command": "automa.refreshFleets",
+				"title": "Refresh Fleets",
 				"icon": "$(refresh)"
 			},
 			{
