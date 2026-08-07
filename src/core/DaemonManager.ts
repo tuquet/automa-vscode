@@ -369,8 +369,14 @@ export class DaemonManager {
 			env.EXTENSION_PATHS = extensionPaths;
 		}
 
-		this.daemonProcess = spawn(cmd, args, {
-			shell: true,
+		const cmdParts = cmd.split(" ");
+		const executable = cmdParts[0];
+		const spawnArgs = [...cmdParts.slice(1), ...args];
+
+		this.daemonProcess = spawn(executable, spawnArgs, {
+			shell:
+				process.platform === "win32" &&
+				(executable === "npx" || executable === "npx.cmd"),
 			detached: false,
 			stdio: "pipe",
 			env,
