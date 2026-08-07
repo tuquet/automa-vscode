@@ -90,15 +90,25 @@ export class HistoryTreeDataProvider
 		if (confirm !== "Yes") return;
 
 		try {
-			await DaemonManager.getInstance().executeCliCommand([
-				"history",
-				"--delete",
-				item.id,
-			]);
+			const daemon = DaemonManager.getInstance();
+			const port = daemon.getPort();
+			const res = await fetch(`http://localhost:${port}/api/jobs/${item.id}`, {
+				method: "DELETE",
+			});
+			if (!res.ok) throw new Error("Daemon not ready");
 			this.refresh();
-		} catch (err: unknown) {
-			const msg = err instanceof Error ? err.message : String(err);
-			vscode.window.showErrorMessage(`Failed to delete log: ${msg}`);
+		} catch (_err: unknown) {
+			try {
+				await DaemonManager.getInstance().executeCliCommand([
+					"history",
+					"--delete",
+					item.id,
+				]);
+				this.refresh();
+			} catch (cliErr: unknown) {
+				const msg = cliErr instanceof Error ? cliErr.message : String(cliErr);
+				vscode.window.showErrorMessage(`Failed to delete log: ${msg}`);
+			}
 		}
 	}
 
@@ -111,14 +121,24 @@ export class HistoryTreeDataProvider
 		if (confirm !== "Yes") return;
 
 		try {
-			await DaemonManager.getInstance().executeCliCommand([
-				"history",
-				"--clear",
-			]);
+			const daemon = DaemonManager.getInstance();
+			const port = daemon.getPort();
+			const res = await fetch(`http://localhost:${port}/api/jobs`, {
+				method: "DELETE",
+			});
+			if (!res.ok) throw new Error("Daemon not ready");
 			this.refresh();
-		} catch (err: unknown) {
-			const msg = err instanceof Error ? err.message : String(err);
-			vscode.window.showErrorMessage(`Failed to clear history: ${msg}`);
+		} catch (_err: unknown) {
+			try {
+				await DaemonManager.getInstance().executeCliCommand([
+					"history",
+					"--clear",
+				]);
+				this.refresh();
+			} catch (cliErr: unknown) {
+				const msg = cliErr instanceof Error ? cliErr.message : String(cliErr);
+				vscode.window.showErrorMessage(`Failed to clear history: ${msg}`);
+			}
 		}
 	}
 
@@ -173,12 +193,25 @@ export class HistoryTreeDataProvider
 
 	private async fetchChildren(): Promise<vscode.TreeItem[]> {
 		try {
-			const args = ["history", "--limit", this.currentLimit.toString()];
-			if (this.taskIdFilter) {
-				args.push("--task-id", this.taskIdFilter);
-			}
+			let jobs: any;
 
-			const jobs = await DaemonManager.getInstance().executeCliCommand(args);
+			try {
+				const daemon = DaemonManager.getInstance();
+				const port = daemon.getPort();
+				let url = `http://localhost:${port}/api/jobs/history?limit=${this.currentLimit}`;
+				if (this.taskIdFilter) {
+					url += `&taskId=${encodeURIComponent(this.taskIdFilter)}`;
+				}
+				const res = await fetch(url);
+				if (!res.ok) throw new Error("Daemon not ready");
+				jobs = await res.json();
+			} catch (_err) {
+				const args = ["history", "--limit", this.currentLimit.toString()];
+				if (this.taskIdFilter) {
+					args.push("--task-id", this.taskIdFilter);
+				}
+				jobs = await DaemonManager.getInstance().executeCliCommand(args);
+			}
 
 			if (!jobs || jobs.length === 0) {
 				const msg = this.taskIdFilter

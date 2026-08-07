@@ -35,12 +35,23 @@ export class LogCustomEditorProvider
 
 	private static async fetchLogFromDaemon(jobId: string): Promise<any> {
 		const { DaemonManager } = require("../core/DaemonManager");
-		const { stdout } = await DaemonManager.getInstance().executeRawCliCommand([
-			"log",
-			jobId,
-			"--json",
-		]);
-		return JSON.parse(stdout);
+		const daemon = DaemonManager.getInstance();
+
+		try {
+			const port = daemon.getPort();
+			const res = await fetch(
+				`http://localhost:${port}/api/jobs/${jobId}/details`,
+			);
+			if (!res.ok) throw new Error("Daemon not ready");
+			return await res.json();
+		} catch (_err) {
+			const { stdout } = await daemon.executeRawCliCommand([
+				"log",
+				jobId,
+				"--json",
+			]);
+			return JSON.parse(stdout);
+		}
 	}
 
 	public static async showLogForJobId(

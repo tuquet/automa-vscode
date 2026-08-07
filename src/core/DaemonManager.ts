@@ -102,31 +102,33 @@ export class DaemonManager {
 		}).catch((e) => e);
 		const output = stdout || stderr || "";
 
-		let jsonStr = output.trim();
-		const firstBrace = jsonStr.indexOf("{");
-		const firstBracket = jsonStr.indexOf("[");
-		const lastBrace = jsonStr.lastIndexOf("}");
-		const lastBracket = jsonStr.lastIndexOf("]");
-		let startIndex = -1;
-		let endIndex = jsonStr.length;
+		const extractJSON = (str: string) => {
+			const candidates = [];
+			const firstBrace = str.indexOf("{");
+			if (firstBrace !== -1) {
+				candidates.push(str.substring(firstBrace, str.lastIndexOf("}") + 1));
+			}
+			const firstBracket = str.indexOf("[");
+			if (firstBracket !== -1) {
+				candidates.push(str.substring(firstBracket, str.lastIndexOf("]") + 1));
+			}
+			candidates.sort((a, b) => b.length - a.length);
 
-		if (firstBrace !== -1 && firstBracket !== -1) {
-			startIndex = Math.min(firstBrace, firstBracket);
-			endIndex = startIndex === firstBrace ? lastBrace + 1 : lastBracket + 1;
-		} else if (firstBrace !== -1) {
-			startIndex = firstBrace;
-			endIndex = lastBrace + 1;
-		} else if (firstBracket !== -1) {
-			startIndex = firstBracket;
-			endIndex = lastBracket + 1;
-		}
+			for (const cand of candidates) {
+				if (!cand) continue;
+				try {
+					return JSON.parse(cand);
+				} catch (_e) {
+					// continue
+				}
+			}
+			throw new Error("No valid JSON found in output");
+		};
 
-		if (startIndex !== -1 && endIndex > startIndex) {
-			jsonStr = jsonStr.substring(startIndex, endIndex);
-		}
-
+		let parsed: any;
 		try {
-			return JSON.parse(jsonStr);
+			parsed = extractJSON(output);
+			return parsed;
 		} catch (error: unknown) {
 			const e = error instanceof Error ? error : new Error(String(error));
 			throw new Error(

@@ -1,5 +1,4 @@
 import type * as vscode from "vscode";
-import { DaemonManager } from "../core/DaemonManager";
 import { AutomaFilesProvider } from "./AutomaFilesProvider";
 import { BrowserProfileEditorProvider } from "./BrowserProfileEditorProvider";
 import { FleetPreviewEditorProvider } from "./FleetPreviewEditorProvider";

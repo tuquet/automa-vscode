@@ -107,7 +107,7 @@ export class FleetPreviewEditorProvider
 					const content = await vscode.workspace.fs.readFile(file);
 					const json = JSON.parse(Buffer.from(content).toString("utf8"));
 					const item = extractItem(json, file.fsPath);
-					if (item && item.id && item.name) {
+					if (item?.id && item.name) {
 						dict[item.id] = item.name;
 					}
 				} catch (_e) {

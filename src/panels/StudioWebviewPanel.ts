@@ -85,7 +85,7 @@ export class StudioWebviewPanel {
 	}
 
 	private async handleRuntimeMessage(message: any): Promise<any> {
-		if (!message || !message.name) return null;
+		if (!message?.name) return null;
 
 		try {
 			switch (message.name) {
@@ -96,7 +96,7 @@ export class StudioWebviewPanel {
 
 					if (typeof message.data === "string") {
 						url = message.data;
-					} else if (message.data && message.data.resource) {
+					} else if (message.data?.resource) {
 						url = message.data.resource.url || message.data.resource;
 						options = message.data.resource;
 					}
@@ -128,7 +128,7 @@ export class StudioWebviewPanel {
 					const daemon = DaemonManager.getInstance();
 
 					const workflowData = message.data?.workflowData || message.data;
-					if (!workflowData || !workflowData.id)
+					if (!workflowData?.id)
 						return { success: false, error: "Missing workflow ID" };
 
 					try {
@@ -145,7 +145,8 @@ export class StudioWebviewPanel {
 						if (!res.ok) throw new Error(`Daemon responded with ${res.status}`);
 						return await res.json();
 					} catch (error: unknown) {
-						const e = error instanceof Error ? error : new Error(String(error));
+						const _e =
+							error instanceof Error ? error : new Error(String(error));
 						// Fallback to CLI if Daemon isn't reachable
 						try {
 							const result = await daemon.executeCliCommand([
@@ -166,7 +167,7 @@ export class StudioWebviewPanel {
 					// We can return a specific command, but since this resolves a promise,
 					// the webview caller might not be able to navigate themselves if they expect us to.
 					// Let's just log it for now since they are in the dashboard.
-					Logger.info("Open Dashboard requested: " + message.data);
+					Logger.info(`Open Dashboard requested: ${message.data}`);
 					return true;
 				}
 
