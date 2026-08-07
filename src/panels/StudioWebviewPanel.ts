@@ -140,7 +140,10 @@ export class StudioWebviewPanel {
 						return { success: false, error: "Missing workflow ID" };
 
 					const reqOptions =
-						(message.data as Record<string, unknown>)?.options || {};
+						((message.data as Record<string, unknown>)?.options as Record<
+							string,
+							unknown
+						>) || {};
 					try {
 						const port = daemon.getPort();
 						const executeUrl = `http://localhost:${port}/api/jobs/run`;

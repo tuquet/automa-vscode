@@ -287,9 +287,9 @@ export class WorkflowPreviewEditorProvider
 						.parameters as Record<string, unknown>[]) {
 						if (
 							triggerParamsData &&
-							triggerParamsData[param.name] !== undefined
+							triggerParamsData[param.name as string] !== undefined
 						) {
-							param.defaultValue = triggerParamsData[param.name];
+							param.defaultValue = triggerParamsData[param.name as string];
 						}
 					}
 				}

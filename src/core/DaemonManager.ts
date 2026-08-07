@@ -163,46 +163,11 @@ export class DaemonManager {
 
 			str = str.trim();
 
-			// Extract single object {} or array [] efficiently from the bottom up
-			// Many CLI logs have JSON at the end, so scanning backwards is fast
-			const lastCloseBrace = str.lastIndexOf("}");
-			const lastCloseBracket = str.lastIndexOf("]");
-
-			if (lastCloseBrace !== -1 && lastCloseBrace > lastCloseBracket) {
-				let openBraces = 0;
-				for (let i = lastCloseBrace; i >= 0; i--) {
-					if (str[i] === "}") openBraces++;
-					else if (str[i] === "{") {
-						openBraces--;
-						if (openBraces === 0) {
-							try {
-								return JSON.parse(str.substring(i, lastCloseBrace + 1));
-							} catch (_e) {}
-						}
-					}
-				}
-			} else if (lastCloseBracket !== -1) {
-				let openBrackets = 0;
-				for (let i = lastCloseBracket; i >= 0; i--) {
-					if (str[i] === "]") openBrackets++;
-					else if (str[i] === "[") {
-						openBrackets--;
-						if (openBrackets === 0) {
-							try {
-								return JSON.parse(str.substring(i, lastCloseBracket + 1));
-							} catch (_e) {}
-						}
-					}
-				}
-			}
-
-			// Fallback: Check last few lines for a complete JSON
+			// CLI commands always output their final --json data as a single unformatted line.
+			// Logs might be printed before it.
+			// We split by newline and scan from the bottom up to find the valid JSON.
 			const lines = str.split("\n");
-			for (
-				let i = lines.length - 1;
-				i >= Math.max(0, lines.length - 100);
-				i--
-			) {
+			for (let i = lines.length - 1; i >= 0; i--) {
 				const line = lines[i].trim();
 				if (
 					(line.startsWith("{") && line.endsWith("}")) ||

@@ -133,10 +133,19 @@ export async function lintCheckCommand(
 					try {
 						const daemon = DaemonManager.getInstance();
 						const port = daemon.getPort();
+						let type = "workflow";
+						if (filePath.endsWith(".package.json")) type = "package";
+						else if (filePath.endsWith(".fleet.json")) type = "fleet";
+						else if (
+							filePath.endsWith(".table.json") ||
+							filePath.endsWith(".variable.json") ||
+							filePath.endsWith(".credential.json")
+						)
+							type = "globals";
 						const res = await fetch(`http://localhost:${port}/api/lint`, {
 							method: "POST",
 							headers: { "Content-Type": "application/json" },
-							body: JSON.stringify({ content }),
+							body: JSON.stringify({ content, type }),
 						});
 						if (!res.ok) throw new Error("Daemon not ready");
 
