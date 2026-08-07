@@ -140,7 +140,11 @@ export class VaultTreeDataProvider
 			"Error reading variables",
 			"No *.variable.json found",
 			(item, isArray, _key, val) =>
-				isArray ? (item.value as string | undefined) : String(val),
+				isArray
+					? (item.value as string | undefined)
+					: typeof val === "object"
+						? JSON.stringify(val)
+						: String(val),
 			true,
 		);
 	}
