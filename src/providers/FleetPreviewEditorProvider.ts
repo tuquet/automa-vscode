@@ -88,53 +88,61 @@ export class FleetPreviewEditorProvider
 		]);
 	}
 
-	private async getWorkflowDictionary(): Promise<Record<string, string>> {
+	private async buildDictionaryFromFiles(
+		globPattern: string,
+		extractItem: (
+			json: any,
+			filePath: string,
+		) => { id?: string; name?: string } | undefined,
+		errorContext: string,
+	): Promise<Record<string, string>> {
 		const dict: Record<string, string> = {};
 		try {
 			const files = await vscode.workspace.findFiles(
-				"**/*.workflow.json",
+				globPattern,
 				"**/node_modules/**",
 			);
 			for (const file of files) {
 				try {
 					const content = await vscode.workspace.fs.readFile(file);
 					const json = JSON.parse(Buffer.from(content).toString("utf8"));
-					if (json.id && json.name) {
-						dict[json.id] = json.name;
+					const item = extractItem(json, file.fsPath);
+					if (item && item.id && item.name) {
+						dict[item.id] = item.name;
 					}
 				} catch (_e) {
 					// Ignore parse errors for individual files
 				}
 			}
 		} catch (e) {
-			console.error("Failed to scan workflows:", e);
+			console.error(`Failed to scan ${errorContext}:`, e);
 		}
 		return dict;
 	}
 
-	private async getProfileDictionary(): Promise<Record<string, string>> {
-		const dict: Record<string, string> = {};
-		try {
-			const files = await vscode.workspace.findFiles(
-				"**/*.profile.json",
-				"**/node_modules/**",
-			);
-			for (const file of files) {
-				try {
-					const content = await vscode.workspace.fs.readFile(file);
-					const json = JSON.parse(Buffer.from(content).toString("utf8"));
-					const id =
-						json.id || path.basename(file.fsPath, path.extname(file.fsPath));
-					const name = json.name || id;
-					dict[id] = name;
-				} catch (_e) {
-					// Ignore parse errors
+	private async getWorkflowDictionary(): Promise<Record<string, string>> {
+		return this.buildDictionaryFromFiles(
+			"**/*.workflow.json",
+			(json) => {
+				if (json.id && json.name) {
+					return { id: json.id, name: json.name };
 				}
-			}
-		} catch (e) {
-			console.error("Failed to scan profiles:", e);
-		}
-		return dict;
+				return undefined;
+			},
+			"workflows",
+		);
+	}
+
+	private async getProfileDictionary(): Promise<Record<string, string>> {
+		return this.buildDictionaryFromFiles(
+			"**/*.profile.json",
+			(json, filePath) => {
+				const id = json.id || path.basename(filePath, path.extname(filePath));
+				const name = json.name || id;
+				return { id, name };
+			},
+			"profiles",
+		);
 	}
 
 	private getHtmlForWebview(_webview: vscode.Webview): string {
