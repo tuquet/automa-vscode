@@ -99,12 +99,15 @@ export class WorkflowPreviewEditorProvider
 
 		for (const varName of implicitVars) {
 			let defaultVal = "";
-			if (
-				globalVariables &&
-				typeof globalVariables === "object" &&
-				globalVariables[varName] !== undefined
-			) {
-				defaultVal = globalVariables[varName];
+			if (globalVariables && typeof globalVariables === "object") {
+				const strippedName = varName.startsWith("$$")
+					? varName.slice(2)
+					: varName;
+				if (globalVariables[varName] !== undefined) {
+					defaultVal = globalVariables[varName];
+				} else if (globalVariables[strippedName] !== undefined) {
+					defaultVal = globalVariables[strippedName];
+				}
 			}
 			triggerParams.push({
 				name: varName,
@@ -200,25 +203,32 @@ export class WorkflowPreviewEditorProvider
 				json.globalData = updateData.globalData;
 
 			// JSON parse for objects/arrays
-			if (updateData.settings) {
+			if (updateData.settings !== undefined) {
 				try {
-					json.settings = JSON.parse(updateData.settings);
+					json.settings =
+						updateData.settings.trim() === ""
+							? {}
+							: JSON.parse(updateData.settings);
 				} catch (error: unknown) {
 					const e = error instanceof Error ? error : new Error(String(error));
 					throw new Error(`Invalid JSON in Settings: ${e.message}`);
 				}
 			}
-			if (updateData.table) {
+			if (updateData.table !== undefined) {
 				try {
-					json.table = JSON.parse(updateData.table);
+					json.table =
+						updateData.table.trim() === "" ? [] : JSON.parse(updateData.table);
 				} catch (error: unknown) {
 					const e = error instanceof Error ? error : new Error(String(error));
 					throw new Error(`Invalid JSON in Table: ${e.message}`);
 				}
 			}
-			if (updateData.includedWorkflows) {
+			if (updateData.includedWorkflows !== undefined) {
 				try {
-					json.includedWorkflows = JSON.parse(updateData.includedWorkflows);
+					json.includedWorkflows =
+						updateData.includedWorkflows.trim() === ""
+							? {}
+							: JSON.parse(updateData.includedWorkflows);
 				} catch (error: unknown) {
 					const e = error instanceof Error ? error : new Error(String(error));
 					throw new Error(`Invalid JSON in Included Workflows: ${e.message}`);

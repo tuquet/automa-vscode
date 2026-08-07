@@ -236,12 +236,26 @@
                     return vars;
                 });
 
-                const workflow = reactive({
+                const currentDocState = {
                     name: `{{JSON_NAME}}`,
                     description: `{{JSON_DESCRIPTION}}`,
                     icon: `{{JSON_ICON}}` || 'riGlobalLine',
                     settings: `{{JSON_SETTINGS}}`
-                });
+                };
+
+                let workflowData = currentDocState;
+                if (previousState.lastDocState && JSON.stringify(previousState.lastDocState) === JSON.stringify(currentDocState)) {
+                    if (previousState.workflow) {
+                        workflowData = previousState.workflow;
+                    }
+                }
+
+                const workflow = reactive(workflowData);
+
+                watch(workflow, (newVal) => {
+                    const state = vscode.getState() || {};
+                    vscode.setState({ ...state, workflow: JSON.parse(JSON.stringify(newVal)), lastDocState: currentDocState });
+                }, { deep: true });
 
                 const iconsList = ref([
                     'mdiPackageVariantClosed', 'riGlobalLine', 'riFileTextLine', 'riEqualizerLine', 'riTimerLine', 'riCalendarLine', 'riFlashlightLine', 'riLightbulbFlashLine', 'riDatabase2Line', 'riWindowLine', 'riCursorLine', 'riDownloadLine', 'riCommandLine'

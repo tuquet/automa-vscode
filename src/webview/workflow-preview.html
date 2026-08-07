@@ -356,7 +356,7 @@
                     vscode.setState({ ...state, currentTab: newTab, keepBrowserOpen: newKeepOpen });
                 });
 
-                const workflow = reactive({
+                const currentDocState = {
                     name: `{{JSON_NAME}}`,
                     description: `{{JSON_DESCRIPTION}}`,
                     version: `{{JSON_VERSION}}`,
@@ -366,7 +366,21 @@
                     table: `{{JSON_TABLE}}`,
                     settings: `{{JSON_SETTINGS}}`,
                     includedWorkflows: `{{JSON_INCLUDED_WORKFLOWS}}`
-                });
+                };
+
+                let workflowData = currentDocState;
+                if (previousState.lastDocState && JSON.stringify(previousState.lastDocState) === JSON.stringify(currentDocState)) {
+                    if (previousState.workflow) {
+                        workflowData = previousState.workflow;
+                    }
+                }
+
+                const workflow = reactive(workflowData);
+
+                watch(workflow, (newVal) => {
+                    const state = vscode.getState() || {};
+                    vscode.setState({ ...state, workflow: JSON.parse(JSON.stringify(newVal)), lastDocState: currentDocState });
+                }, { deep: true });
 
                 const iconsList = ref([
                     'mdiPackageVariantClosed', 'riGlobalLine', 'riFileTextLine', 'riEqualizerLine', 'riTimerLine', 'riCalendarLine', 'riFlashlightLine', 'riLightbulbFlashLine', 'riDatabase2Line', 'riWindowLine', 'riCursorLine', 'riDownloadLine', 'riCommandLine'
