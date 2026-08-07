@@ -322,6 +322,7 @@ export class StudioWebviewPanel {
 		const workspaceRoot = vscode.workspace.workspaceFolders[0].uri;
 		const EXCLUDE_PATTERN =
 			"**/{node_modules,.git,dist,out,.gemini,tmp,build}/**";
+		const parseErrors: string[] = [];
 
 		try {
 			if (items.workflows && Array.isArray(items.workflows)) {
@@ -340,7 +341,11 @@ export class StudioWebviewPanel {
 							if (data.id) {
 								idToUriMap.set(data.id, file);
 							}
-						} catch (_e) {}
+						} catch (e: unknown) {
+							const msg = e instanceof Error ? e.message : String(e);
+							const path = require("node:path");
+							parseErrors.push(`${path.basename(file.fsPath)}: ${msg}`);
+						}
 					}),
 				);
 
@@ -374,6 +379,7 @@ export class StudioWebviewPanel {
 					"studio.variable.json",
 					"variables",
 					EXCLUDE_PATTERN,
+					parseErrors,
 				);
 			}
 
@@ -385,6 +391,7 @@ export class StudioWebviewPanel {
 					"studio.credential.json",
 					"credentials",
 					EXCLUDE_PATTERN,
+					parseErrors,
 				);
 			}
 
@@ -396,11 +403,24 @@ export class StudioWebviewPanel {
 					"studio.table.json",
 					"tables",
 					EXCLUDE_PATTERN,
+					parseErrors,
+				);
+			}
+
+			if (parseErrors.length > 0) {
+				const limit = 3;
+				const displayErrors = parseErrors.slice(0, limit).join(", ");
+				const more =
+					parseErrors.length > limit
+						? ` and ${parseErrors.length - limit} more`
+						: "";
+				vscode.window.showWarningMessage(
+					`Studio Webview failed to parse ${parseErrors.length} file(s) during save: ${displayErrors}${more}`,
 				);
 			}
 		} catch (error: unknown) {
-			const e = error instanceof Error ? error : new Error(String(error));
-			Logger.error(`Failed to handle storage set: ${e.message}`);
+			const e = error instanceof Error ? error.message : String(error);
+			Logger.error(`Failed to handle storage set: ${e}`);
 		}
 	}
 
@@ -411,6 +431,7 @@ export class StudioWebviewPanel {
 		defaultFileName: string,
 		folderName: string,
 		excludePattern: string,
+		parseErrors: string[],
 	) {
 		const allFiles = await vscode.workspace.findFiles(
 			globPattern,
@@ -430,7 +451,11 @@ export class StudioWebviewPanel {
 				for (const item of arr) {
 					if (item && item.id) idToUriMap.set(item.id, file);
 				}
-			} catch (_e) {}
+			} catch (e: unknown) {
+				const msg = e instanceof Error ? e.message : String(e);
+				const path = require("node:path");
+				parseErrors.push(`${path.basename(file.fsPath)}: ${msg}`);
+			}
 		}
 
 		for (const rawItem of itemsList) {
