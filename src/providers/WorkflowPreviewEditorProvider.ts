@@ -474,10 +474,10 @@ export class WorkflowPreviewEditorProvider
 		if (htmlContent.startsWith("<body><h2>Error")) return htmlContent;
 
 		const injectPackageData = `
-				const pInputs = ${JSON.stringify(pkgInputs)};
-				const pOutputs = ${JSON.stringify(pkgOutputs)};
-				const pVars = ${JSON.stringify(pkgVars)};
-				const tParams = ${JSON.stringify(triggerParams)};
+				const pInputs = ${JSON.stringify(pkgInputs).replace(/</g, "\\u003c")};
+				const pOutputs = ${JSON.stringify(pkgOutputs).replace(/</g, "\\u003c")};
+				const pVars = ${JSON.stringify(pkgVars).replace(/</g, "\\u003c")};
+				const tParams = ${JSON.stringify(triggerParams).replace(/</g, "\\u003c")};
 			`;
 		htmlContent = htmlContent.replace(
 			/\{\{INJECT_PACKAGE_DATA\}\}/g,
