@@ -197,7 +197,7 @@ async function executeEncryption(
 	const vaultPath = getWorkspaceRoot();
 	if (!vaultPath) return;
 
-	vscode.window.withProgress(
+	return vscode.window.withProgress(
 		{
 			location: vscode.ProgressLocation.Notification,
 			title: `Encrypting credential '${name}'...`,

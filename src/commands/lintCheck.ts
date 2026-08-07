@@ -93,7 +93,7 @@ export async function lintCheckCommand(nodeOrUri?: any, nodesOrUris?: any[]) {
 		return;
 	}
 
-	vscode.window.withProgress(
+	await vscode.window.withProgress(
 		{
 			location: vscode.ProgressLocation.Window,
 			title: "Linting Automa Workflow(s)...",

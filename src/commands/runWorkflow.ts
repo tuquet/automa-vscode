@@ -117,7 +117,7 @@ export async function runWorkflowCommand(
 		args.push("--use-default-parameters");
 	}
 
-	TaskRunner.runAutomaCli(args, {
+	await TaskRunner.runAutomaCli(args, {
 		id: `workflow-${Date.now()}`,
 		name: `Workflow: ${displayName}`,
 		source: "Automa",
@@ -153,7 +153,7 @@ export async function runWorkflowWithParamsCommand(nodeOrUri?: any) {
 		args.push("--variables", JSON.stringify(globalVariables));
 	}
 
-	TaskRunner.runAutomaCli(args, {
+	await TaskRunner.runAutomaCli(args, {
 		id: `workflow-${Date.now()}`,
 		name: `Workflow (Params): ${displayName}`,
 		source: "Automa",
