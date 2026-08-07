@@ -161,10 +161,14 @@ export class DaemonManager {
 				return JSON.parse(str);
 			} catch (_e) {}
 
-			// The CLI with --json usually prints a single-line JSON object at the very end.
-			// To avoid huge string parsing bottlenecks, just check the last few lines.
 			const lines = str.trim().split("\n");
-			for (let i = lines.length - 1; i >= Math.max(0, lines.length - 50); i--) {
+
+			// Strategy 1: Check the last few lines for a single-line complete JSON object/array
+			for (
+				let i = lines.length - 1;
+				i >= Math.max(0, lines.length - 100);
+				i--
+			) {
 				const line = lines[i].trim();
 				if (line.startsWith("{") || line.startsWith("[")) {
 					try {
@@ -173,40 +177,20 @@ export class DaemonManager {
 				}
 			}
 
-			// Fallback if it's pretty-printed (rare for CLI --json, but possible)
-			const firstBrace = str.indexOf("{");
-			const lastBrace = str.lastIndexOf("}");
-			const firstBracket = str.indexOf("[");
-			const lastBracket = str.lastIndexOf("]");
-
-			const isObject =
-				firstBrace !== -1 && lastBrace !== -1 && firstBrace < lastBrace;
-			const isArray =
-				firstBracket !== -1 && lastBracket !== -1 && firstBracket < lastBracket;
-
-			let jsonStr = "";
-			if (isObject && isArray) {
-				if (firstBrace < firstBracket && lastBrace > lastBracket) {
-					jsonStr = str.substring(firstBrace, lastBrace + 1);
-				} else if (firstBracket < firstBrace && lastBracket > lastBrace) {
-					jsonStr = str.substring(firstBracket, lastBracket + 1);
-				} else {
-					try {
-						return JSON.parse(str.substring(firstBrace, lastBrace + 1));
-					} catch (e) {
-						jsonStr = str.substring(firstBracket, lastBracket + 1);
+			// Strategy 2: Multi-line JSON extraction from the end
+			// Find the last closing brace or bracket
+			const lastCharIdx = Math.max(str.lastIndexOf("}"), str.lastIndexOf("]"));
+			if (lastCharIdx !== -1) {
+				// Search backwards for the opening brace or bracket
+				for (let i = lastCharIdx - 1; i >= 0; i--) {
+					if (str[i] === "{" || str[i] === "[") {
+						try {
+							return JSON.parse(str.substring(i, lastCharIdx + 1));
+						} catch (e) {
+							// Continue earlier to find the true matching opening bracket
+						}
 					}
 				}
-			} else if (isObject) {
-				jsonStr = str.substring(firstBrace, lastBrace + 1);
-			} else if (isArray) {
-				jsonStr = str.substring(firstBracket, lastBracket + 1);
-			}
-
-			if (jsonStr) {
-				try {
-					return JSON.parse(jsonStr);
-				} catch (e) {}
 			}
 
 			throw new Error("No valid JSON found in output");
