@@ -19,6 +19,12 @@ async function resolveTarget(
 			typeof (nodeOrUri as Record<string, unknown>).label === "string"
 				? (nodeOrUri as { label: string }).label
 				: path.basename(targetPath);
+	} else {
+		const activeEditor = vscode.window.activeTextEditor;
+		if (activeEditor?.document.uri.fsPath.endsWith(".json")) {
+			targetPath = activeEditor.document.uri.fsPath;
+			displayName = path.basename(targetPath);
+		}
 	}
 
 	if (!targetPath) {

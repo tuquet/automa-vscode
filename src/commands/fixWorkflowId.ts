@@ -38,12 +38,21 @@ export async function fixWorkflowIdCommand(
 		const path = extractFsPath(nodeOrUri);
 		if (path) {
 			urisToProcess = [vscode.Uri.file(path)];
+		} else if (vscode.window.activeTextEditor) {
+			urisToProcess = [vscode.window.activeTextEditor.document.uri];
 		}
 	}
 
 	if (urisToProcess.length === 0) {
-		vscode.window.showErrorMessage("Vui lòng chọn ít nhất 1 file .json.");
-		return;
+		const uris = await vscode.window.showOpenDialog({
+			canSelectMany: true,
+			openLabel: "Select Workflow(s) to Fix",
+			filters: {
+				"JSON files": ["json"],
+			},
+		});
+		if (!uris || uris.length === 0) return;
+		urisToProcess.push(...uris);
 	}
 
 	let fixedCount = 0;
