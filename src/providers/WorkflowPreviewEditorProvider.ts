@@ -60,7 +60,7 @@ export class WorkflowPreviewEditorProvider
 
 	private async sanitizeDocument(
 		document: vscode.TextDocument,
-		json: any,
+		json: Record<string, unknown>,
 	): Promise<void> {
 		const { WorkflowSanitizer } = await import("../core/Sanitizer");
 		const isModified = WorkflowSanitizer.sanitize(json);
@@ -72,9 +72,9 @@ export class WorkflowPreviewEditorProvider
 
 	private async prepareTriggerParameters(
 		document: vscode.TextDocument,
-		json: any,
+		json: Record<string, unknown>,
 		content: string,
-	): Promise<any[]> {
+	): Promise<Record<string, unknown>[]> {
 		const { WorkflowParser } = await import("../core/WorkflowParser");
 		const implicitVars = WorkflowParser.extractImplicitVariables(content);
 		const triggerParams = WorkflowParser.extractTriggerParameters(
@@ -84,7 +84,10 @@ export class WorkflowPreviewEditorProvider
 
 		// Get workspace settings to pre-fill global variables
 		const config = vscode.workspace.getConfiguration("automa", document.uri);
-		const globalVariables = config.get<any>("vault.run.globalVariables", {});
+		const globalVariables = config.get<Record<string, unknown>>(
+			"vault.run.globalVariables",
+			{},
+		);
 
 		for (const varName of implicitVars) {
 			let defaultVal = "";
@@ -174,7 +177,7 @@ export class WorkflowPreviewEditorProvider
 
 	private async handleSaveWorkflow(
 		document: vscode.TextDocument,
-		updateData: any,
+		updateData: Record<string, unknown>,
 	) {
 		try {
 			const content = document.getText();
@@ -227,7 +230,7 @@ export class WorkflowPreviewEditorProvider
 			// Update Trigger Parameters Default Values
 			if (updateData.triggerParams && json.drawflow?.nodes) {
 				const triggerNode = json.drawflow.nodes.find(
-					(n: any) =>
+					(n: Record<string, unknown>) =>
 						n.label === "trigger" ||
 						n.name === "trigger" ||
 						n.type === "BlockTrigger",
@@ -253,9 +256,9 @@ export class WorkflowPreviewEditorProvider
 
 	private processHtmlTemplate(
 		templateName: string,
-		json: any,
+		json: Record<string, unknown>,
 		updatedAtStr: string,
-		jsonStringifySafe: (obj: any) => string,
+		jsonStringifySafe: (obj: unknown) => string,
 	): string {
 		try {
 			const htmlPath = path.join(
@@ -273,7 +276,7 @@ export class WorkflowPreviewEditorProvider
 			</p>`
 				: "";
 
-			const safeString = (str: any) =>
+			const safeString = (str: unknown) =>
 				str
 					? String(str)
 							.replace(/\\/g, "\\\\")
@@ -338,10 +341,10 @@ export class WorkflowPreviewEditorProvider
 	}
 
 	private getWorkflowHtml(
-		json: any,
-		triggerParams: any[],
+		json: Record<string, unknown>,
+		triggerParams: Record<string, unknown>[],
 		updatedAtStr: string,
-		jsonStringifySafe: (obj: any) => string,
+		jsonStringifySafe: (obj: unknown) => string,
 	): string {
 		let htmlContent = this.processHtmlTemplate(
 			"workflow-preview.html",
@@ -367,13 +370,13 @@ export class WorkflowPreviewEditorProvider
 	}
 
 	private getPackageHtml(
-		json: any,
-		pkgInputs: any[],
-		pkgOutputs: any[],
-		pkgVars: any[],
-		triggerParams: any[],
+		json: Record<string, unknown>,
+		pkgInputs: Record<string, unknown>[],
+		pkgOutputs: Record<string, unknown>[],
+		pkgVars: Record<string, unknown>[],
+		triggerParams: Record<string, unknown>[],
 		updatedAtStr: string,
-		jsonStringifySafe: (obj: any) => string,
+		jsonStringifySafe: (obj: unknown) => string,
 	): string {
 		let htmlContent = this.processHtmlTemplate(
 			"package-preview.html",
@@ -399,15 +402,15 @@ export class WorkflowPreviewEditorProvider
 	}
 
 	private getHtmlContent(
-		json: any,
-		triggerParams: any[],
+		json: Record<string, unknown>,
+		triggerParams: Record<string, unknown>[],
 		updatedAtStr: string,
 		isPackage: boolean = false,
-		pkgInputs: any[] = [],
-		pkgOutputs: any[] = [],
-		pkgVars: any[] = [],
+		pkgInputs: Record<string, unknown>[] = [],
+		pkgOutputs: Record<string, unknown>[] = [],
+		pkgVars: Record<string, unknown>[] = [],
 	): string {
-		const jsonStringifySafe = (obj: any) =>
+		const jsonStringifySafe = (obj: unknown) =>
 			obj
 				? JSON.stringify(obj, null, 2)
 						.replace(/\\/g, "\\\\")
