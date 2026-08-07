@@ -278,9 +278,25 @@
                 });
 
                 const saveWorkflow = () => {
+                    const dataToSave = JSON.parse(JSON.stringify(workflow));
+
+                    const state = vscode.getState() || {};
+                    const newDocState = {
+                        name: dataToSave.name,
+                        description: dataToSave.description,
+                        version: dataToSave.version,
+                        extVersion: dataToSave.extVersion,
+                        icon: dataToSave.icon,
+                        globalData: dataToSave.globalData,
+                        table: dataToSave.table,
+                        settings: dataToSave.settings,
+                        includedWorkflows: dataToSave.includedWorkflows
+                    };
+                    vscode.setState({ ...state, lastDocState: newDocState });
+
                     vscode.postMessage({
                         command: 'saveWorkflow',
-                        data: JSON.parse(JSON.stringify(workflow))
+                        data: dataToSave
                     });
                 };
 

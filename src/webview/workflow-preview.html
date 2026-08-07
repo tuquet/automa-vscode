@@ -416,6 +416,20 @@
                     });
                     dataToSave.triggerParams = explicitParamsData;
 
+                    const state = vscode.getState() || {};
+                    const newDocState = {
+                        name: dataToSave.name,
+                        description: dataToSave.description,
+                        version: dataToSave.version,
+                        extVersion: dataToSave.extVersion,
+                        icon: dataToSave.icon,
+                        globalData: dataToSave.globalData,
+                        table: dataToSave.table,
+                        settings: dataToSave.settings,
+                        includedWorkflows: dataToSave.includedWorkflows
+                    };
+                    vscode.setState({ ...state, lastDocState: newDocState });
+
                     vscode.postMessage({
                         command: 'saveWorkflow',
                         data: dataToSave
