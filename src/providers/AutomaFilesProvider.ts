@@ -36,8 +36,8 @@ export class AutomaFilesProvider implements vscode.TreeDataProvider<FileItem> {
 			treeDataProvider: this,
 		});
 		context.subscriptions.push(treeView);
-		treeView.onDidChangeVisibility(async (e) => {
-			if (e.visible) await this.setSearchQuery("");
+		treeView.onDidChangeVisibility((e) => {
+			if (e.visible) this.refresh();
 		});
 
 		context.subscriptions.push(
