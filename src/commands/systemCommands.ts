@@ -10,7 +10,7 @@ export function welcomeCommand(context: vscode.ExtensionContext) {
 
 export function installBrowserCommand() {
 	return () => {
-		vscode.window.withProgress(
+		return vscode.window.withProgress(
 			{
 				location: vscode.ProgressLocation.Notification,
 				title: "Installing Automa Browser...",
@@ -24,11 +24,12 @@ export function installBrowserCommand() {
 					vscode.window.showInformationMessage(
 						"Browser installed successfully!",
 					);
-				} catch (err: any) {
+				} catch (err: unknown) {
+					const e = err instanceof Error ? err : new Error(String(err));
 					vscode.window.showErrorMessage(
-						`Failed to install browser: ${err.message}`,
+						`Failed to install browser: ${e.message}`,
 					);
-					throw err;
+					throw e;
 				}
 			},
 		);
@@ -37,7 +38,7 @@ export function installBrowserCommand() {
 
 export function toggleDaemonCommand() {
 	return () => {
-		const daemon = (DaemonManager as any).getInstance();
+		const daemon = DaemonManager.getInstance();
 		if (daemon.daemonProcess) {
 			daemon.stop();
 		} else {

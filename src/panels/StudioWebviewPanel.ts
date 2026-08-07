@@ -154,9 +154,11 @@ export class StudioWebviewPanel {
 								workflowData.id,
 							]);
 							return result;
-						} catch (cliErr: any) {
-							Logger.error(`Workflow execution failed: ${cliErr.message}`);
-							return { success: false, error: cliErr.message };
+						} catch (cliErr: unknown) {
+							const ce =
+								cliErr instanceof Error ? cliErr : new Error(String(cliErr));
+							Logger.error(`Workflow execution failed: ${ce.message}`);
+							return { success: false, error: ce.message };
 						}
 					}
 				}
