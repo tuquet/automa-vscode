@@ -160,7 +160,7 @@ export class DaemonManager {
 			outputBuf = Buffer.from(outputErr);
 		}
 
-		const extractJSONFromBuffer = (buf: Buffer) => {
+		const extractJSONFromBuffer = (buf: Buffer): unknown => {
 			const str = buf.toString("utf-8").trim();
 
 			// Fast path for exact JSON
@@ -168,65 +168,50 @@ export class DaemonManager {
 				return JSON.parse(str);
 			} catch (_e: unknown) {}
 
-			// Check for JSON block bounds
-			const firstBrace = str.indexOf("{");
-			const lastBrace = str.lastIndexOf("}");
-			const firstBracket = str.indexOf("[");
-			const lastBracket = str.lastIndexOf("]");
-
-			const candidates: string[] = [];
-
-			if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-				candidates.push(str.substring(firstBrace, lastBrace + 1));
-			}
-
-			if (
-				firstBracket !== -1 &&
-				lastBracket !== -1 &&
-				lastBracket > firstBracket
-			) {
-				candidates.push(str.substring(firstBracket, lastBracket + 1));
-			}
-
-			// Sort by length descending, larger block is usually the payload
-			candidates.sort((a, b) => b.length - a.length);
-
-			for (const candidate of candidates) {
-				try {
-					return JSON.parse(candidate);
-				} catch (_e: unknown) {}
-			}
-
-			let currentIdx = buf.length;
-			let linesChecked = 0;
-			// Limit to the last 1000 lines to prevent long blockages
-			while (currentIdx > 0 && linesChecked < 1000) {
-				let nextIdx = -1;
-				for (let i = currentIdx - 1; i >= 0; i--) {
-					if (buf[i] === 0x0a) {
-						nextIdx = i;
-						break;
+			const results: unknown[] = [];
+			let i = 0;
+			while (i < str.length) {
+				if (str[i] === "{" || str[i] === "[") {
+					const isObject = str[i] === "{";
+					let depth = 0;
+					let inString = false;
+					let inEscape = false;
+					let j = i;
+					for (; j < str.length; j++) {
+						const char = str[j];
+						if (inString) {
+							if (inEscape) {
+								inEscape = false;
+							} else if (char === "\\") {
+								inEscape = true;
+							} else if (char === '"') {
+								inString = false;
+							}
+						} else {
+							if (char === '"') {
+								inString = true;
+							} else if (char === (isObject ? "{" : "[")) {
+								depth++;
+							} else if (char === (isObject ? "}" : "]")) {
+								depth--;
+								if (depth === 0) {
+									const candidate = str.substring(i, j + 1);
+									try {
+										results.push(JSON.parse(candidate));
+									} catch (_e: unknown) {}
+									break;
+								}
+							}
+						}
 					}
+					i = depth === 0 ? j + 1 : i + 1;
+				} else {
+					i++;
 				}
+			}
 
-				const line = buf
-					.subarray(nextIdx === -1 ? 0 : nextIdx + 1, currentIdx)
-					.toString("utf-8")
-					.trim();
-
-				if (
-					line &&
-					((line.startsWith("{") && line.endsWith("}")) ||
-						(line.startsWith("[") && line.endsWith("]")))
-				) {
-					try {
-						return JSON.parse(line);
-					} catch (_e: unknown) {}
-				}
-
-				if (nextIdx === -1) break;
-				currentIdx = nextIdx;
-				linesChecked++;
+			if (results.length > 0) {
+				return results[results.length - 1];
 			}
 
 			throw new Error("No valid JSON found in output");
