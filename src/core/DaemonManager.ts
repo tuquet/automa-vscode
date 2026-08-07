@@ -166,71 +166,30 @@ export class DaemonManager {
 
 			// CLI commands always output their final --json data as a single unformatted line.
 			// Logs might be printed before it.
-			// We split by newline and scan from the bottom up to find the valid JSON.
-			const lines = str.split("\n");
-			for (let i = lines.length - 1; i >= 0; i--) {
-				const line = lines[i].trim();
+			// To avoid a memory bottleneck from str.split('\n') on massive outputs (e.g. 100MB+ logs),
+			// we scan backwards line by line using lastIndexOf.
+			let currentIdx = str.length;
+			let linesChecked = 0;
+			// Limit to the last 1000 lines to prevent long blockages
+			while (currentIdx > 0 && linesChecked < 1000) {
+				const nextIdx = str.lastIndexOf("\n", currentIdx - 1);
+				const line = str
+					.substring(nextIdx === -1 ? 0 : nextIdx + 1, currentIdx)
+					.trim();
+
 				if (
-					(line.startsWith("{") && line.endsWith("}")) ||
-					(line.startsWith("[") && line.endsWith("]"))
+					line &&
+					((line.startsWith("{") && line.endsWith("}")) ||
+						(line.startsWith("[") && line.endsWith("]")))
 				) {
 					try {
 						return JSON.parse(line);
 					} catch (_e) {}
 				}
-			}
 
-			// Robust fallback: O(N) single-pass balanced brace matching to find valid JSON blocks
-			let depth = 0;
-			let inString = false;
-			let isEscaped = false;
-			const validBlocks: string[] = [];
-			let currentBlockStart = -1;
-			let currentBlockType = "";
-
-			for (let i = 0; i < str.length; i++) {
-				const char = str[i];
-				if (isEscaped) {
-					isEscaped = false;
-					continue;
-				}
-				if (char === "\\") {
-					isEscaped = true;
-					continue;
-				}
-				if (char === '"') {
-					inString = !inString;
-					continue;
-				}
-				if (!inString) {
-					if (char === "{" || char === "[") {
-						if (depth === 0) {
-							currentBlockStart = i;
-							currentBlockType = char;
-						}
-						depth++;
-					} else if (char === "}" || char === "]") {
-						depth--;
-						if (depth === 0 && currentBlockStart !== -1) {
-							if (
-								(currentBlockType === "{" && char === "}") ||
-								(currentBlockType === "[" && char === "]")
-							) {
-								validBlocks.push(str.substring(currentBlockStart, i + 1));
-							}
-							currentBlockStart = -1;
-						} else if (depth < 0) {
-							depth = 0; // reset on unmatched closing brace
-						}
-					}
-				}
-			}
-
-			// Parse backwards so we get the last valid JSON block
-			for (let i = validBlocks.length - 1; i >= 0; i--) {
-				try {
-					return JSON.parse(validBlocks[i]);
-				} catch (_e) {}
+				if (nextIdx === -1) break;
+				currentIdx = nextIdx;
+				linesChecked++;
 			}
 
 			throw new Error("No valid JSON found in output");
