@@ -168,7 +168,22 @@ export class StudioWebviewPanel {
 								`automa-run-${Date.now()}.json`,
 							);
 							fs.writeFileSync(tempFile, JSON.stringify(workflowData), "utf-8");
-							const result = await daemon.executeCliCommand(["run", tempFile]);
+							const args = ["run", tempFile];
+							if (reqOptions.vaultPath) {
+								args.push("--vault-path", reqOptions.vaultPath);
+							}
+							if (reqOptions.project) {
+								args.push("--project", reqOptions.project);
+							}
+							if (reqOptions.variables) {
+								args.push(
+									"--variables",
+									typeof reqOptions.variables === "string"
+										? reqOptions.variables
+										: JSON.stringify(reqOptions.variables),
+								);
+							}
+							const result = await daemon.executeCliCommand(args);
 							fs.unlinkSync(tempFile);
 							return result;
 						} catch (cliErr: unknown) {
