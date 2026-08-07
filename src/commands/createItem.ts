@@ -4,7 +4,16 @@ import * as vscode from "vscode";
 import { TaskRunner } from "../core/TaskRunner";
 
 export async function createWorkflowCommand() {
-	await TaskRunner.runAutomaCli(["studio"], {
+	const args = ["studio"];
+	if (
+		vscode.workspace.workspaceFolders &&
+		vscode.workspace.workspaceFolders.length > 0
+	) {
+		const workspaceRoot = vscode.workspace.workspaceFolders[0].uri.fsPath;
+		args.push("--vault-path", workspaceRoot);
+	}
+
+	await TaskRunner.runAutomaCli(args, {
 		id: "create-workflow",
 		name: "Create Workflow",
 		source: "Automa",
@@ -17,7 +26,16 @@ export async function createWorkflowCommand() {
 }
 
 export async function createPackageCommand() {
-	await TaskRunner.runAutomaCli(["studio", "--route", "/packages"], {
+	const args = ["studio", "--route", "/packages"];
+	if (
+		vscode.workspace.workspaceFolders &&
+		vscode.workspace.workspaceFolders.length > 0
+	) {
+		const workspaceRoot = vscode.workspace.workspaceFolders[0].uri.fsPath;
+		args.push("--vault-path", workspaceRoot);
+	}
+
+	await TaskRunner.runAutomaCli(args, {
 		id: "create-package",
 		name: "Create Package",
 		source: "Automa",
