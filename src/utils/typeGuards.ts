@@ -20,46 +20,18 @@ export function isNumber(value: unknown): value is number {
 	return typeof value === "number";
 }
 
-export function isObjectHasData(
+export function hasStringProp<K extends string>(
 	value: unknown,
-): value is { data: Record<string, unknown> } {
-	return isRecord(value) && isRecord(value.data);
+	key: K,
+): value is Record<K, string> {
+	return hasProp(value, key) && typeof value[key] === "string";
 }
 
-export function isObjectHasDrawflow(
+export function hasObjectProp<K extends string>(
 	value: unknown,
-): value is { drawflow: Record<string, unknown> } {
-	return isRecord(value) && isRecord(value.drawflow);
-}
-
-/**
- * Checks if an object has a string `fsPath` property.
- */
-export function hasFsPath(value: unknown): value is { fsPath: string } {
-	return isRecord(value) && typeof value.fsPath === "string";
-}
-
-/**
- * Checks if an object has a `resourceUri` property that is a `vscode.Uri`.
- */
-export function hasResourceUri(
-	value: unknown,
-): value is { resourceUri: vscode.Uri } {
-	return isRecord(value) && value.resourceUri instanceof vscode.Uri;
-}
-
-/**
- * Checks if an object has a string `fullPath` property.
- */
-export function hasFullPath(value: unknown): value is { fullPath: string } {
-	return isRecord(value) && typeof value.fullPath === "string";
-}
-
-/**
- * Checks if an object has a string `label` property.
- */
-export function hasLabel(value: unknown): value is { label: string } {
-	return isRecord(value) && typeof value.label === "string";
+	key: K,
+): value is Record<K, Record<string, unknown>> {
+	return hasProp(value, key) && isRecord(value[key]);
 }
 
 /**
@@ -70,13 +42,16 @@ export function extractFsPath(nodeOrUri: unknown): string | null {
 	if (nodeOrUri instanceof vscode.Uri) {
 		return nodeOrUri.fsPath;
 	}
-	if (hasResourceUri(nodeOrUri)) {
+	if (
+		hasProp(nodeOrUri, "resourceUri") &&
+		nodeOrUri.resourceUri instanceof vscode.Uri
+	) {
 		return nodeOrUri.resourceUri.fsPath;
 	}
-	if (hasFsPath(nodeOrUri)) {
+	if (hasStringProp(nodeOrUri, "fsPath")) {
 		return nodeOrUri.fsPath;
 	}
-	if (hasFullPath(nodeOrUri)) {
+	if (hasStringProp(nodeOrUri, "fullPath")) {
 		return nodeOrUri.fullPath;
 	}
 	return null;
@@ -99,4 +74,26 @@ export function hasNodesAndEdges(value: unknown): value is {
 	return (
 		isRecord(value) && Array.isArray(value.nodes) && Array.isArray(value.edges)
 	);
+}
+
+export function getProp<T = unknown>(
+	value: unknown,
+	key: string,
+): T | undefined {
+	return isRecord(value) ? (value[key] as T) : undefined;
+}
+
+export function hasProp<K extends string>(
+	value: unknown,
+	key: K,
+): value is Record<K, unknown> {
+	return isRecord(value) && key in value;
+}
+
+export function castRecord(value: unknown): Record<string, unknown> {
+	return isRecord(value) ? value : {};
+}
+
+export function castRecordArray(value: unknown): Record<string, unknown>[] {
+	return Array.isArray(value) ? value.filter(isRecord) : [];
 }

@@ -3,8 +3,8 @@ import * as path from "node:path";
 import * as vscode from "vscode";
 import { runWorkflowCommand } from "../commands/runWorkflow";
 import {
-	isObjectHasData,
-	isObjectHasDrawflow,
+	getProp,
+	hasObjectProp,
 	isRecord,
 	toError,
 } from "../utils/typeGuards";
@@ -284,20 +284,20 @@ export class WorkflowPreviewEditorProvider
 				let nodesList: Record<string, unknown>[] = [];
 				if (
 					json.data &&
-					isObjectHasData(json) &&
+					hasObjectProp(json, "data") &&
 					json.data !== null &&
-					Array.isArray((json.data as Record<string, unknown>).nodes)
+					Array.isArray(getProp<unknown>(json.data, "nodes"))
 				) {
-					nodesList = (json.data as Record<string, unknown>).nodes as Record<
+					nodesList = getProp<unknown>(json.data, "nodes") as Record<
 						string,
 						unknown
 					>[];
 				} else if (
 					json.drawflow &&
-					isObjectHasDrawflow(json) &&
+					hasObjectProp(json, "drawflow") &&
 					json.drawflow !== null
 				) {
-					if (Array.isArray((json.drawflow as Record<string, unknown>).nodes)) {
+					if (Array.isArray(getProp<unknown>(json.drawflow, "nodes"))) {
 						nodesList = (json.drawflow as Record<string, unknown>)
 							.nodes as Record<string, unknown>[];
 					} else {
@@ -323,10 +323,8 @@ export class WorkflowPreviewEditorProvider
 				);
 				if (
 					triggerNode?.data &&
-					isObjectHasData(triggerNode) &&
-					Array.isArray(
-						(triggerNode.data as Record<string, unknown>).parameters,
-					)
+					hasObjectProp(triggerNode, "data") &&
+					Array.isArray(getProp<unknown>(triggerNode.data, "parameters"))
 				) {
 					const triggerParamsData = updateData.triggerParams as Record<
 						string,

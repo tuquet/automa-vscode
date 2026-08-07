@@ -1,6 +1,5 @@
 import {
-	isObjectHasData,
-	isObjectHasDrawflow,
+	hasObjectProp,
 	isRecord,
 } from "../utils/typeGuards";
 export const WorkflowParser = {
@@ -32,9 +31,9 @@ export const WorkflowParser = {
 
 		const json = (jsonObj || {}) as Record<string, unknown>;
 
-		if (isObjectHasData(json) && Array.isArray(json.data.nodes)) {
+		if (hasObjectProp(json, "data") && Array.isArray(json.data.nodes)) {
 			nodesList = json.data.nodes as Record<string, unknown>[];
-		} else if (isObjectHasDrawflow(json)) {
+		} else if (hasObjectProp(json, "drawflow")) {
 			if (Array.isArray(json.drawflow.nodes)) {
 				nodesList = json.drawflow.nodes as Record<string, unknown>[];
 			} else {
@@ -54,7 +53,7 @@ export const WorkflowParser = {
 					(node.label === "trigger" ||
 						node.name === "trigger" ||
 						node.type === "BlockTrigger") &&
-					isObjectHasData(node) &&
+					hasObjectProp(node, "data") &&
 					Array.isArray(node.data.parameters)
 				) {
 					for (const param of node.data.parameters as Record<

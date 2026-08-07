@@ -4,7 +4,7 @@ import * as vscode from "vscode";
 import { TaskRunner } from "../core/TaskRunner";
 import {
 	extractFsPath,
-	hasLabel,
+	hasStringProp,
 	isString,
 	toError,
 } from "../utils/typeGuards";
@@ -20,7 +20,7 @@ async function resolveTarget(
 	const pathFromNode = extractFsPath(nodeOrUri);
 	if (pathFromNode) {
 		targetPath = pathFromNode;
-		displayName = hasLabel(nodeOrUri)
+		displayName = hasStringProp(nodeOrUri, "label")
 			? nodeOrUri.label
 			: path.basename(targetPath);
 	} else {
