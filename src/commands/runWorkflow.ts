@@ -2,7 +2,12 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as vscode from "vscode";
 import { TaskRunner } from "../core/TaskRunner";
-import { extractFsPath, isString, toError } from "../utils/typeGuards";
+import {
+	extractFsPath,
+	hasLabel,
+	isString,
+	toError,
+} from "../utils/typeGuards";
 
 let _automaOutputChannel: vscode.OutputChannel;
 
@@ -15,10 +20,9 @@ async function resolveTarget(
 	const pathFromNode = extractFsPath(nodeOrUri);
 	if (pathFromNode) {
 		targetPath = pathFromNode;
-		displayName =
-			typeof (nodeOrUri as Record<string, unknown>).label === "string"
-				? (nodeOrUri as { label: string }).label
-				: path.basename(targetPath);
+		displayName = hasLabel(nodeOrUri)
+			? nodeOrUri.label
+			: path.basename(targetPath);
 	} else {
 		const activeEditor = vscode.window.activeTextEditor;
 		if (activeEditor?.document.uri.fsPath.endsWith(".json")) {

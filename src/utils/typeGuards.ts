@@ -56,6 +56,13 @@ export function hasFullPath(value: unknown): value is { fullPath: string } {
 }
 
 /**
+ * Checks if an object has a string `label` property.
+ */
+export function hasLabel(value: unknown): value is { label: string } {
+	return isRecord(value) && typeof value.label === "string";
+}
+
+/**
  * Extracts the file system path from various VS Code node/uri representations.
  * Replaces bloaty inline type checking across commands.
  */
@@ -76,9 +83,11 @@ export function extractFsPath(nodeOrUri: unknown): string | null {
 }
 
 export function getErrorMessage(error: unknown): string {
-	return getErrorMessage(error);
+	if (error instanceof Error) return error.message;
+	return String(error);
 }
 
 export function toError(error: unknown): Error {
-	return toError(error);
+	if (error instanceof Error) return error;
+	return new Error(String(error));
 }
