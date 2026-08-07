@@ -42,7 +42,7 @@ export class AutomaFilesProvider implements vscode.TreeDataProvider<FileItem> {
 
 		context.subscriptions.push(
 			vscode.commands.registerCommand(`automa.refresh${entityName}`, () => {
-				this.setSearchQuery("");
+				this.refresh();
 			}),
 		);
 		context.subscriptions.push(
