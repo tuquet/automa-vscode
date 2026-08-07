@@ -557,13 +557,13 @@
 						"filenamePattern": "*.bprofile.json"
 					},
 					{
-						"filenamePattern": "*.variables.json"
+						"filenamePattern": "*.variable.json"
 					},
 					{
-						"filenamePattern": "*.credentials.json"
+						"filenamePattern": "*.credential.json"
 					},
 					{
-						"filenamePattern": "*.tables.json"
+						"filenamePattern": "*.table.json"
 					}
 				]
 			}
