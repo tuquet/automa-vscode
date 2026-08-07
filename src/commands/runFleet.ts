@@ -12,10 +12,22 @@ export async function runFleetCommand(
 		targetPath = nodeOrUri.fsPath;
 		displayName = path.basename(nodeOrUri.fsPath);
 	} else {
-		vscode.window.showErrorMessage(
-			"Run Fleet must be triggered from a .fleets.json file.",
-		);
-		return;
+		const activeEditor = vscode.window.activeTextEditor;
+		if (activeEditor?.document.uri.fsPath.endsWith(".fleets.json")) {
+			targetPath = activeEditor.document.uri.fsPath;
+			displayName = path.basename(targetPath);
+		} else {
+			const uris = await vscode.window.showOpenDialog({
+				canSelectMany: false,
+				openLabel: "Select Fleet",
+				filters: {
+					"Fleet files": ["fleets.json"],
+				},
+			});
+			if (!uris || uris.length === 0) return;
+			targetPath = uris[0].fsPath;
+			displayName = path.basename(targetPath);
+		}
 	}
 
 	const options = await vscode.window.showQuickPick(

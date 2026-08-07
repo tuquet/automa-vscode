@@ -3,13 +3,27 @@ import * as vscode from "vscode";
 import { TaskRunner } from "../core/TaskRunner";
 
 export async function openInStudioCommand(uri: vscode.Uri) {
-	if (!uri) {
-		vscode.window.showErrorMessage("No workflow file selected.");
-		return;
+	let targetPath = uri?.fsPath;
+
+	if (!targetPath) {
+		const activeEditor = vscode.window.activeTextEditor;
+		if (activeEditor?.document.uri.fsPath.endsWith(".workflow.json")) {
+			targetPath = activeEditor.document.uri.fsPath;
+		} else {
+			const uris = await vscode.window.showOpenDialog({
+				canSelectMany: false,
+				openLabel: "Open in Studio",
+				filters: {
+					"JSON files": ["json"],
+				},
+			});
+			if (!uris || uris.length === 0) return;
+			targetPath = uris[0].fsPath;
+		}
 	}
 
-	const displayName = path.basename(uri.fsPath);
-	const args = ["studio", uri.fsPath];
+	const displayName = path.basename(targetPath);
+	const args = ["studio", targetPath];
 
 	if (
 		vscode.workspace.workspaceFolders &&

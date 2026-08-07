@@ -104,10 +104,15 @@ export async function lintCheckCommand(
 	const urisToProcess = resolveUrisToProcess(nodeOrUri, nodesOrUris);
 
 	if (urisToProcess.length === 0) {
-		vscode.window.showInformationMessage(
-			"No workflow files selected for linting.",
-		);
-		return;
+		const uris = await vscode.window.showOpenDialog({
+			canSelectMany: true,
+			openLabel: "Select Workflow(s) to Lint",
+			filters: {
+				"JSON files": ["json"],
+			},
+		});
+		if (!uris || uris.length === 0) return;
+		urisToProcess.push(...uris);
 	}
 
 	await vscode.window.withProgress(

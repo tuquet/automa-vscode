@@ -27,14 +27,17 @@ async function resolveTarget(
 	}
 
 	if (!targetPath) {
-		const input = await vscode.window.showInputBox({
-			prompt: "Enter absolute path to workflow JSON",
-			placeHolder: "e.g. C:\\path\\to\\workflow.json",
+		const uris = await vscode.window.showOpenDialog({
+			canSelectMany: false,
+			openLabel: "Select Workflow",
+			filters: {
+				"JSON files": ["json"],
+			},
 		});
-		if (!input) return null;
+		if (!uris || uris.length === 0) return null;
 
-		targetPath = input;
-		displayName = input;
+		targetPath = uris[0].fsPath;
+		displayName = path.basename(targetPath);
 	}
 
 	if (!targetPath.endsWith(".json")) {
