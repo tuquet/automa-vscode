@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 
 export abstract class BaseCustomEditorProvider {
-	protected isInternalSave = false;
+	protected internalSaves = new Set<string>();
 
 	constructor(protected readonly context: vscode.ExtensionContext) {}
 
@@ -18,8 +18,9 @@ export abstract class BaseCustomEditorProvider {
 		// Check if it's a TextDocument
 		if ("getText" in document) {
 			changeDisposable = vscode.workspace.onDidChangeTextDocument((e) => {
-				if (e.document.uri.toString() === document.uri.toString()) {
-					if (!this.isInternalSave) {
+				const uriStr = document.uri.toString();
+				if (e.document.uri.toString() === uriStr) {
+					if (!this.internalSaves.has(uriStr)) {
 						updateWebview();
 					}
 				}
@@ -29,8 +30,9 @@ export abstract class BaseCustomEditorProvider {
 			const watcher = vscode.workspace.createFileSystemWatcher(
 				document.uri.fsPath,
 			);
+			const uriStr = document.uri.toString();
 			const handleChange = () => {
-				if (!this.isInternalSave) {
+				if (!this.internalSaves.has(uriStr)) {
 					setTimeout(() => updateWebview(), 50);
 				}
 			};
@@ -57,7 +59,8 @@ export abstract class BaseCustomEditorProvider {
 		document: vscode.TextDocument,
 		content: string,
 	): Promise<boolean> {
-		this.isInternalSave = true;
+		const uriStr = document.uri.toString();
+		this.internalSaves.add(uriStr);
 		try {
 			const edit = new vscode.WorkspaceEdit();
 			edit.replace(
@@ -73,7 +76,7 @@ export abstract class BaseCustomEditorProvider {
 		} finally {
 			// Small delay to ensure the onDidChangeTextDocument event is caught
 			setTimeout(() => {
-				this.isInternalSave = false;
+				this.internalSaves.delete(uriStr);
 			}, 150);
 		}
 	}

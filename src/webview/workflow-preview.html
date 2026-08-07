@@ -435,20 +435,11 @@
                     }
                     
                     const params = {};
-                    const triggerParamsData = {};
+
                     
                     triggerParams.forEach(p => {
-                        if (p.isImplicit) {
-                            params[p.name] = paramValues[p.name];
-                        } else {
-                            triggerParamsData[p.name] = paramValues[p.name];
-                        }
+                        params[p.name] = paramValues[p.name];
                     });
-
-                    // Append trigger data so the CLI can pick it up
-                    if (Object.keys(triggerParamsData).length > 0) {
-                        params.__triggerParams = triggerParamsData;
-                    }
 
                     vscode.postMessage({
                         command: 'runWorkflow',
