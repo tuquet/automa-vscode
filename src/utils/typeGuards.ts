@@ -71,9 +71,7 @@ export function hasNodesAndEdges(value: unknown): value is {
 	nodes: Record<string, unknown>[];
 	edges: Record<string, unknown>[];
 } {
-	return (
-		isRecord(value) && Array.isArray(value.nodes) && Array.isArray(value.edges)
-	);
+	return hasArrayProp(value, "nodes") && hasArrayProp(value, "edges");
 }
 
 export function getProp<T = unknown>(
@@ -96,4 +94,31 @@ export function castRecord(value: unknown): Record<string, unknown> {
 
 export function castRecordArray(value: unknown): Record<string, unknown>[] {
 	return Array.isArray(value) ? value.filter(isRecord) : [];
+}
+
+export function hasArrayProp<K extends string>(
+	value: unknown,
+	key: K,
+): value is Record<K, unknown[]> {
+	return hasProp(value, key) && Array.isArray(value[key]);
+}
+
+export function assertIsRecord(
+	value: unknown,
+	message?: string,
+): asserts value is Record<string, unknown> {
+	if (typeof value !== "object" || value === null || Array.isArray(value)) {
+		throw new Error(message || "Value is not a record");
+	}
+}
+
+export function assertHasProp<K extends string>(
+	value: unknown,
+	key: K,
+	message?: string,
+): asserts value is Record<K, unknown> {
+	assertIsRecord(value, message);
+	if (!(key in value)) {
+		throw new Error(message || `Missing property ${key}`);
+	}
 }

@@ -326,8 +326,8 @@ export async function deleteVaultItemCommand(
 			modified = data.length !== initialLength;
 		} else if (isRecord(data)) {
 			const keyToDelete = targetItem.itemId || targetItem.label;
-			if (keyToDelete in data) {
-				delete castRecord(data)[keyToDelete];
+			if (hasProp(data, keyToDelete)) {
+				delete data[keyToDelete];
 				modified = true;
 			}
 		}
