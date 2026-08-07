@@ -44,6 +44,11 @@
 					"group": "1_run@3"
 				},
 				{
+					"command": "automa.openInStudio",
+					"when": "resourceExtname == .json && resourceFilename =~ /^(?!.*automa-log).*$/",
+					"group": "1_run@4"
+				},
+				{
 					"command": "automa.fixWorkflowId",
 					"when": "resourceExtname == .json && resourceFilename =~ /^(?!.*automa-log).*$/",
 					"group": "2_tools@1"
@@ -262,6 +267,26 @@
 					"command": "automa.runFleet",
 					"when": "viewItem == automaFileItem-automa.fleets",
 					"group": "inline"
+				},
+				{
+					"command": "automa.runWorkflowWithParams",
+					"when": "viewItem == automaFileItem-automa.workflows",
+					"group": "1_run@2"
+				},
+				{
+					"command": "automa.openInStudio",
+					"when": "viewItem == automaFileItem-automa.workflows || viewItem == automaFileItem-automa.packages",
+					"group": "1_run@3"
+				},
+				{
+					"command": "automa.fixWorkflowId",
+					"when": "viewItem == automaFileItem-automa.workflows",
+					"group": "2_tools@1"
+				},
+				{
+					"command": "automa.lintCheck",
+					"when": "viewItem == automaFileItem-automa.workflows || viewItem == automaFileItem-automa.packages",
+					"group": "2_tools@2"
 				},
 				{
 					"command": "automa.deleteVaultItem",
