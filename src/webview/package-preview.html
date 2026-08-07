@@ -269,6 +269,15 @@
                     return str.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
                 };
 
+                const normalizeJsonStr = (str) => {
+                    if (!str || typeof str !== 'string') return str || '';
+                    try {
+                        return JSON.stringify(JSON.parse(str), null, 2);
+                    } catch(e) {
+                        return str;
+                    }
+                };
+
                 const iconClass = computed(() => {
                     const kebab = camelToKebab(workflow.icon);
                     if (workflow.icon.startsWith('mdi')) {
@@ -278,19 +287,27 @@
                 });
 
                 const saveWorkflow = () => {
+                    // Validate JSON fields first
+                    const jsonFields = ['settings'];
+                    for (const field of jsonFields) {
+                        if (workflow[field] && typeof workflow[field] === 'string') {
+                            try {
+                                JSON.parse(workflow[field]);
+                            } catch (e) {
+                                vscode.postMessage({ command: 'error', text: `Cannot save: Invalid JSON in ${field}` });
+                                return;
+                            }
+                        }
+                    }
+
                     const dataToSave = JSON.parse(JSON.stringify(workflow));
 
                     const state = vscode.getState() || {};
                     const newDocState = {
                         name: dataToSave.name,
                         description: dataToSave.description,
-                        version: dataToSave.version,
-                        extVersion: dataToSave.extVersion,
                         icon: dataToSave.icon,
-                        globalData: dataToSave.globalData,
-                        table: dataToSave.table,
-                        settings: dataToSave.settings,
-                        includedWorkflows: dataToSave.includedWorkflows
+                        settings: normalizeJsonStr(dataToSave.settings)
                     };
                     vscode.setState({ ...state, lastDocState: newDocState });
 
