@@ -104,6 +104,7 @@ export class AutomaFilesProvider implements vscode.TreeDataProvider<FileItem> {
 
 		let filteredFiles = files;
 		if (this.filterType !== "all") {
+			const parseErrors: string[] = [];
 			const filterResults = await Promise.all(
 				files.map(async (file) => {
 					try {
@@ -117,17 +118,28 @@ export class AutomaFilesProvider implements vscode.TreeDataProvider<FileItem> {
 
 						if (this.filterType === "package") return isPackage;
 						if (this.filterType === "workflow") return !isPackage;
-					} catch (error: unknown) {
-						const e = error instanceof Error ? error : new Error(String(error));
-						vscode.window.showErrorMessage(
-							`Failed to parse file ${file.fsPath}: ${e.message}`,
-						);
+					} catch (e: unknown) {
+						const msg = e instanceof Error ? e.message : String(e);
+						parseErrors.push(`${path.basename(file.fsPath)}: ${msg}`);
 						// If parsing fails, consider it a normal workflow by default
 						return this.filterType === "workflow";
 					}
 					return false;
 				}),
 			);
+
+			if (parseErrors.length > 0) {
+				const limit = 3;
+				const displayErrors = parseErrors.slice(0, limit).join(", ");
+				const more =
+					parseErrors.length > limit
+						? ` and ${parseErrors.length - limit} more`
+						: "";
+				vscode.window.showWarningMessage(
+					`Failed to parse ${parseErrors.length} file(s) for ${this.viewId}: ${displayErrors}${more}`,
+				);
+			}
+
 			filteredFiles = files.filter((_, index) => filterResults[index]);
 		}
 

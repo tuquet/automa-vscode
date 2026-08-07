@@ -192,6 +192,7 @@ export class VaultTreeDataProvider
 		if (files.length > 0) {
 			try {
 				const items: VaultItem[] = [];
+				const parseErrors: string[] = [];
 				for (const file of files) {
 					try {
 						const content = await vscode.workspace.fs.readFile(file);
@@ -228,12 +229,23 @@ export class VaultTreeDataProvider
 								);
 							}
 						}
-					} catch (error: unknown) {
-						const e = error instanceof Error ? error : new Error(String(error));
-						vscode.window.showErrorMessage(
-							`Failed to parse vault file ${file.fsPath}: ${e.message}`,
+					} catch (e: unknown) {
+						const msg = e instanceof Error ? e.message : String(e);
+						parseErrors.push(
+							`Failed to parse vault file ${file.fsPath}: ${msg}`,
 						);
 					}
+				}
+				if (parseErrors.length > 0) {
+					const limit = 3;
+					const displayErrors = parseErrors.slice(0, limit).join("\n");
+					const more =
+						parseErrors.length > limit
+							? `\n...and ${parseErrors.length - limit} more`
+							: "";
+					vscode.window.showWarningMessage(
+						`Failed to parse ${parseErrors.length} vault file(s):\n${displayErrors}${more}`,
+					);
 				}
 				return items;
 			} catch (_e) {

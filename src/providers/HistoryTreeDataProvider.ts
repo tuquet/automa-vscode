@@ -96,8 +96,9 @@ export class HistoryTreeDataProvider
 				item.id,
 			]);
 			this.refresh();
-		} catch (err: any) {
-			vscode.window.showErrorMessage(`Failed to delete log: ${err.message}`);
+		} catch (err: unknown) {
+			const msg = err instanceof Error ? err.message : String(err);
+			vscode.window.showErrorMessage(`Failed to delete log: ${msg}`);
 		}
 	}
 
@@ -115,8 +116,9 @@ export class HistoryTreeDataProvider
 				"--clear",
 			]);
 			this.refresh();
-		} catch (err: any) {
-			vscode.window.showErrorMessage(`Failed to clear history: ${err.message}`);
+		} catch (err: unknown) {
+			const msg = err instanceof Error ? err.message : String(err);
+			vscode.window.showErrorMessage(`Failed to clear history: ${msg}`);
 		}
 	}
 
@@ -242,12 +244,13 @@ export class HistoryTreeDataProvider
 			}
 
 			return treeItems;
-		} catch (err: any) {
+		} catch (err: unknown) {
+			const msg = err instanceof Error ? err.message : String(err);
 			const errorItem = new vscode.TreeItem(
 				"Error loading history",
 				vscode.TreeItemCollapsibleState.None,
 			);
-			errorItem.description = err.message;
+			errorItem.description = msg;
 			return [errorItem];
 		}
 	}
