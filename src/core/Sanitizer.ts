@@ -32,11 +32,15 @@ export class WorkflowSanitizer {
 		let edges: Record<string, unknown>[] = [];
 
 		if (isPackage && json.data) {
-			if (Array.isArray((json.data as any).nodes)) nodes = (json.data as any).nodes;
-			if (Array.isArray((json.data as any).edges)) edges = (json.data as any).edges;
+			if (Array.isArray((json.data as Record<string, unknown>).nodes))
+				nodes = (json.data as Record<string, unknown>).nodes as Record<string, unknown>[];
+			if (Array.isArray((json.data as Record<string, unknown>).edges))
+				edges = (json.data as Record<string, unknown>).edges as Record<string, unknown>[];
 		} else if (!isPackage && json.drawflow) {
-			if (Array.isArray((json.drawflow as any).nodes)) nodes = (json.drawflow as any).nodes;
-			if (Array.isArray((json.drawflow as any).edges)) edges = (json.drawflow as any).edges;
+			if (Array.isArray((json.drawflow as Record<string, unknown>).nodes))
+				nodes = (json.drawflow as Record<string, unknown>).nodes as Record<string, unknown>[];
+			if (Array.isArray((json.drawflow as Record<string, unknown>).edges))
+				edges = (json.drawflow as Record<string, unknown>).edges as Record<string, unknown>[];
 			// Fallback for object-based nodes
 			if (
 				!Array.isArray((json.drawflow as any).nodes) &&
@@ -97,7 +101,9 @@ export class WorkflowSanitizer {
 					}
 
 					// Recursively sanitize nested nodes/edges (e.g. in BlockPackage/BlockGroup)
-					const nestedData = (node.data as any).data ? (node.data as any).data : node.data;
+					const nestedData = (node.data as any).data
+						? (node.data as any).data
+						: node.data;
 					if (
 						nestedData &&
 						Array.isArray(nestedData.nodes) &&
