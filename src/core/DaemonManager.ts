@@ -125,23 +125,23 @@ export class DaemonManager {
 							(executable === "npx" || executable === "npx.cmd"),
 					});
 
-					let stdoutData = "";
-					let stderrData = "";
+					const stdoutChunks: Buffer[] = [];
+					const stderrChunks: Buffer[] = [];
 
 					child.stdout?.on("data", (data) => {
-						stdoutData += data.toString();
+						stdoutChunks.push(Buffer.isBuffer(data) ? data : Buffer.from(data));
 					});
 
 					child.stderr?.on("data", (data) => {
-						stderrData += data.toString();
+						stderrChunks.push(Buffer.isBuffer(data) ? data : Buffer.from(data));
 					});
 
 					child.on("error", reject);
 
 					child.on("close", (_code) => {
 						resolve({
-							stdout: stdoutData.trim(),
-							stderr: stderrData.trim(),
+							stdout: Buffer.concat(stdoutChunks).toString("utf-8").trim(),
+							stderr: Buffer.concat(stderrChunks).toString("utf-8").trim(),
 						});
 					});
 				},
@@ -161,26 +161,34 @@ export class DaemonManager {
 				return JSON.parse(str);
 			} catch (_e) {}
 
-			// Find the first { or [ and last } or ]
+			// The CLI with --json usually prints a single-line JSON object at the very end.
+			// To avoid huge string parsing bottlenecks, just check the last few lines.
+			const lines = str.trim().split("\n");
+			for (let i = lines.length - 1; i >= Math.max(0, lines.length - 50); i--) {
+				const line = lines[i].trim();
+				if (line.startsWith("{") || line.startsWith("[")) {
+					try {
+						return JSON.parse(line);
+					} catch (e) {}
+				}
+			}
+
+			// Fallback if it's pretty-printed (rare for CLI --json, but possible)
 			const firstBrace = str.indexOf("{");
 			const lastBrace = str.lastIndexOf("}");
 			const firstBracket = str.indexOf("[");
 			const lastBracket = str.lastIndexOf("]");
 
-			const isObject =
-				firstBrace !== -1 && lastBrace !== -1 && firstBrace < lastBrace;
-			const isArray =
-				firstBracket !== -1 && lastBracket !== -1 && firstBracket < lastBracket;
+			const isObject = firstBrace !== -1 && lastBrace !== -1 && firstBrace < lastBrace;
+			const isArray = firstBracket !== -1 && lastBracket !== -1 && firstBracket < lastBracket;
 
 			let jsonStr = "";
 			if (isObject && isArray) {
-				// Which one is the outermost?
 				if (firstBrace < firstBracket && lastBrace > lastBracket) {
 					jsonStr = str.substring(firstBrace, lastBrace + 1);
 				} else if (firstBracket < firstBrace && lastBracket > lastBrace) {
 					jsonStr = str.substring(firstBracket, lastBracket + 1);
 				} else {
-					// Fallback: try both
 					try {
 						return JSON.parse(str.substring(firstBrace, lastBrace + 1));
 					} catch (e) {
@@ -196,14 +204,6 @@ export class DaemonManager {
 			if (jsonStr) {
 				try {
 					return JSON.parse(jsonStr);
-				} catch (e) {}
-			}
-
-			// Fallback: Match lines from the end
-			const lines = str.trim().split("\n");
-			for (let i = lines.length - 1; i >= 0; i--) {
-				try {
-					return JSON.parse(lines[i]);
 				} catch (e) {}
 			}
 
