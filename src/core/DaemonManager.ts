@@ -16,6 +16,38 @@ export class DaemonManager {
 	private hasLoggedReuse = false;
 	private statusBarItem: vscode.StatusBarItem;
 
+	private async tryProxyCommand(args: string[]): Promise<unknown | undefined> {
+		if (!this.port) return undefined;
+		const cmd = args[0];
+		try {
+			if (cmd === "history") {
+				const res = await fetch(
+					`http://localhost:${this.port}/api/jobs/history`,
+				);
+				if (res.ok) return await res.json();
+			} else if (cmd === "clear-history") {
+				const res = await fetch(`http://localhost:${this.port}/api/jobs`, {
+					method: "DELETE",
+				});
+				if (res.ok) return await res.json();
+			} else if (cmd === "delete-history" && args[1]) {
+				const res = await fetch(
+					`http://localhost:${this.port}/api/jobs/${args[1]}`,
+					{ method: "DELETE" },
+				);
+				if (res.ok) return await res.json();
+			} else if (cmd === "log" && args[1]) {
+				const res = await fetch(
+					`http://localhost:${this.port}/api/jobs/${args[1]}/logs`,
+				);
+				if (res.ok) return await res.json();
+			}
+		} catch (_e) {
+			// ignore and fallback
+		}
+		return undefined;
+	}
+
 	public isRunning(): boolean {
 		return this.daemonProcess !== null;
 	}
@@ -94,6 +126,11 @@ export class DaemonManager {
 	}
 
 	public async executeCliCommand(args: string[]): Promise<unknown> {
+		const proxiedRes = await this.tryProxyCommand(args);
+		if (proxiedRes !== undefined) {
+			return proxiedRes;
+		}
+
 		const { cmd, args: resolvedArgs } = this.resolveCommandAndArgs(args);
 
 		const finalArgs = resolvedArgs.includes("--json")
@@ -168,34 +205,49 @@ export class DaemonManager {
 				return JSON.parse(str);
 			} catch (_e: unknown) {}
 
-			// Optimized path: try to find the start of the JSON object/array
+			// Fallback: try to find the outer boundaries of a JSON object/array
 			const startObject = str.indexOf("{");
+			const lastObject = str.lastIndexOf("}");
 			const startArray = str.indexOf("[");
-			let startIdx = -1;
+			const lastArray = str.lastIndexOf("]");
 
-			if (startObject !== -1 && startArray !== -1) {
-				startIdx = Math.min(startObject, startArray);
-			} else if (startObject !== -1) {
-				startIdx = startObject;
-			} else if (startArray !== -1) {
-				startIdx = startArray;
+			let objStr = "";
+			if (startObject !== -1 && lastObject !== -1 && lastObject > startObject) {
+				objStr = str.substring(startObject, lastObject + 1);
 			}
 
-			if (startIdx !== -1) {
+			let arrStr = "";
+			if (startArray !== -1 && lastArray !== -1 && lastArray > startArray) {
+				arrStr = str.substring(startArray, lastArray + 1);
+			}
+
+			if (
+				objStr &&
+				startObject <= (startArray === -1 ? Infinity : startArray)
+			) {
 				try {
-					// Try parsing from the first '{' or '[' to the end
-					return JSON.parse(str.substring(startIdx));
-				} catch (_e: unknown) {
-					// Try line by line fallback just in case there are multiple JSONs or trailing texts
-					const lines = str.split("\n");
-					for (let i = lines.length - 1; i >= 0; i--) {
-						const line = lines[i].trim();
-						if (line.startsWith("{") || line.startsWith("[")) {
-							try {
-								return JSON.parse(line);
-							} catch (_e2: unknown) {}
-						}
-					}
+					return JSON.parse(objStr);
+				} catch (_e: unknown) {}
+			}
+			if (arrStr) {
+				try {
+					return JSON.parse(arrStr);
+				} catch (_e: unknown) {}
+			}
+			if (objStr) {
+				try {
+					return JSON.parse(objStr);
+				} catch (_e: unknown) {}
+			}
+
+			// Final fallback: line by line
+			const lines = str.split("\n");
+			for (let i = lines.length - 1; i >= 0; i--) {
+				const line = lines[i].trim();
+				if (line.startsWith("{") || line.startsWith("[")) {
+					try {
+						return JSON.parse(line);
+					} catch (_e2: unknown) {}
 				}
 			}
 
