@@ -120,177 +120,189 @@ export class VaultTreeDataProvider
 
 		if (element.type === "Category") {
 			if (element.label === "Variables") {
-				const files = await vscode.workspace.findFiles(
-					"**/*.variable.json",
-					"**/{node_modules,.git,dist,out,.gemini,tmp,build}/**",
-				);
-				if (files.length > 0) {
-					try {
-						const items: VaultItem[] = [];
-						for (const file of files) {
-							try {
-								const content = await vscode.workspace.fs.readFile(file);
-								const data = JSON.parse(Buffer.from(content).toString("utf-8"));
-								if (Array.isArray(data)) {
-									for (const item of data) {
-										const name = item.name || item.key || "Unnamed";
-										items.push(
-											new VaultItem(
-												name,
-												vscode.TreeItemCollapsibleState.None,
-												"Variable",
-												"symbol-variable",
-												item.value,
-											),
-										);
-									}
-								} else if (typeof data === "object" && data !== null) {
-									for (const [key, value] of Object.entries(data)) {
-										items.push(
-											new VaultItem(
-												key,
-												vscode.TreeItemCollapsibleState.None,
-												"Variable",
-												"symbol-variable",
-												String(value),
-											),
-										);
-									}
-								}
-							} catch (_e) {}
-						}
-						return items;
-					} catch (_e) {
-						return [
-							new VaultItem(
-								"Error reading variables",
-								vscode.TreeItemCollapsibleState.None,
-								"Error",
-								"error",
-							),
-						];
-					}
-				}
-				return [
-					new VaultItem(
-						"No *.variable.json found",
-						vscode.TreeItemCollapsibleState.None,
-						"Info",
-						"info",
-					),
-				];
+				return await this.getVariables();
 			} else if (element.label === "Credentials") {
-				const files = await vscode.workspace.findFiles(
-					"**/*.credential.json",
-					"**/{node_modules,.git,dist,out,.gemini,tmp,build}/**",
-				);
-				if (files.length > 0) {
-					try {
-						const items: VaultItem[] = [];
-						for (const file of files) {
-							try {
-								const content = await vscode.workspace.fs.readFile(file);
-								const data = JSON.parse(Buffer.from(content).toString("utf-8"));
-								if (Array.isArray(data)) {
-									for (const item of data) {
-										const name = item.name || item.id || "Unnamed";
-										items.push(
-											new VaultItem(
-												name,
-												vscode.TreeItemCollapsibleState.None,
-												"Credential",
-												"key",
-												"********",
-											),
-										);
-									}
-								} else if (typeof data === "object" && data !== null) {
-									for (const key of Object.keys(data)) {
-										items.push(
-											new VaultItem(
-												key,
-												vscode.TreeItemCollapsibleState.None,
-												"Credential",
-												"key",
-												"********",
-											),
-										);
-									}
-								}
-							} catch (_e) {}
-						}
-						return items;
-					} catch (_e) {
-						return [
-							new VaultItem(
-								"Error reading credentials",
-								vscode.TreeItemCollapsibleState.None,
-								"Error",
-								"error",
-							),
-						];
-					}
-				}
-				return [
-					new VaultItem(
-						"No *.credential.json found",
-						vscode.TreeItemCollapsibleState.None,
-						"Info",
-						"info",
-					),
-				];
+				return await this.getCredentials();
 			} else if (element.label === "Tables") {
-				const files = await vscode.workspace.findFiles(
-					"**/*.table.json",
-					"**/{node_modules,.git,dist,out,.gemini,tmp,build}/**",
-				);
-				if (files.length > 0) {
-					try {
-						const items: VaultItem[] = [];
-						for (const file of files) {
-							try {
-								const content = await vscode.workspace.fs.readFile(file);
-								const data = JSON.parse(Buffer.from(content).toString("utf-8"));
-								if (Array.isArray(data)) {
-									for (const item of data) {
-										const name = item.name || item.id || "Unnamed Table";
-										items.push(
-											new VaultItem(
-												name,
-												vscode.TreeItemCollapsibleState.None,
-												"Table",
-												"list-flat",
-												item.id ? `ID: ${item.id}` : "Table",
-											),
-										);
-									}
-								}
-							} catch (_e) {}
-						}
-						return items;
-					} catch (_e) {
-						return [
-							new VaultItem(
-								"Error reading tables",
-								vscode.TreeItemCollapsibleState.None,
-								"Error",
-								"error",
-							),
-						];
-					}
-				}
-				return [
-					new VaultItem(
-						"No *.table.json found",
-						vscode.TreeItemCollapsibleState.None,
-						"Info",
-						"info",
-					),
-				];
+				return await this.getTables();
 			}
 		}
 
 		return [];
+	}
+
+	private async getVariables(): Promise<VaultItem[]> {
+		const files = await vscode.workspace.findFiles(
+			"**/*.variable.json",
+			"**/{node_modules,.git,dist,out,.gemini,tmp,build}/**",
+		);
+		if (files.length > 0) {
+			try {
+				const items: VaultItem[] = [];
+				for (const file of files) {
+					try {
+						const content = await vscode.workspace.fs.readFile(file);
+						const data = JSON.parse(Buffer.from(content).toString("utf-8"));
+						if (Array.isArray(data)) {
+							for (const item of data) {
+								const name = item.name || item.key || "Unnamed";
+								items.push(
+									new VaultItem(
+										name,
+										vscode.TreeItemCollapsibleState.None,
+										"Variable",
+										"symbol-variable",
+										item.value,
+									),
+								);
+							}
+						} else if (typeof data === "object" && data !== null) {
+							for (const [key, value] of Object.entries(data)) {
+								items.push(
+									new VaultItem(
+										key,
+										vscode.TreeItemCollapsibleState.None,
+										"Variable",
+										"symbol-variable",
+										String(value),
+									),
+								);
+							}
+						}
+					} catch (_e) {}
+				}
+				return items;
+			} catch (_e) {
+				return [
+					new VaultItem(
+						"Error reading variables",
+						vscode.TreeItemCollapsibleState.None,
+						"Error",
+						"error",
+					),
+				];
+			}
+		}
+		return [
+			new VaultItem(
+				"No *.variable.json found",
+				vscode.TreeItemCollapsibleState.None,
+				"Info",
+				"info",
+			),
+		];
+	}
+
+	private async getCredentials(): Promise<VaultItem[]> {
+		const files = await vscode.workspace.findFiles(
+			"**/*.credential.json",
+			"**/{node_modules,.git,dist,out,.gemini,tmp,build}/**",
+		);
+		if (files.length > 0) {
+			try {
+				const items: VaultItem[] = [];
+				for (const file of files) {
+					try {
+						const content = await vscode.workspace.fs.readFile(file);
+						const data = JSON.parse(Buffer.from(content).toString("utf-8"));
+						if (Array.isArray(data)) {
+							for (const item of data) {
+								const name = item.name || item.id || "Unnamed";
+								items.push(
+									new VaultItem(
+										name,
+										vscode.TreeItemCollapsibleState.None,
+										"Credential",
+										"key",
+										"********",
+									),
+								);
+							}
+						} else if (typeof data === "object" && data !== null) {
+							for (const key of Object.keys(data)) {
+								items.push(
+									new VaultItem(
+										key,
+										vscode.TreeItemCollapsibleState.None,
+										"Credential",
+										"key",
+										"********",
+									),
+								);
+							}
+						}
+					} catch (_e) {}
+				}
+				return items;
+			} catch (_e) {
+				return [
+					new VaultItem(
+						"Error reading credentials",
+						vscode.TreeItemCollapsibleState.None,
+						"Error",
+						"error",
+					),
+				];
+			}
+		}
+		return [
+			new VaultItem(
+				"No *.credential.json found",
+				vscode.TreeItemCollapsibleState.None,
+				"Info",
+				"info",
+			),
+		];
+	}
+
+	private async getTables(): Promise<VaultItem[]> {
+		const files = await vscode.workspace.findFiles(
+			"**/*.table.json",
+			"**/{node_modules,.git,dist,out,.gemini,tmp,build}/**",
+		);
+		if (files.length > 0) {
+			try {
+				const items: VaultItem[] = [];
+				for (const file of files) {
+					try {
+						const content = await vscode.workspace.fs.readFile(file);
+						const data = JSON.parse(Buffer.from(content).toString("utf-8"));
+						if (Array.isArray(data)) {
+							for (const item of data) {
+								const name = item.name || item.id || "Unnamed Table";
+								items.push(
+									new VaultItem(
+										name,
+										vscode.TreeItemCollapsibleState.None,
+										"Table",
+										"list-flat",
+										item.id ? `ID: ${item.id}` : "Table",
+									),
+								);
+							}
+						}
+					} catch (_e) {}
+				}
+				return items;
+			} catch (_e) {
+				return [
+					new VaultItem(
+						"Error reading tables",
+						vscode.TreeItemCollapsibleState.None,
+						"Error",
+						"error",
+					),
+				];
+			}
+		}
+		return [
+			new VaultItem(
+				"No *.table.json found",
+				vscode.TreeItemCollapsibleState.None,
+				"Info",
+				"info",
+			),
+		];
 	}
 }
 

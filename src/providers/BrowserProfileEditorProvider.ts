@@ -32,50 +32,13 @@ export class BrowserProfileEditorProvider
 		webviewPanel.webview.options = { enableScripts: true };
 
 		const updateWebview = () => {
-			try {
-				const content = document.getText();
-				const json = JSON.parse(content || "{}");
-
-				const fileName = path.basename(document.uri.fsPath);
-				const isProfile =
-					fileName.includes(".profile.") || fileName.includes(".bprofile.");
-				const label = isProfile ? "Profile" : "Data";
-				const icon = isProfile ? "ri-window-line" : "ri-database-2-line";
-				webviewPanel.title = `${label}: ${json.name || fileName}`;
-				webviewPanel.webview.html = this.getHtmlContent(
-					json,
-					label,
-					icon,
-					fileName,
-				);
-			} catch (e: any) {
-				webviewPanel.webview.html = `<body><h2>Error reading profile</h2><p>${e.message}</p></body>`;
-			}
+			this.renderWebview(document, webviewPanel);
 		};
 
 		const messageDisposable = webviewPanel.webview.onDidReceiveMessage(
 			async (message) => {
 				if (message.type === "save-profile") {
-					try {
-						const newJsonStr = message.data;
-
-						const edit = new vscode.WorkspaceEdit();
-						edit.replace(
-							document.uri,
-							new vscode.Range(0, 0, document.lineCount, 0),
-							newJsonStr,
-						);
-						await vscode.workspace.applyEdit(edit);
-						await document.save();
-
-						vscode.window.showInformationMessage(
-							"Browser Profile saved successfully!",
-						);
-					} catch (e: any) {
-						vscode.window.showErrorMessage(
-							`Failed to save profile: ${e.message}`,
-						);
-					}
+					await this.handleSaveProfile(document, message.data);
 				}
 			},
 		);
@@ -94,6 +57,49 @@ export class BrowserProfileEditorProvider
 		});
 
 		updateWebview();
+	}
+
+	private renderWebview(document: vscode.TextDocument, webviewPanel: vscode.WebviewPanel) {
+		try {
+			const content = document.getText();
+			const json = JSON.parse(content || "{}");
+
+			const fileName = path.basename(document.uri.fsPath);
+			const isProfile =
+				fileName.includes(".profile.") || fileName.includes(".bprofile.");
+			const label = isProfile ? "Profile" : "Data";
+			const icon = isProfile ? "ri-window-line" : "ri-database-2-line";
+			webviewPanel.title = `${label}: ${json.name || fileName}`;
+			webviewPanel.webview.html = this.getHtmlContent(
+				json,
+				label,
+				icon,
+				fileName,
+			);
+		} catch (e: any) {
+			webviewPanel.webview.html = `<body><h2>Error reading profile</h2><p>${e.message}</p></body>`;
+		}
+	}
+
+	private async handleSaveProfile(document: vscode.TextDocument, newJsonStr: string) {
+		try {
+			const edit = new vscode.WorkspaceEdit();
+			edit.replace(
+				document.uri,
+				new vscode.Range(0, 0, document.lineCount, 0),
+				newJsonStr,
+			);
+			await vscode.workspace.applyEdit(edit);
+			await document.save();
+
+			vscode.window.showInformationMessage(
+				"Browser Profile saved successfully!",
+			);
+		} catch (e: any) {
+			vscode.window.showErrorMessage(
+				`Failed to save profile: ${e.message}`,
+			);
+		}
 	}
 
 	private getHtmlContent(
