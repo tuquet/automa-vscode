@@ -124,34 +124,7 @@ export class ProviderManager {
 			"account",
 			"automa.browserProfiles",
 		);
-		const profilesTreeView = vscode.window.createTreeView(
-			"automa.browserProfiles",
-			{
-				treeDataProvider: profilesProvider,
-			},
-		);
-		this.context.subscriptions.push(profilesTreeView);
-		profilesTreeView.onDidChangeVisibility((e) => {
-			if (e.visible) profilesProvider.setSearchQuery("");
-		});
-		this.context.subscriptions.push(
-			vscode.commands.registerCommand("automa.refreshProfiles", () => {
-				profilesProvider.setSearchQuery("");
-			}),
-		);
-		this.context.subscriptions.push(
-			vscode.commands.registerCommand("automa.searchProfiles", async () => {
-				const query = await vscode.window.showInputBox({
-					placeHolder: "Search Browser Profiles...",
-				});
-				if (query !== undefined) profilesProvider.setSearchQuery(query);
-			}),
-		);
-		this.context.subscriptions.push(
-			vscode.commands.registerCommand("automa.clearSearchProfiles", () =>
-				profilesProvider.setSearchQuery(""),
-			),
-		);
+		profilesProvider.register(this.context, "Profiles");
 
 		// 3. Workflows Panel
 		const workflowsProvider = new AutomaFilesProvider(
@@ -160,31 +133,7 @@ export class ProviderManager {
 			"automa.workflows",
 			"workflow",
 		);
-		const workflowsTreeView = vscode.window.createTreeView("automa.workflows", {
-			treeDataProvider: workflowsProvider,
-		});
-		this.context.subscriptions.push(workflowsTreeView);
-		workflowsTreeView.onDidChangeVisibility((e) => {
-			if (e.visible) workflowsProvider.setSearchQuery("");
-		});
-		this.context.subscriptions.push(
-			vscode.commands.registerCommand("automa.refreshWorkflows", () => {
-				workflowsProvider.setSearchQuery("");
-			}),
-		);
-		this.context.subscriptions.push(
-			vscode.commands.registerCommand("automa.searchWorkflows", async () => {
-				const query = await vscode.window.showInputBox({
-					placeHolder: "Search Workflows...",
-				});
-				if (query !== undefined) workflowsProvider.setSearchQuery(query);
-			}),
-		);
-		this.context.subscriptions.push(
-			vscode.commands.registerCommand("automa.clearSearchWorkflows", () =>
-				workflowsProvider.setSearchQuery(""),
-			),
-		);
+		workflowsProvider.register(this.context, "Workflows");
 
 		// 4. Packages Panel
 		const packagesProvider = new AutomaFilesProvider(
@@ -193,31 +142,7 @@ export class ProviderManager {
 			"automa.packages",
 			"package",
 		);
-		const packagesTreeView = vscode.window.createTreeView("automa.packages", {
-			treeDataProvider: packagesProvider,
-		});
-		this.context.subscriptions.push(packagesTreeView);
-		packagesTreeView.onDidChangeVisibility((e) => {
-			if (e.visible) packagesProvider.setSearchQuery("");
-		});
-		this.context.subscriptions.push(
-			vscode.commands.registerCommand("automa.refreshPackages", () => {
-				packagesProvider.setSearchQuery("");
-			}),
-		);
-		this.context.subscriptions.push(
-			vscode.commands.registerCommand("automa.searchPackages", async () => {
-				const query = await vscode.window.showInputBox({
-					placeHolder: "Search Packages...",
-				});
-				if (query !== undefined) packagesProvider.setSearchQuery(query);
-			}),
-		);
-		this.context.subscriptions.push(
-			vscode.commands.registerCommand("automa.clearSearchPackages", () =>
-				packagesProvider.setSearchQuery(""),
-			),
-		);
+		packagesProvider.register(this.context, "Packages");
 
 		// 5. Fleets Panel
 		const fleetsProvider = new AutomaFilesProvider(
@@ -225,13 +150,7 @@ export class ProviderManager {
 			"rocket",
 			"automa.fleets",
 		);
-		const fleetsTreeView = vscode.window.createTreeView("automa.fleets", {
-			treeDataProvider: fleetsProvider,
-		});
-		this.context.subscriptions.push(fleetsTreeView);
-		fleetsTreeView.onDidChangeVisibility((e) => {
-			if (e.visible) fleetsProvider.setSearchQuery("");
-		});
+		fleetsProvider.register(this.context, "Fleets");
 
 		// 6. Global File System Watcher
 		const vaultWatcher = vscode.workspace.createFileSystemWatcher(
@@ -247,24 +166,6 @@ export class ProviderManager {
 		vaultWatcher.onDidChange(refreshAll);
 		vaultWatcher.onDidCreate(refreshAll);
 		vaultWatcher.onDidDelete(refreshAll);
-		this.context.subscriptions.push(
-			vscode.commands.registerCommand("automa.refreshFleets", () => {
-				fleetsProvider.setSearchQuery("");
-			}),
-		);
-		this.context.subscriptions.push(
-			vscode.commands.registerCommand("automa.searchFleets", async () => {
-				const query = await vscode.window.showInputBox({
-					placeHolder: "Search Fleets...",
-				});
-				if (query !== undefined) fleetsProvider.setSearchQuery(query);
-			}),
-		);
-		this.context.subscriptions.push(
-			vscode.commands.registerCommand("automa.clearSearchFleets", () =>
-				fleetsProvider.setSearchQuery(""),
-			),
-		);
 
 		// 6. Global Vault Panel
 		const vaultProvider = new VaultTreeDataProvider();

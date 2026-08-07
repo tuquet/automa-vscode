@@ -32,6 +32,35 @@ export class AutomaFilesProvider implements vscode.TreeDataProvider<FileItem> {
 		this.watcher.dispose();
 	}
 
+	register(context: vscode.ExtensionContext, entityName: string) {
+		const treeView = vscode.window.createTreeView(this.viewId, {
+			treeDataProvider: this,
+		});
+		context.subscriptions.push(treeView);
+		treeView.onDidChangeVisibility((e) => {
+			if (e.visible) this.setSearchQuery("");
+		});
+
+		context.subscriptions.push(
+			vscode.commands.registerCommand(`automa.refresh${entityName}`, () => {
+				this.setSearchQuery("");
+			}),
+		);
+		context.subscriptions.push(
+			vscode.commands.registerCommand(`automa.search${entityName}`, async () => {
+				const query = await vscode.window.showInputBox({
+					placeHolder: `Search ${entityName}...`,
+				});
+				if (query !== undefined) this.setSearchQuery(query);
+			}),
+		);
+		context.subscriptions.push(
+			vscode.commands.registerCommand(`automa.clearSearch${entityName}`, () =>
+				this.setSearchQuery(""),
+			),
+		);
+	}
+
 	refresh(): void {
 		this._cachedChildren = this.fetchChildren();
 		this._onDidChangeTreeData.fire(undefined);
