@@ -214,3 +214,46 @@ async function executeEncryption(
 		},
 	);
 }
+
+export async function deleteVaultItemCommand(item: import("../providers/VaultTreeDataProvider").VaultItem) {
+	if (!item?.resourceUri || !item.label) return;
+
+	const confirm = await vscode.window.showWarningMessage(
+		`Are you sure you want to delete ${item.type.toLowerCase()} '${item.label}'?`,
+		"Yes",
+		"No",
+	);
+	if (confirm !== "Yes") return;
+
+	try {
+		const content = fs.readFileSync(item.resourceUri.fsPath, "utf8");
+		let data = JSON.parse(content);
+		let modified = false;
+
+		if (Array.isArray(data)) {
+			const initialLength = data.length;
+			data = data.filter((entry: Record<string, unknown>) => {
+				const name = entry.name || entry.id || entry.key;
+				return name !== item.label;
+			});
+			modified = data.length !== initialLength;
+		} else if (typeof data === "object" && data !== null) {
+			if (item.label in data) {
+				delete (data as Record<string, unknown>)[item.label];
+				modified = true;
+			}
+		}
+
+		if (modified) {
+			writeJsonFile(item.resourceUri.fsPath, data);
+			vscode.window.showInformationMessage(
+				`${item.type} '${item.label}' deleted.`,
+			);
+		}
+	} catch (error: unknown) {
+		const e = error instanceof Error ? error : new Error(String(error));
+		vscode.window.showErrorMessage(
+			`Failed to delete ${item.type.toLowerCase()}: ${e.message}`,
+		);
+	}
+}

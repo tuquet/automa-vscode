@@ -23,6 +23,7 @@ import {
 	addCredentialCommand,
 	addTableCommand,
 	addVariableCommand,
+	deleteVaultItemCommand,
 	encryptSecretCommand,
 } from "./vaultCommands";
 import {
@@ -127,6 +128,10 @@ export class CommandManager {
 			vscode.commands.registerCommand(
 				"automa.vault.encryptSecret",
 				encryptSecretCommand,
+			),
+			vscode.commands.registerCommand(
+				"automa.deleteVaultItem",
+				deleteVaultItemCommand,
 			),
 		];
 
