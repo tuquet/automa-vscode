@@ -4,6 +4,7 @@ import { Logger } from "../core/Logger";
 import {
 	castRecord,
 	getErrorMessage,
+	isRecord,
 	isString,
 	toError,
 } from "../utils/typeGuards";
@@ -241,6 +242,36 @@ export class StudioWebviewPanel {
 		}
 	}
 
+	private normalizeVaultData(
+		rawData: unknown[],
+		type: "variable" | "credential" | "table",
+	): Record<string, unknown>[] {
+		const normalized: Record<string, unknown>[] = [];
+		for (const data of rawData) {
+			if (Array.isArray(data)) {
+				normalized.push(...data);
+			} else if (isRecord(data)) {
+				for (const [key, val] of Object.entries(data)) {
+					let value: string;
+					if (type === "variable") {
+						value =
+							isRecord(val) || Array.isArray(val)
+								? JSON.stringify(val)
+								: String(val);
+					} else {
+						value = String(val);
+					}
+					normalized.push({
+						id: key,
+						name: key,
+						value: value,
+					});
+				}
+			}
+		}
+		return normalized;
+	}
+
 	private async handleStorageGet(
 		_keys: unknown,
 	): Promise<Record<string, unknown>> {
@@ -328,9 +359,9 @@ export class StudioWebviewPanel {
 			}
 
 			result.workflows = workflows;
-			result.variables = rawVars.flat();
-			result.credentials = rawCreds.flat();
-			result.tables = rawTables.flat();
+			result.variables = this.normalizeVaultData(rawVars, "variable");
+			result.credentials = this.normalizeVaultData(rawCreds, "credential");
+			result.tables = this.normalizeVaultData(rawTables, "table");
 			result.workflowStates = {}; // Initial state
 		} catch (error: unknown) {
 			const e = toError(error);
@@ -476,16 +507,27 @@ export class StudioWebviewPanel {
 		);
 
 		const idToUriMap = new Map<string, vscode.Uri>();
-		const uriToItemsMap = new Map<string, Record<string, unknown>[]>();
+		const uriToDataMap = new Map<
+			string,
+			Record<string, unknown>[] | Record<string, unknown>
+		>();
 
 		for (const file of allFiles) {
 			try {
 				const content = await vscode.workspace.fs.readFile(file);
 				const data = JSON.parse(Buffer.from(content).toString("utf-8"));
-				const arr = Array.isArray(data) ? data : [];
-				uriToItemsMap.set(file.toString(), arr);
-				for (const item of arr) {
-					if (item?.id) idToUriMap.set(item.id, file);
+				uriToDataMap.set(file.toString(), data);
+				if (Array.isArray(data)) {
+					for (const item of data) {
+						if (item?.id || item?.key || item?.name) {
+							const id = item.id || item.key || item.name;
+							idToUriMap.set(id as string, file);
+						}
+					}
+				} else if (isRecord(data)) {
+					for (const key of Object.keys(data)) {
+						idToUriMap.set(key, file);
+					}
 				}
 			} catch (e: unknown) {
 				const msg = getErrorMessage(e);
@@ -509,24 +551,31 @@ export class StudioWebviewPanel {
 				targetUri = vscode.Uri.joinPath(folderDir, defaultFileName);
 			}
 
-			let itemsInFile = uriToItemsMap.get(targetUri.toString());
-			if (!itemsInFile) {
-				itemsInFile = [];
-				uriToItemsMap.set(targetUri.toString(), itemsInFile);
+			let dataInFile = uriToDataMap.get(targetUri.toString());
+			if (!dataInFile) {
+				dataInFile = []; // default to array for new files
+				uriToDataMap.set(targetUri.toString(), dataInFile);
 			}
 
-			const existingIdx = itemsInFile.findIndex((x) => x.id === item.id);
-			if (existingIdx !== -1) {
-				itemsInFile[existingIdx] = item;
-			} else {
-				itemsInFile.push(item);
+			if (Array.isArray(dataInFile)) {
+				const existingIdx = dataInFile.findIndex(
+					(x: Record<string, unknown>) =>
+						x.id === itemId || x.key === itemId || x.name === itemId,
+				);
+				if (existingIdx !== -1) {
+					dataInFile[existingIdx] = item;
+				} else {
+					dataInFile.push(item);
+				}
+			} else if (isRecord(dataInFile)) {
+				dataInFile[itemId] = item.value !== undefined ? item.value : item;
 			}
 		}
 
-		for (const [uriStr, arr] of uriToItemsMap.entries()) {
+		for (const [uriStr, data] of uriToDataMap.entries()) {
 			await vscode.workspace.fs.writeFile(
 				vscode.Uri.parse(uriStr),
-				Buffer.from(JSON.stringify(arr, null, 2), "utf-8"),
+				Buffer.from(JSON.stringify(data, null, 2), "utf-8"),
 			);
 		}
 	}
