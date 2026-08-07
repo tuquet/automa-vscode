@@ -40,17 +40,44 @@ export class FleetPreviewEditorProvider
 			],
 		};
 
-		webviewPanel.webview.html = this.getHtmlForWebview(webviewPanel.webview);
+		let isRendered = false;
+		let hasError = false;
+
+		const renderWebview = () => {
+			try {
+				const content = document.getText();
+				const json = JSON.parse(content || "{}");
+				webviewPanel.title = `Fleet: ${json.name || json.fleet_id || path.basename(document.uri.fsPath)}`;
+				webviewPanel.webview.html = this.getHtmlForWebview(
+					webviewPanel.webview,
+				);
+				return true;
+			} catch (error: unknown) {
+				const e = getErrorMessage(error);
+				webviewPanel.webview.html = `<body><h2>Error reading fleet</h2><p>${e}</p></body>`;
+				return false;
+			}
+		};
 
 		const updateWebview = async () => {
-			const workflows = await this.getWorkflowDictionary();
-			const profiles = await this.getProfileDictionary();
-			webviewPanel.webview.postMessage({
-				type: "update",
-				text: document.getText(),
-				workflows: workflows,
-				profiles: profiles,
-			});
+			if (!isRendered || hasError) {
+				const success = renderWebview();
+				hasError = !success;
+				isRendered = true;
+			} else {
+				try {
+					const workflows = await this.getWorkflowDictionary();
+					const profiles = await this.getProfileDictionary();
+					webviewPanel.webview.postMessage({
+						type: "update",
+						text: document.getText(),
+						workflows: workflows,
+						profiles: profiles,
+					});
+				} catch (_e: unknown) {
+					// Ignore parse errors on external edits until fixed
+				}
+			}
 		};
 
 		// Listen to telemetry
