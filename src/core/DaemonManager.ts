@@ -180,6 +180,23 @@ export class DaemonManager {
 				}
 			}
 
+			// Robust fallback: find all start blocks and parse backwards
+			const starts = [];
+			for (let i = 0; i < str.length; i++) {
+				if (str[i] === "{" || str[i] === "[") starts.push(i);
+			}
+			for (let i = starts.length - 1; i >= 0; i--) {
+				const start = starts[i];
+				const endChar = str[start] === "{" ? "}" : "]";
+				let end = str.lastIndexOf(endChar);
+				while (end > start) {
+					try {
+						return JSON.parse(str.substring(start, end + 1));
+					} catch (_e) {}
+					end = str.lastIndexOf(endChar, end - 1);
+				}
+			}
+
 			throw new Error("No valid JSON found in output");
 		};
 
