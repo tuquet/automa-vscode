@@ -115,6 +115,11 @@ export async function lintCheckCommand(
 			cancellable: false,
 		},
 		async () => {
+			let totalErrors = 0;
+			let totalWarnings = 0;
+			let totalPassed = 0;
+			let totalProcessed = 0;
+
 			for (const uri of urisToProcess) {
 				const filePath = uri.fsPath;
 
@@ -156,25 +161,46 @@ export async function lintCheckCommand(
 					const diagnostics = parseDiagnosticsFromOutput(output, lines);
 					diagnosticCollection.set(uri, diagnostics);
 
+					totalProcessed++;
+
 					if (diagnostics.length === 0) {
-						vscode.window.showInformationMessage(
-							`Lint passed for ${filePath.split(/\\|\//).pop()}`,
-						);
+						totalPassed++;
 					} else {
 						const errorCount = diagnostics.filter(
 							(d) => d.severity === vscode.DiagnosticSeverity.Error,
 						).length;
 						const warnCount = diagnostics.length - errorCount;
-						const msg = `Lint finished: ${errorCount} error(s), ${warnCount} warning(s) in ${filePath.split(/\\|\//).pop()}`;
-						if (errorCount > 0) {
-							vscode.window.showErrorMessage(msg);
-						} else {
-							vscode.window.showWarningMessage(msg);
-						}
+						totalErrors += errorCount;
+						totalWarnings += warnCount;
 					}
 				} catch (error: unknown) {
 					const e = error instanceof Error ? error : new Error(String(error));
-					vscode.window.showErrorMessage(`Failed to run linter: ${e.message}`);
+					vscode.window.showErrorMessage(
+						`Failed to run linter on ${filePath.split(/\\|\//).pop()}: ${e.message}`,
+					);
+				}
+			}
+
+			if (totalProcessed === 1) {
+				const filePath = urisToProcess[0].fsPath.split(/\\|\//).pop();
+				if (totalErrors === 0 && totalWarnings === 0) {
+					vscode.window.showInformationMessage(`Lint passed for ${filePath}`);
+				} else {
+					const msg = `Lint finished: ${totalErrors} error(s), ${totalWarnings} warning(s) in ${filePath}`;
+					if (totalErrors > 0) {
+						vscode.window.showErrorMessage(msg);
+					} else {
+						vscode.window.showWarningMessage(msg);
+					}
+				}
+			} else if (totalProcessed > 1) {
+				const msg = `Lint finished for ${totalProcessed} files: ${totalPassed} passed, ${totalErrors} total error(s), ${totalWarnings} total warning(s).`;
+				if (totalErrors > 0) {
+					vscode.window.showErrorMessage(msg);
+				} else if (totalWarnings > 0) {
+					vscode.window.showWarningMessage(msg);
+				} else {
+					vscode.window.showInformationMessage(msg);
 				}
 			}
 		},
