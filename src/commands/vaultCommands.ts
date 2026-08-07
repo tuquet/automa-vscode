@@ -168,25 +168,7 @@ export async function addTableCommand() {
 }
 
 export async function encryptSecretCommand() {
-	const secretName = await vscode.window.showInputBox({
-		prompt: "Enter the name for this credential",
-		placeHolder: "e.g. GithubToken",
-	});
-	if (!secretName) return;
-
-	const plaintext = await vscode.window.showInputBox({
-		prompt: `Enter the secret value for '${secretName}'`,
-		password: true,
-	});
-	if (!plaintext) return;
-
-	const passphrase = await vscode.window.showInputBox({
-		prompt:
-			"Enter your Automa Passphrase (or leave empty to use AUTOMA_PASSPHRASE env)",
-		password: true,
-	});
-
-	await executeEncryption(secretName, plaintext, passphrase);
+	await addCredentialCommand();
 }
 
 async function executeEncryption(
