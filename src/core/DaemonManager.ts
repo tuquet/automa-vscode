@@ -177,20 +177,41 @@ export class DaemonManager {
 				}
 			}
 
-			// Strategy 2: Multi-line JSON extraction from the end
-			// Find the last closing brace or bracket
-			const lastCharIdx = Math.max(str.lastIndexOf("}"), str.lastIndexOf("]"));
-			if (lastCharIdx !== -1) {
-				// Search backwards for the opening brace or bracket
-				for (let i = lastCharIdx - 1; i >= 0; i--) {
-					if (str[i] === "{" || str[i] === "[") {
-						try {
-							return JSON.parse(str.substring(i, lastCharIdx + 1));
-						} catch (e) {
-							// Continue earlier to find the true matching opening bracket
-						}
+			// Strategy 2: Two-pointer JSON extraction (Robust and Fast)
+			let startIdx = -1;
+			const firstBrace = str.indexOf("{");
+			const firstBracket = str.indexOf("[");
+			if (firstBrace !== -1 && firstBracket !== -1)
+				startIdx = Math.min(firstBrace, firstBracket);
+			else startIdx = Math.max(firstBrace, firstBracket);
+
+			let attempts = 0;
+			while (startIdx !== -1 && attempts < 50) {
+				let endIdx = -1;
+				const lastBrace = str.lastIndexOf("}");
+				const lastBracket = str.lastIndexOf("]");
+				if (lastBrace !== -1 && lastBracket !== -1)
+					endIdx = Math.max(lastBrace, lastBracket);
+				else endIdx = Math.max(lastBrace, lastBracket);
+
+				let endAttempts = 0;
+				while (endIdx > startIdx && endAttempts < 50) {
+					try {
+						return JSON.parse(str.substring(startIdx, endIdx + 1));
+					} catch (e) {
+						const nextLastBrace = str.lastIndexOf("}", endIdx - 1);
+						const nextLastBracket = str.lastIndexOf("]", endIdx - 1);
+						endIdx = Math.max(nextLastBrace, nextLastBracket);
+						endAttempts++;
 					}
 				}
+
+				const nextFirstBrace = str.indexOf("{", startIdx + 1);
+				const nextFirstBracket = str.indexOf("[", startIdx + 1);
+				if (nextFirstBrace !== -1 && nextFirstBracket !== -1)
+					startIdx = Math.min(nextFirstBrace, nextFirstBracket);
+				else startIdx = Math.max(nextFirstBrace, nextFirstBracket);
+				attempts++;
 			}
 
 			throw new Error("No valid JSON found in output");
