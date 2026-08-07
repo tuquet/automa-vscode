@@ -62,7 +62,8 @@ export async function fixWorkflowIdCommand(
 			} else {
 				skippedCount++;
 			}
-		} catch (e: any) {
+		} catch (error: unknown) {
+			const e = error instanceof Error ? error : new Error(String(error));
 			errorCount++;
 			console.error(`Error fixing ${uri.fsPath}: ${e.message}`);
 		}

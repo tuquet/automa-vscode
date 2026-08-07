@@ -127,7 +127,8 @@ export class DaemonManager {
 
 		try {
 			return JSON.parse(jsonStr);
-		} catch (e: any) {
+		} catch (error: unknown) {
+			const e = error instanceof Error ? error : new Error(String(error));
 			throw new Error(
 				`Failed to parse CLI JSON output: ${e.message}\nOutput was: ${output}`,
 			);
@@ -241,7 +242,8 @@ export class DaemonManager {
 			this.statusBarItem.text = `$(radio-tower) Automa: :${this.port}`;
 			this.statusBarItem.tooltip =
 				"Automa CLI Daemon is running (Click to stop)";
-		} catch (e: any) {
+		} catch (error: unknown) {
+			const e = error instanceof Error ? error : new Error(String(error));
 			Logger.error(`Failed to launch daemon: ${e.message}`);
 			this.updateStatusStopped();
 		}

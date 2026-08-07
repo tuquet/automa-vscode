@@ -144,7 +144,8 @@ export class StudioWebviewPanel {
 						});
 						if (!res.ok) throw new Error(`Daemon responded with ${res.status}`);
 						return await res.json();
-					} catch (e: any) {
+					} catch (error: unknown) {
+						const e = error instanceof Error ? error : new Error(String(error));
 						// Fallback to CLI if Daemon isn't reachable
 						try {
 							const result = await daemon.executeCliCommand([
@@ -173,7 +174,8 @@ export class StudioWebviewPanel {
 					Logger.info(`Unhandled runtime message: ${message.name}`);
 					return null;
 			}
-		} catch (e: any) {
+		} catch (error: unknown) {
+			const e = error instanceof Error ? error : new Error(String(error));
 			Logger.error(`Runtime Message Error [${message.name}]: ${e.message}`);
 			return null;
 		}
@@ -219,7 +221,8 @@ export class StudioWebviewPanel {
 			result.credentials = rawCreds.flat();
 			result.tables = rawTables.flat();
 			result.workflowStates = {}; // Initial state
-		} catch (e: any) {
+		} catch (error: unknown) {
+			const e = error instanceof Error ? error : new Error(String(error));
 			Logger.error(`Failed to fetch storage get: ${e.message}`);
 		}
 
@@ -278,7 +281,8 @@ export class StudioWebviewPanel {
 					);
 				}
 			}
-		} catch (e: any) {
+		} catch (error: unknown) {
+			const e = error instanceof Error ? error : new Error(String(error));
 			Logger.error(`Failed to handle storage set: ${e.message}`);
 		}
 	}

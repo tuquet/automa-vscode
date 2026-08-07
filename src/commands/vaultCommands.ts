@@ -220,7 +220,8 @@ async function executeEncryption(
 				vscode.window.showInformationMessage(
 					`Credential ${name} encrypted and added successfully.`,
 				);
-			} catch (e: any) {
+			} catch (error: unknown) {
+				const e = error instanceof Error ? error : new Error(String(error));
 				vscode.window.showErrorMessage(
 					`Failed to add credential: ${e.message}`,
 				);

@@ -79,7 +79,8 @@ export class BrowserProfileEditorProvider
 				icon,
 				fileName,
 			);
-		} catch (e: any) {
+		} catch (error: unknown) {
+			const e = error instanceof Error ? error : new Error(String(error));
 			webviewPanel.webview.html = `<body><h2>Error reading profile</h2><p>${e.message}</p></body>`;
 		}
 	}
@@ -101,7 +102,8 @@ export class BrowserProfileEditorProvider
 			vscode.window.showInformationMessage(
 				"Browser Profile saved successfully!",
 			);
-		} catch (e: any) {
+		} catch (error: unknown) {
+			const e = error instanceof Error ? error : new Error(String(error));
 			vscode.window.showErrorMessage(`Failed to save profile: ${e.message}`);
 		}
 	}

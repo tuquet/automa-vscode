@@ -167,7 +167,8 @@ export class WorkflowPreviewEditorProvider
 				pkgOutputs,
 				pkgVars,
 			);
-		} catch (e: any) {
+		} catch (error: unknown) {
+			const e = error instanceof Error ? error : new Error(String(error));
 			webviewPanel.webview.html = `<body><h2>Error reading workflow</h2><p>${e.message}</p></body>`;
 		}
 	}
@@ -192,17 +193,30 @@ export class WorkflowPreviewEditorProvider
 				json.globalData = updateData.globalData;
 
 			// JSON parse for objects/arrays
-			try {
-				if (updateData.settings)
+			if (updateData.settings) {
+				try {
 					json.settings = JSON.parse(updateData.settings);
-			} catch (_e) {}
-			try {
-				if (updateData.table) json.table = JSON.parse(updateData.table);
-			} catch (_e) {}
-			try {
-				if (updateData.includedWorkflows)
+				} catch (error: unknown) {
+					const e = error instanceof Error ? error : new Error(String(error));
+					throw new Error(`Invalid JSON in Settings: ${e.message}`);
+				}
+			}
+			if (updateData.table) {
+				try {
+					json.table = JSON.parse(updateData.table);
+				} catch (error: unknown) {
+					const e = error instanceof Error ? error : new Error(String(error));
+					throw new Error(`Invalid JSON in Table: ${e.message}`);
+				}
+			}
+			if (updateData.includedWorkflows) {
+				try {
 					json.includedWorkflows = JSON.parse(updateData.includedWorkflows);
-			} catch (_e) {}
+				} catch (error: unknown) {
+					const e = error instanceof Error ? error : new Error(String(error));
+					throw new Error(`Invalid JSON in Included Workflows: ${e.message}`);
+				}
+			}
 
 			// Update Trigger Parameters Default Values
 			if (updateData.triggerParams && json.drawflow?.nodes) {
@@ -225,7 +239,8 @@ export class WorkflowPreviewEditorProvider
 			await this.saveDocument(document, JSON.stringify(json, null, 4));
 
 			vscode.window.showInformationMessage("Workflow saved successfully!");
-		} catch (e: any) {
+		} catch (error: unknown) {
+			const e = error instanceof Error ? error : new Error(String(error));
 			vscode.window.showErrorMessage(`Failed to save workflow: ${e.message}`);
 		}
 	}
