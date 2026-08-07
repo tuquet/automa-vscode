@@ -96,7 +96,7 @@ export class BrowserProfileEditorProvider
 	}
 
 	private getHtmlContent(
-		json: any,
+		json: Record<string, unknown>,
 		label: string,
 		icon: string,
 		fileName: string,
@@ -111,7 +111,7 @@ export class BrowserProfileEditorProvider
 			);
 			let htmlContent = fs.readFileSync(htmlPath, "utf-8");
 
-			const safeString = (str: any) =>
+			const safeString = (str: unknown) =>
 				str
 					? String(str)
 							.replace(/\\/g, "\\\\")

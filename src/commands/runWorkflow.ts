@@ -5,7 +5,6 @@ import { TaskRunner } from "../core/TaskRunner";
 
 let _automaOutputChannel: vscode.OutputChannel;
 
-// biome-ignore lint/suspicious/noExplicitAny: nodeOrUri can be a vscode.Uri or TreeItem depending on context
 async function resolveTarget(
 	nodeOrUri?: unknown,
 ): Promise<{ targetPath: string; displayName: string } | null> {
@@ -95,7 +94,6 @@ function buildBaseArgs(
 	return args;
 }
 
-// biome-ignore lint/suspicious/noExplicitAny: nodeOrUri can be various types from VSCode tree view
 export async function runWorkflowCommand(
 	nodeOrUri?: unknown,
 	params?: Record<string, unknown>,
@@ -138,7 +136,6 @@ export async function runWorkflowCommand(
 	});
 }
 
-// biome-ignore lint/suspicious/noExplicitAny: nodeOrUri can be various types from VSCode tree view
 export async function runWorkflowWithParamsCommand(nodeOrUri?: unknown) {
 	const target = await resolveTarget(nodeOrUri);
 	if (!target) return;

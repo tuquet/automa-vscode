@@ -55,7 +55,9 @@ export abstract class BaseCustomEditorProvider {
 
 		webviewPanel.onDidDispose(() => {
 			changeDisposable.dispose();
-			additionalDisposables.forEach((d) => d.dispose());
+			additionalDisposables.forEach((d) => {
+				d.dispose();
+			});
 		});
 	}
 

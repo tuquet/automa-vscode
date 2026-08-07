@@ -4,15 +4,14 @@ export class WorkflowParser {
 
 		// 1. Scan for {{variables.xyz}}
 		const varRegex1 = /\{\{\s*variables\.([a-zA-Z0-9_$]+)\s*\}\}/g;
-		let match;
-		while ((match = varRegex1.exec(content)) !== null) {
+		for (const match of content.matchAll(varRegex1)) {
 			implicitVars.add(match[1]);
 		}
 
 		// 2. Scan for automaRefData('variables', 'xyz')
 		const varRegex2 =
 			/automaRefData\(\s*['"]variables['"]\s*,\s*['"]([a-zA-Z0-9_$]+)['"]\s*\)/g;
-		while ((match = varRegex2.exec(content)) !== null) {
+		for (const match of content.matchAll(varRegex2)) {
 			implicitVars.add(match[1]);
 		}
 
@@ -44,7 +43,7 @@ export class WorkflowParser {
 			} else {
 				Object.keys(drawflow).forEach((tab) => {
 					const tabData = drawflow[tab] as Record<string, unknown>;
-					if (tabData && tabData.data) {
+					if (tabData?.data) {
 						Object.entries(tabData.data as Record<string, unknown>).forEach(
 							([_key, node]: [string, unknown]) => {
 								nodesList.push(node as Record<string, unknown>);
