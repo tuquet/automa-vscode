@@ -2,7 +2,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as vscode from "vscode";
 import { TaskRunner } from "../core/TaskRunner";
-import { extractFsPath, isString } from "../utils/typeGuards";
+import { extractFsPath, isString, toError } from "../utils/typeGuards";
 
 let _automaOutputChannel: vscode.OutputChannel;
 
@@ -53,7 +53,7 @@ async function resolveTarget(
 		fs.accessSync(targetPath, fs.constants.R_OK);
 	} catch (e: unknown) {
 		vscode.window.showErrorMessage(
-			`Failed to access workflow file: ${(e as Error).message}`,
+			`Failed to access workflow file: ${toError(e).message}`,
 		);
 		return null;
 	}

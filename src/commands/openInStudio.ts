@@ -1,9 +1,10 @@
 import * as path from "node:path";
 import * as vscode from "vscode";
 import { TaskRunner } from "../core/TaskRunner";
+import { extractFsPath } from "../utils/typeGuards";
 
-export async function openInStudioCommand(uri: vscode.Uri) {
-	let targetPath = uri?.fsPath;
+export async function openInStudioCommand(nodeOrUri: unknown) {
+	let targetPath = extractFsPath(nodeOrUri);
 
 	if (!targetPath) {
 		const activeEditor = vscode.window.activeTextEditor;
