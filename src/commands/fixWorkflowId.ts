@@ -1,6 +1,7 @@
 import * as crypto from "node:crypto";
 import * as fs from "node:fs";
 import * as vscode from "vscode";
+import { extractFsPath } from "../utils/typeGuards";
 
 function generateShortId(): string {
 	// Standard nanoid alphabet
@@ -28,24 +29,16 @@ export async function fixWorkflowIdCommand(
 
 	if (nodesOrUris && Array.isArray(nodesOrUris) && nodesOrUris.length > 0) {
 		urisToProcess = nodesOrUris
-			.map((n) =>
-				n instanceof vscode.Uri
-					? n
-					: typeof n === "object" && n !== null && "fsPath" in n
-						? vscode.Uri.file((n as Record<string, unknown>).fsPath as string)
-						: (n as vscode.Uri),
-			)
-			.filter(Boolean);
-	} else if (nodeOrUri instanceof vscode.Uri) {
-		urisToProcess = [nodeOrUri];
-	} else if (
-		nodeOrUri &&
-		typeof nodeOrUri === "object" &&
-		"fsPath" in nodeOrUri
-	) {
-		urisToProcess = [
-			vscode.Uri.file((nodeOrUri as Record<string, unknown>).fsPath as string),
-		];
+			.map((n) => {
+				const path = extractFsPath(n);
+				return path ? vscode.Uri.file(path) : null;
+			})
+			.filter((uri): uri is vscode.Uri => uri !== null);
+	} else {
+		const path = extractFsPath(nodeOrUri);
+		if (path) {
+			urisToProcess = [vscode.Uri.file(path)];
+		}
 	}
 
 	if (urisToProcess.length === 0) {

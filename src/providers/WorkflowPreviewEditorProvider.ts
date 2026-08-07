@@ -2,6 +2,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as vscode from "vscode";
 import { runWorkflowCommand } from "../commands/runWorkflow";
+import { isRecord } from "../utils/typeGuards";
 import { BaseCustomEditorProvider } from "./BaseCustomEditorProvider";
 
 export class WorkflowPreviewEditorProvider
@@ -91,7 +92,7 @@ export class WorkflowPreviewEditorProvider
 
 		for (const varName of implicitVars) {
 			let defaultVal = "";
-			if (globalVariables && typeof globalVariables === "object") {
+			if (isRecord(globalVariables)) {
 				const strippedName = varName.startsWith("$$")
 					? varName.slice(2)
 					: varName;

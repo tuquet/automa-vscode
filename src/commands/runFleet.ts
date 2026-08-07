@@ -1,6 +1,7 @@
 import * as path from "node:path";
 import * as vscode from "vscode";
 import { TaskRunner } from "../core/TaskRunner";
+import { extractFsPath } from "../utils/typeGuards";
 
 export async function runFleetCommand(
 	nodeOrUri?: vscode.Uri | { fsPath: string },
@@ -8,20 +9,10 @@ export async function runFleetCommand(
 	let targetPath = "";
 	let displayName = "";
 
-	if (nodeOrUri instanceof vscode.Uri) {
-		targetPath = nodeOrUri.fsPath;
-		displayName = path.basename(nodeOrUri.fsPath);
-	} else if (
-		nodeOrUri &&
-		typeof nodeOrUri === "object" &&
-		"resourceUri" in nodeOrUri &&
-		nodeOrUri.resourceUri instanceof vscode.Uri
-	) {
-		targetPath = nodeOrUri.resourceUri.fsPath;
-		displayName = path.basename(targetPath);
-	} else if (nodeOrUri?.fsPath) {
-		targetPath = nodeOrUri.fsPath;
-		displayName = path.basename(nodeOrUri.fsPath);
+	const pathFromNode = extractFsPath(nodeOrUri);
+	if (pathFromNode) {
+		targetPath = pathFromNode;
+		displayName = path.basename(pathFromNode);
 	} else {
 		const activeEditor = vscode.window.activeTextEditor;
 		if (activeEditor?.document.uri.fsPath.endsWith(".fleets.json")) {

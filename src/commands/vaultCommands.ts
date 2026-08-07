@@ -2,6 +2,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as vscode from "vscode";
 import { DaemonManager } from "../core/DaemonManager";
+import { isRecord } from "../utils/typeGuards";
 
 export interface ITable {
 	id: string | number;
@@ -84,7 +85,7 @@ export async function addVariableCommand() {
 		} else {
 			data.push({ name: key, value: value });
 		}
-	} else if (typeof data === "object" && data !== null) {
+	} else if (isRecord(data)) {
 		data[key] = value;
 	} else {
 		data = [{ name: key, value: value }];
@@ -157,7 +158,7 @@ export async function addTableCommand() {
 
 	if (Array.isArray(data)) {
 		data.push(newTable);
-	} else if (typeof data === "object" && data !== null) {
+	} else if (isRecord(data)) {
 		data[newTableId] = newTable;
 	} else {
 		data = [newTable];
@@ -241,7 +242,7 @@ export async function deleteVaultItemCommand(
 				return name !== item.label;
 			});
 			modified = data.length !== initialLength;
-		} else if (typeof data === "object" && data !== null) {
+		} else if (isRecord(data)) {
 			const keyToDelete = item.itemId || item.label;
 			if (keyToDelete in data) {
 				delete (data as Record<string, unknown>)[keyToDelete];

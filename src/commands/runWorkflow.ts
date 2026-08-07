@@ -2,6 +2,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as vscode from "vscode";
 import { TaskRunner } from "../core/TaskRunner";
+import { extractFsPath } from "../utils/typeGuards";
 
 let _automaOutputChannel: vscode.OutputChannel;
 
@@ -11,22 +12,13 @@ async function resolveTarget(
 	let targetPath = "";
 	let displayName = "";
 
-	if (nodeOrUri instanceof vscode.Uri) {
-		targetPath = nodeOrUri.fsPath;
-		displayName = path.basename(nodeOrUri.fsPath);
-	} else if (nodeOrUri && typeof nodeOrUri === "object") {
-		const node = nodeOrUri as Record<string, unknown>;
-		if (node.resourceUri instanceof vscode.Uri) {
-			targetPath = node.resourceUri.fsPath;
-			displayName = path.basename(targetPath);
-		} else if ("fsPath" in node && typeof node.fsPath === "string") {
-			targetPath = node.fsPath;
-			displayName = path.basename(node.fsPath);
-		} else if ("fullPath" in node && typeof node.fullPath === "string") {
-			targetPath = node.fullPath;
-			displayName =
-				typeof node.label === "string" ? node.label : path.basename(targetPath);
-		}
+	const pathFromNode = extractFsPath(nodeOrUri);
+	if (pathFromNode) {
+		targetPath = pathFromNode;
+		displayName =
+			typeof (nodeOrUri as Record<string, unknown>).label === "string"
+				? (nodeOrUri as { label: string }).label
+				: path.basename(targetPath);
 	}
 
 	if (!targetPath) {

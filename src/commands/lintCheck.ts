@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import { DaemonManager } from "../core/DaemonManager";
+import { extractFsPath } from "../utils/typeGuards";
 
 let diagnosticCollection: vscode.DiagnosticCollection;
 
@@ -15,27 +16,19 @@ function resolveUrisToProcess(
 ): vscode.Uri[] {
 	if (Array.isArray(nodesOrUris) && nodesOrUris.length > 0) {
 		return nodesOrUris
-			.map((n) =>
-				n instanceof vscode.Uri
-					? n
-					: typeof n === "object" && n !== null && "resourceUri" in n
-						? ((n as Record<string, unknown>).resourceUri as vscode.Uri)
-						: null,
-			)
+			.map((n) => {
+				const path = extractFsPath(n);
+				return path ? vscode.Uri.file(path) : null;
+			})
 			.filter((uri): uri is vscode.Uri => uri !== null);
-	} else if (nodeOrUri instanceof vscode.Uri) {
-		return [nodeOrUri];
-	} else if (
-		nodeOrUri &&
-		typeof nodeOrUri === "object" &&
-		"resourceUri" in nodeOrUri
-	) {
-		return [(nodeOrUri as Record<string, unknown>).resourceUri as vscode.Uri];
-	} else {
-		const activeEditor = vscode.window.activeTextEditor;
-		if (activeEditor) {
-			return [activeEditor.document.uri];
-		}
+	}
+	const path = extractFsPath(nodeOrUri);
+	if (path) {
+		return [vscode.Uri.file(path)];
+	}
+	const activeEditor = vscode.window.activeTextEditor;
+	if (activeEditor) {
+		return [activeEditor.document.uri];
 	}
 	return [];
 }

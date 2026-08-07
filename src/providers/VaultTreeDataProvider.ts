@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import { isRecord } from "../utils/typeGuards";
 
 export class VaultTreeDataProvider
 	implements vscode.TreeDataProvider<VaultItem>
@@ -142,7 +143,7 @@ export class VaultTreeDataProvider
 			(item, isArray, _key, val) =>
 				isArray
 					? (item.value as string | undefined)
-					: typeof val === "object"
+					: isRecord(val) || Array.isArray(val)
 						? JSON.stringify(val)
 						: String(val),
 			true,
@@ -219,11 +220,7 @@ export class VaultTreeDataProvider
 									),
 								);
 							}
-						} else if (
-							allowObjects &&
-							typeof data === "object" &&
-							data !== null
-						) {
+						} else if (allowObjects && isRecord(data)) {
 							for (const [key, val] of Object.entries(data)) {
 								const value = extractValue(data, false, key, val);
 								items.push(
