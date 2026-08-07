@@ -134,12 +134,21 @@ export class StudioWebviewPanel {
 					try {
 						const port = daemon.getPort();
 						const executeUrl = `http://localhost:${port}/api/jobs/run`;
+						const reqOptions = message.data?.options || {};
+						if (
+							!reqOptions.vaultPath &&
+							vscode.workspace.workspaceFolders?.length
+						) {
+							reqOptions.vaultPath =
+								vscode.workspace.workspaceFolders[0].uri.fsPath;
+						}
+
 						const res = await fetch(executeUrl, {
 							method: "POST",
 							headers: { "Content-Type": "application/json" },
 							body: JSON.stringify({
 								workflowData,
-								options: message.data?.options || {},
+								options: reqOptions,
 							}),
 						});
 						if (!res.ok) throw new Error(`Daemon responded with ${res.status}`);

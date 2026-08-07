@@ -123,20 +123,28 @@ export class DaemonManager {
 			} catch (_e) {}
 
 			// The CLI might output trailing logs (e.g. info/warn logs).
-			// We search for the last valid JSON block from the end of the string.
+			// We search for the first valid JSON block from the beginning.
 			const firstBrace = str.indexOf("{");
 			const firstBracket = str.indexOf("[");
 			let startIndex = -1;
+			let isArray = false;
+
 			if (firstBrace !== -1 && firstBracket !== -1) {
-				startIndex = Math.min(firstBrace, firstBracket);
-			} else {
-				startIndex = Math.max(firstBrace, firstBracket);
+				if (firstBrace < firstBracket) {
+					startIndex = firstBrace;
+				} else {
+					startIndex = firstBracket;
+					isArray = true;
+				}
+			} else if (firstBrace !== -1) {
+				startIndex = firstBrace;
+			} else if (firstBracket !== -1) {
+				startIndex = firstBracket;
+				isArray = true;
 			}
 
 			if (startIndex !== -1) {
-				const lastBrace = str.lastIndexOf("}");
-				const lastBracket = str.lastIndexOf("]");
-				const endIndex = Math.max(lastBrace, lastBracket);
+				const endIndex = isArray ? str.lastIndexOf("]") : str.lastIndexOf("}");
 
 				if (endIndex > startIndex) {
 					try {
@@ -184,8 +192,8 @@ export class DaemonManager {
 		const commandStr = `${cmd} ${finalArgs.map((a) => `"${a.replace(/"/g, '\\"')}"`).join(" ")}`;
 		const { stdout, stderr } = await execAsync(commandStr, {
 			maxBuffer: 1024 * 1024 * 50,
-		});
-		return { stdout, stderr };
+		}).catch((e) => e);
+		return { stdout: stdout || "", stderr: stderr || "" };
 	}
 
 	public getPort(): number {
