@@ -266,18 +266,16 @@ export class DaemonManager {
 						}
 					}
 
-					let parsedSuccessfully = false;
 					if (endIndex !== -1) {
 						const possibleJson = text.substring(startIndex, endIndex + 1);
 						try {
 							lastValidJson = JSON.parse(possibleJson);
-							parsedSuccessfully = true;
 						} catch (_e: unknown) {
 							// Invalid JSON
 						}
 					}
 
-					if (parsedSuccessfully && endIndex !== -1) {
+					if (endIndex !== -1) {
 						startIndex = text.indexOf(startChar, endIndex + 1);
 					} else {
 						startIndex = text.indexOf(startChar, startIndex + 1);
