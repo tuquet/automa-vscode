@@ -12,7 +12,6 @@ import {
 	runWorkflowCommand,
 	runWorkflowWithParamsCommand,
 } from "./runWorkflow";
-import { showRunnerLogCommand } from "./showRunnerLog";
 import { stopFleetCommand } from "./stopFleet";
 import {
 	installBrowserCommand,
@@ -111,10 +110,6 @@ export class CommandManager {
 				toggleDaemonCommand(),
 			),
 			vscode.commands.registerCommand("automa.killRunner", killRunner),
-			vscode.commands.registerCommand(
-				"automa.showRunnerLog",
-				showRunnerLogCommand,
-			),
 			vscode.commands.registerCommand("automa.addVariable", addVariableCommand),
 			vscode.commands.registerCommand(
 				"automa.addCredential",

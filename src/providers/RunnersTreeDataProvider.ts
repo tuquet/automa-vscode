@@ -103,7 +103,7 @@ export class RunnersTreeDataProvider
 
 		// Click to view log detail
 		treeItem.command = {
-			command: "automa.showRunnerLog",
+			command: "automa.showLiveLog",
 			title: "Show Log Detail",
 			arguments: [element],
 		};
