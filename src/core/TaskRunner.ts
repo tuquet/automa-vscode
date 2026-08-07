@@ -159,7 +159,9 @@ export class TaskRunner {
 				const end = trimmed.lastIndexOf("}");
 				if (start !== -1 && end !== -1 && end > start) {
 					try {
-						const telemetry = JSON.parse(trimmed.substring(start, end + 1));
+						const telemetry = JSON.parse(
+							trimmed.substring(start, end + 1),
+						) as Record<string, unknown>;
 						TaskRunner.telemetryEmitter.emit("telemetry", telemetry);
 					} catch (_e) {
 						// ignore parse error
