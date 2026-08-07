@@ -100,8 +100,20 @@ export class DaemonManager {
 			.join(" ");
 		const execCmd = `${cmd} ${argsStr}`;
 
+		const config = vscode.workspace.getConfiguration("automa");
+		const browserPathOverride = config.get<string>("browserPathOverride") || "";
+		const extensionPaths = config.get<string>("extensionPaths") || "";
+		const env = { ...process.env };
+		if (browserPathOverride) {
+			env.AUTOMA_BROWSER_PATH = browserPathOverride;
+		}
+		if (extensionPaths) {
+			env.EXTENSION_PATHS = extensionPaths;
+		}
+
 		const { stdout, stderr } = await execAsync(execCmd, {
 			maxBuffer: 1024 * 1024 * 50,
+			env,
 		}).catch((e) => e);
 		const output = `${stdout || ""}\n${stderr || ""}`.trim();
 
@@ -110,43 +122,19 @@ export class DaemonManager {
 				return JSON.parse(str);
 			} catch (_e) {}
 
-			// Try the last line
+			// The CLI outputs the final JSON at the end of stdout.
+			// It might be single-line or multi-line (pretty-printed).
+			// We build the string from the bottom up and try to parse it.
 			const lines = str.split("\n");
-			try {
-				return JSON.parse(lines[lines.length - 1].trim());
-			} catch (_e) {}
-
-			// Try extracting from first { to last }
-			const firstBrace = str.indexOf("{");
-			const lastBrace = str.lastIndexOf("}");
-			if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-				try {
-					return JSON.parse(str.substring(firstBrace, lastBrace + 1));
-				} catch (_e) {}
-			}
-
-			// Try extracting from first [ to last ]
-			const firstBracket = str.indexOf("[");
-			const lastBracket = str.lastIndexOf("]");
-			if (
-				firstBracket !== -1 &&
-				lastBracket !== -1 &&
-				lastBracket > firstBracket
-			) {
-				try {
-					return JSON.parse(str.substring(firstBracket, lastBracket + 1));
-				} catch (_e) {}
-			}
-
-			// Try finding `{` or `[` starting from the end
-			for (let i = str.length - 1; i >= 0; i--) {
-				if (str[i] === "{" || str[i] === "[") {
-					const endChar = str[i] === "{" ? "}" : "]";
-					const end = str.lastIndexOf(endChar);
-					if (end > i) {
-						try {
-							return JSON.parse(str.substring(i, end + 1));
-						} catch (_e) {}
+			let current = "";
+			for (let i = lines.length - 1; i >= 0; i--) {
+				current = lines[i] + (current ? "\n" + current : "");
+				const trimmed = current.trim();
+				if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+					try {
+						return JSON.parse(trimmed);
+					} catch (_e) {
+						// Continue adding lines upwards until it forms valid JSON
 					}
 				}
 			}
@@ -286,9 +274,13 @@ export class DaemonManager {
 		config: vscode.WorkspaceConfiguration,
 	) {
 		const browserPathOverride = config.get<string>("browserPathOverride") || "";
+		const extensionPaths = config.get<string>("extensionPaths") || "";
 		const env = { ...process.env };
 		if (browserPathOverride) {
 			env.AUTOMA_BROWSER_PATH = browserPathOverride;
+		}
+		if (extensionPaths) {
+			env.EXTENSION_PATHS = extensionPaths;
 		}
 
 		this.daemonProcess = spawn(cmd, args, {
