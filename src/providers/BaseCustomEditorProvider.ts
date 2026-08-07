@@ -22,7 +22,12 @@ export abstract class BaseCustomEditorProvider {
 				const uriStr = document.uri.toString();
 				if (e.document.uri.toString() === uriStr) {
 					if (!this.internalSaves.has(uriStr)) {
-						updateWebview();
+						const res = updateWebview();
+						if (res instanceof Promise) {
+							res.catch((err: unknown) =>
+								console.error("Webview update error:", err),
+							);
+						}
 					}
 				}
 			});
@@ -37,7 +42,14 @@ export abstract class BaseCustomEditorProvider {
 			const uriStr = document.uri.toString();
 			const handleChange = () => {
 				if (!this.internalSaves.has(uriStr)) {
-					setTimeout(() => updateWebview(), 50);
+					setTimeout(() => {
+						const res = updateWebview();
+						if (res instanceof Promise) {
+							res.catch((err: unknown) =>
+								console.error("Webview update error:", err),
+							);
+						}
+					}, 50);
 				}
 			};
 
