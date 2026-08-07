@@ -233,12 +233,43 @@ export class StudioWebviewPanel {
 				]);
 
 			const parseErrors: string[] = [];
-			const readJsonFiles = async (files: vscode.Uri[]) => {
+			const readJsonFiles = async (
+				files: vscode.Uri[],
+				shouldSanitize = false,
+			) => {
+				const daemon = DaemonManager.getInstance();
+				const port = daemon.getPort();
 				const contents = await Promise.all(
 					files.map(async (file) => {
 						try {
 							const bytes = await vscode.workspace.fs.readFile(file);
-							return JSON.parse(Buffer.from(bytes).toString("utf-8"));
+							let parsed = JSON.parse(Buffer.from(bytes).toString("utf-8"));
+
+							if (shouldSanitize) {
+								try {
+									const res = await fetch(
+										`http://localhost:${port}/api/sanitize`,
+										{
+											method: "POST",
+											headers: { "Content-Type": "application/json" },
+											body: JSON.stringify({ content: JSON.stringify(parsed) }),
+										},
+									);
+									if (res.ok) {
+										const data = (await res.json()) as {
+											success: boolean;
+											data: unknown;
+										};
+										if (data.success && data.data) {
+											parsed = data.data;
+										}
+									}
+								} catch (e) {
+									// Ignore fetch error, just use un-sanitized data
+								}
+							}
+
+							return parsed;
 						} catch (e: unknown) {
 							const msg = e instanceof Error ? e.message : String(e);
 							const path = require("node:path");
@@ -251,7 +282,7 @@ export class StudioWebviewPanel {
 			};
 
 			const [workflows, rawVars, rawCreds, rawTables] = await Promise.all([
-				readJsonFiles(workflowFiles),
+				readJsonFiles(workflowFiles, true),
 				readJsonFiles(variableFiles),
 				readJsonFiles(credentialFiles),
 				readJsonFiles(tableFiles),

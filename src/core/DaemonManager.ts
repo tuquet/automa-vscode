@@ -161,40 +161,50 @@ export class DaemonManager {
 				return JSON.parse(str);
 			} catch (_e) {}
 
-			// To handle logs prefixed or suffixed, find the last valid JSON object or array.
-			const tryParse = (s: string) => {
-				try {
-					return JSON.parse(s);
-				} catch (_e) {
-					return null;
-				}
-			};
+			// Find the first { or [ and last } or ]
+			const firstBrace = str.indexOf("{");
+			const lastBrace = str.lastIndexOf("}");
+			const firstBracket = str.indexOf("[");
+			const lastBracket = str.lastIndexOf("]");
 
-			// We find the last '}' or ']' and walk backwards to find the matching '{' or '['
-			const lastIdx = Math.max(str.lastIndexOf("}"), str.lastIndexOf("]"));
-			if (lastIdx !== -1) {
-				const isArray = str[lastIdx] === "]";
-				const openChar = isArray ? "[" : "{";
-				const closeChar = isArray ? "]" : "}";
-				let depth = 0;
-				for (let i = lastIdx; i >= 0; i--) {
-					if (str[i] === closeChar) depth++;
-					else if (str[i] === openChar) depth--;
+			const isObject =
+				firstBrace !== -1 && lastBrace !== -1 && firstBrace < lastBrace;
+			const isArray =
+				firstBracket !== -1 && lastBracket !== -1 && firstBracket < lastBracket;
 
-					if (depth === 0) {
-						const possibleJson = str.substring(i, lastIdx + 1);
-						const parsed = tryParse(possibleJson);
-						if (parsed !== null) return parsed;
+			let jsonStr = "";
+			if (isObject && isArray) {
+				// Which one is the outermost?
+				if (firstBrace < firstBracket && lastBrace > lastBracket) {
+					jsonStr = str.substring(firstBrace, lastBrace + 1);
+				} else if (firstBracket < firstBrace && lastBracket > lastBrace) {
+					jsonStr = str.substring(firstBracket, lastBracket + 1);
+				} else {
+					// Fallback: try both
+					try {
+						return JSON.parse(str.substring(firstBrace, lastBrace + 1));
+					} catch (e) {
+						jsonStr = str.substring(firstBracket, lastBracket + 1);
 					}
 				}
+			} else if (isObject) {
+				jsonStr = str.substring(firstBrace, lastBrace + 1);
+			} else if (isArray) {
+				jsonStr = str.substring(firstBracket, lastBracket + 1);
 			}
 
-			// Fallback if the above doesn't work (e.g. nested structures not matched perfectly)
-			// Match lines from the end
+			if (jsonStr) {
+				try {
+					return JSON.parse(jsonStr);
+				} catch (e) {}
+			}
+
+			// Fallback: Match lines from the end
 			const lines = str.trim().split("\n");
 			for (let i = lines.length - 1; i >= 0; i--) {
-				const parsed = tryParse(lines[i]);
-				if (parsed !== null) return parsed;
+				try {
+					return JSON.parse(lines[i]);
+				} catch (e) {}
 			}
 
 			throw new Error("No valid JSON found in output");
