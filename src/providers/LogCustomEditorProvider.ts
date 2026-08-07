@@ -207,7 +207,7 @@ export class LogCustomEditorProvider
 		let htmlContent = fsSync.readFileSync(htmlPath, "utf-8");
 
 		const escapeHtml = (unsafe: unknown) => {
-			if (typeof unsafe !== "string") return String(unsafe);
+			if (!isString(unsafe)) return String(unsafe);
 			return unsafe
 				.replace(/&/g, "&amp;")
 				.replace(/</g, "&lt;")
