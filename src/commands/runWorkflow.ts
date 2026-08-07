@@ -5,6 +5,7 @@ import { TaskRunner } from "../core/TaskRunner";
 
 let _automaOutputChannel: vscode.OutputChannel;
 
+// biome-ignore lint/suspicious/noExplicitAny: nodeOrUri can be a vscode.Uri or TreeItem depending on context
 async function resolveTarget(
 	nodeOrUri?: any,
 ): Promise<{ targetPath: string; displayName: string } | null> {
@@ -31,6 +32,16 @@ async function resolveTarget(
 	if (!targetPath.endsWith(".json")) {
 		vscode.window.showErrorMessage(
 			"Cloud workflows are not supported yet via API.",
+		);
+		return null;
+	}
+
+	try {
+		// Just to validate it's readable
+		fs.accessSync(targetPath, fs.constants.R_OK);
+	} catch (e: unknown) {
+		vscode.window.showErrorMessage(
+			`Failed to access workflow file: ${(e as Error).message}`,
 		);
 		return null;
 	}
@@ -75,24 +86,15 @@ function buildBaseArgs(
 	return args;
 }
 
+// biome-ignore lint/suspicious/noExplicitAny: nodeOrUri can be various types from VSCode tree view
 export async function runWorkflowCommand(
 	nodeOrUri?: any,
-	params?: any,
+	params?: Record<string, unknown>,
 	runOptions?: { keepBrowserOpen?: boolean },
 ) {
 	const target = await resolveTarget(nodeOrUri);
 	if (!target) return;
 	const { targetPath, displayName } = target;
-
-	try {
-		// Just to validate it's readable
-		fs.readFileSync(targetPath, "utf-8");
-	} catch (e: any) {
-		vscode.window.showErrorMessage(
-			`Failed to read workflow file: ${e.message}`,
-		);
-		return;
-	}
 
 	const config = vscode.workspace.getConfiguration("automa");
 	const keepBrowserOpen =
@@ -127,19 +129,11 @@ export async function runWorkflowCommand(
 	});
 }
 
+// biome-ignore lint/suspicious/noExplicitAny: nodeOrUri can be various types from VSCode tree view
 export async function runWorkflowWithParamsCommand(nodeOrUri?: any) {
 	const target = await resolveTarget(nodeOrUri);
 	if (!target) return;
 	const { targetPath, displayName } = target;
-
-	try {
-		fs.readFileSync(targetPath, "utf-8");
-	} catch (e: any) {
-		vscode.window.showErrorMessage(
-			`Failed to read workflow file: ${e.message}`,
-		);
-		return;
-	}
 
 	// Bỏ qua logic tự parse params bằng showInputBox vì CLI đã có wizard (prompts) rất tốt.
 	// Chúng ta sẽ gọi thẳng CLI và KHÔNG truyền --use-default-parameters để ép nó hiện wizard trong Terminal.
