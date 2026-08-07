@@ -249,7 +249,7 @@ export class DaemonManager {
 
 	public async executeRawCliCommand(
 		args: string[],
-	): Promise<{ stdout: string; stderr: string }> {
+	): Promise<{ stdout: string; stderr: string; code: number | null }> {
 		const { cmd, args: finalArgs } = this.resolveCommandAndArgs(args);
 		const cmdParts = cmd.split(" ");
 		const executable = cmdParts[0];
@@ -276,7 +276,7 @@ export class DaemonManager {
 
 				child.on("error", reject);
 
-				child.on("close", () => {
+				child.on("close", (code) => {
 					let stdoutStr = "";
 					let stderrStr = "";
 					try {
@@ -289,12 +289,12 @@ export class DaemonManager {
 					} catch (_e) {
 						stderrStr = "[Stderr exceeded string length limit]";
 					}
-					resolve({ stdout: stdoutStr || "", stderr: stderrStr || "" });
+					resolve({ stdout: stdoutStr || "", stderr: stderrStr || "", code });
 				});
 			});
 		} catch (error: unknown) {
 			const e = toError(error);
-			return { stdout: "", stderr: e.message || String(e) };
+			return { stdout: "", stderr: e.message || String(e), code: -1 };
 		}
 	}
 

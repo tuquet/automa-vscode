@@ -19,9 +19,14 @@ export function installBrowserCommand() {
 			},
 			async (_progress) => {
 				try {
-					await DaemonManager.getInstance().executeRawCliCommand([
-						"install-browser",
-					]);
+					const result = await DaemonManager.getInstance().executeRawCliCommand(
+						["install-browser"],
+					);
+					if (result.code !== 0) {
+						throw new Error(
+							`Command failed with exit code ${result.code}\n${result.stderr}`,
+						);
+					}
 					vscode.window.showInformationMessage(
 						"Browser installed successfully!",
 					);
@@ -39,11 +44,27 @@ export function installBrowserCommand() {
 
 export function toggleDaemonCommand() {
 	return async () => {
-		const daemon = DaemonManager.getInstance();
-		if (daemon.isRunning()) {
-			daemon.stop();
-		} else {
-			await daemon.start();
+		try {
+			const daemon = DaemonManager.getInstance();
+			if (daemon.isRunning()) {
+				daemon.stop();
+				vscode.window.showInformationMessage("Automa CLI Daemon stopped.");
+			} else {
+				vscode.window.showInformationMessage("Starting Automa CLI Daemon...");
+				await daemon.start();
+				if (daemon.isRunning()) {
+					vscode.window.showInformationMessage(
+						"Automa CLI Daemon started successfully.",
+					);
+				} else {
+					vscode.window.showErrorMessage(
+						"Failed to start Automa CLI Daemon. Check logs for details.",
+					);
+				}
+			}
+		} catch (error: unknown) {
+			const e = toError(error);
+			vscode.window.showErrorMessage(`Failed to toggle daemon: ${e.message}`);
 		}
 	};
 }

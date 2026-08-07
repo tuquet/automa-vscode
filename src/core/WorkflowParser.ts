@@ -1,7 +1,4 @@
-import {
-	hasObjectProp,
-	isRecord,
-} from "../utils/typeGuards";
+import { hasObjectProp, isRecord } from "../utils/typeGuards";
 export const WorkflowParser = {
 	extractImplicitVariables(content: string): Set<string> {
 		const implicitVars = new Set<string>();

@@ -2,12 +2,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as vscode from "vscode";
 import { runWorkflowCommand } from "../commands/runWorkflow";
-import {
-	getProp,
-	hasObjectProp,
-	isRecord,
-	toError,
-} from "../utils/typeGuards";
+import { getProp, hasObjectProp, isRecord, toError } from "../utils/typeGuards";
 import { BaseCustomEditorProvider } from "./BaseCustomEditorProvider";
 
 export class WorkflowPreviewEditorProvider

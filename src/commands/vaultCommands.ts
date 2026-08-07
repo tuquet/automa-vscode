@@ -199,7 +199,13 @@ async function executeEncryption(
 				if (passphrase) {
 					args.push("-p", passphrase);
 				}
-				await DaemonManager.getInstance().executeRawCliCommand(args);
+				const result =
+					await DaemonManager.getInstance().executeRawCliCommand(args);
+				if (result.code !== 0) {
+					throw new Error(
+						`Command failed with exit code ${result.code}\n${result.stderr}`,
+					);
+				}
 				vscode.window.showInformationMessage(
 					`Credential ${name} encrypted and added successfully.`,
 				);
