@@ -190,16 +190,22 @@
     <script>INJECT_PACKAGE_DATA
         const vscode = acquireVsCodeApi();
 
-        const { createApp, ref, reactive, computed } = Vue;
+        const { createApp, ref, reactive, computed, watch } = Vue;
 
         createApp({
             setup() {
-                const currentTab = ref('params');
+                const previousState = vscode.getState() || {};
+                const currentTab = ref(previousState.currentTab || 'params');
                 const tabs = [
                     { id: 'params', label: 'Package Interface' },
                     { id: 'settings', label: 'Settings' },
                     { id: 'properties', label: 'Properties' }
                 ];
+                
+                watch(currentTab, (newTab) => {
+                    const state = vscode.getState() || {};
+                    vscode.setState({ ...state, currentTab: newTab });
+                });
 
                 const inputs = ref(pInputs || []);
                 const outputs = ref(pOutputs || []);
