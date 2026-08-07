@@ -1,9 +1,10 @@
 import * as crypto from "node:crypto";
 import {
 	castRecord,
+	castRecordArray,
 	hasNodesAndEdges,
+	hasObjectProp,
 	isBoolean,
-	isRecord,
 } from "../utils/typeGuards";
 
 function generateShortId(): string {
@@ -37,18 +38,22 @@ export const WorkflowSanitizer = {
 		let nodes: Record<string, unknown>[] = [];
 		let edges: Record<string, unknown>[] = [];
 
-		if (isPackage && isRecord(json.data)) {
-			if (Array.isArray(json.data.nodes)) nodes = json.data.nodes;
-			if (Array.isArray(json.data.edges)) edges = json.data.edges;
-		} else if (!isPackage && isRecord(json.drawflow)) {
-			if (Array.isArray(json.drawflow.nodes)) nodes = json.drawflow.nodes;
-			if (Array.isArray(json.drawflow.edges)) edges = json.drawflow.edges;
+		if (isPackage && hasObjectProp(json, "data")) {
+			if (Array.isArray(json.data.nodes))
+				nodes = castRecordArray(json.data.nodes);
+			if (Array.isArray(json.data.edges))
+				edges = castRecordArray(json.data.edges);
+		} else if (!isPackage && hasObjectProp(json, "drawflow")) {
+			if (Array.isArray(json.drawflow.nodes))
+				nodes = castRecordArray(json.drawflow.nodes);
+			if (Array.isArray(json.drawflow.edges))
+				edges = castRecordArray(json.drawflow.edges);
 
 			// Fallback for object-based nodes
 			if (
 				!Array.isArray(json.drawflow.nodes) &&
-				isRecord(json.drawflow.Home) &&
-				isRecord(json.drawflow.Home.data)
+				hasObjectProp(json.drawflow, "Home") &&
+				hasObjectProp(json.drawflow.Home, "data")
 			) {
 				Object.entries(json.drawflow.Home.data).forEach(([key, node]) => {
 					const n = castRecord(node);
