@@ -142,21 +142,21 @@ export class TaskRunner {
 
 		const child = spawn(command, options.args, { env, cwd, shell: isWin });
 
-		child.stdout.on("data", (data) => {
-			const str = data.toString();
-			outputChannel.append(str);
+		const readline = require("node:readline");
+		const rl = readline.createInterface({
+			input: child.stdout,
+			terminal: false,
+		});
 
-			// Parse telemetry
-			const lines = str.split("\n");
-			for (const line of lines) {
-				const trimmed = line.trim();
-				if (trimmed.startsWith("{") && trimmed.includes('"type":"telemetry"')) {
-					try {
-						const telemetry = JSON.parse(trimmed);
-						TaskRunner.telemetryEmitter.emit("telemetry", telemetry);
-					} catch (_e) {
-						// ignore parse error
-					}
+		rl.on("line", (line: string) => {
+			outputChannel.appendLine(line);
+			const trimmed = line.trim();
+			if (trimmed.startsWith("{") && trimmed.includes('"type":"telemetry"')) {
+				try {
+					const telemetry = JSON.parse(trimmed);
+					TaskRunner.telemetryEmitter.emit("telemetry", telemetry);
+				} catch (_e) {
+					// ignore parse error
 				}
 			}
 		});

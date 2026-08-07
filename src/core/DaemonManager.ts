@@ -97,24 +97,32 @@ export class DaemonManager {
 
 		const execCmd = `${cmd} ${argsStr}`;
 
-		const { stdout, stderr } = await execAsync(execCmd).catch((e) => e);
+		const { stdout, stderr } = await execAsync(execCmd, {
+			maxBuffer: 1024 * 1024 * 10,
+		}).catch((e) => e);
 		const output = stdout || stderr || "";
 
 		let jsonStr = output.trim();
 		const firstBrace = jsonStr.indexOf("{");
 		const firstBracket = jsonStr.indexOf("[");
+		const lastBrace = jsonStr.lastIndexOf("}");
+		const lastBracket = jsonStr.lastIndexOf("]");
 		let startIndex = -1;
+		let endIndex = jsonStr.length;
 
 		if (firstBrace !== -1 && firstBracket !== -1) {
 			startIndex = Math.min(firstBrace, firstBracket);
+			endIndex = startIndex === firstBrace ? lastBrace + 1 : lastBracket + 1;
 		} else if (firstBrace !== -1) {
 			startIndex = firstBrace;
+			endIndex = lastBrace + 1;
 		} else if (firstBracket !== -1) {
 			startIndex = firstBracket;
+			endIndex = lastBracket + 1;
 		}
 
-		if (startIndex !== -1 && startIndex > 0) {
-			jsonStr = jsonStr.substring(startIndex);
+		if (startIndex !== -1 && endIndex > startIndex) {
+			jsonStr = jsonStr.substring(startIndex, endIndex);
 		}
 
 		try {
@@ -131,7 +139,9 @@ export class DaemonManager {
 	): Promise<{ stdout: string; stderr: string }> {
 		const { cmd, args: finalArgs } = this.resolveCommandAndArgs(args);
 		const commandStr = `${cmd} ${finalArgs.map((a) => `"${a.replace(/"/g, '\\"')}"`).join(" ")}`;
-		const { stdout, stderr } = await execAsync(commandStr);
+		const { stdout, stderr } = await execAsync(commandStr, {
+			maxBuffer: 1024 * 1024 * 10,
+		});
 		return { stdout, stderr };
 	}
 
