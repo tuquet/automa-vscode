@@ -37,7 +37,7 @@ function getGlobalsFilePath(filename: string): string | undefined {
 	return path.join(globalsDir, filename);
 }
 
-function loadVariables(
+function _loadVariables(
 	varsPath: string,
 ): Array<{ name?: string; key?: string; value: unknown }> {
 	if (!fs.existsSync(varsPath)) return [];
@@ -59,7 +59,7 @@ function loadVariables(
 	return [];
 }
 
-function loadTables(tablesPath: string): ITable[] {
+function _loadTables(tablesPath: string): ITable[] {
 	if (!fs.existsSync(tablesPath)) return [];
 	try {
 		const content = fs.readFileSync(tablesPath, "utf8");

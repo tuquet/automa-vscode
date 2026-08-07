@@ -1,15 +1,17 @@
 import * as vscode from "vscode";
 import { TaskRunner } from "../core/TaskRunner";
 
-export class LiveLogEditorProvider {
-	public static currentPanels: Map<string, vscode.WebviewPanel> = new Map();
+const currentPanels: Map<string, vscode.WebviewPanel> = new Map();
 
-	public static showLiveLog(
+export const LiveLogEditorProvider = {
+	currentPanels,
+
+	showLiveLog(
 		_context: vscode.ExtensionContext,
 		taskId: string,
 		taskName: string,
 	) {
-		let panel = LiveLogEditorProvider.currentPanels.get(taskId);
+		let panel = currentPanels.get(taskId);
 
 		if (panel) {
 			panel.reveal(vscode.ViewColumn.One);
@@ -26,7 +28,7 @@ export class LiveLogEditorProvider {
 			},
 		);
 
-		LiveLogEditorProvider.currentPanels.set(taskId, panel);
+		currentPanels.set(taskId, panel);
 
 		panel.webview.html = LiveLogEditorProvider.getHtmlForWebview();
 
@@ -45,91 +47,124 @@ export class LiveLogEditorProvider {
 
 		panel.onDidDispose(() => {
 			TaskRunner.telemetryEmitter.off("telemetry", listener);
-			LiveLogEditorProvider.currentPanels.delete(taskId);
+			currentPanels.delete(taskId);
 		});
-	}
+	},
 
-	private static getHtmlForWebview(): string {
+	getHtmlForWebview(): string {
 		return `
 <!DOCTYPE html>
 <html lang="en">
 <head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Live Log</title>
-	<style>
-		body {
-			font-family: var(--vscode-editor-font-family);
-			font-size: var(--vscode-editor-font-size);
-			color: var(--vscode-editor-foreground);
-			background-color: var(--vscode-editor-background);
-			padding: 10px;
-		}
-		ul {
-			list-style-type: none;
-			padding: 0;
-			margin: 0;
-		}
-		li {
-			padding: 4px 0;
-			border-bottom: 1px solid var(--vscode-panel-border);
-			word-wrap: break-word;
-		}
-		.timestamp {
-			color: var(--vscode-descriptionForeground);
-			font-size: 0.9em;
-			margin-right: 8px;
-		}
-		.level-info { color: var(--vscode-terminal-ansiGreen); }
-		.level-error { color: var(--vscode-terminal-ansiRed); }
-		.level-warn { color: var(--vscode-terminal-ansiYellow); }
-	</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Log</title>
+    <style>
+        body {
+            font-family: var(--vscode-editor-font-family);
+            font-size: var(--vscode-editor-font-size);
+            color: var(--vscode-editor-foreground);
+            background-color: var(--vscode-editor-background);
+            padding: 10px;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        #log-container {
+            flex-grow: 1;
+            overflow-y: auto;
+            border: 1px solid var(--vscode-panel-border);
+            padding: 10px;
+            background-color: var(--vscode-editor-background);
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .log-entry {
+            margin-bottom: 4px;
+            border-bottom: 1px solid var(--vscode-panel-border);
+            padding-bottom: 4px;
+        }
+        .log-header {
+            font-weight: bold;
+            color: var(--vscode-textLink-foreground);
+            margin-bottom: 2px;
+        }
+        .log-body {
+            margin-left: 10px;
+        }
+        .log-error {
+            color: var(--vscode-errorForeground);
+        }
+        .log-success {
+            color: var(--vscode-testing-iconPassed);
+        }
+        .log-info {
+            color: var(--vscode-descriptionForeground);
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            margin-left: 8px;
+            background-color: var(--vscode-badge-background);
+            color: var(--vscode-badge-foreground);
+        }
+    </style>
 </head>
 <body>
-	<ul id="log-list"></ul>
+    <div id="log-container"></div>
+    <script>
+        const vscode = acquireVsCodeApi();
+        const container = document.getElementById('log-container');
 
-	<script>
-		const vscode = acquireVsCodeApi();
-		const logList = document.getElementById('log-list');
+        window.addEventListener('message', event => {
+            const message = event.data;
+            const div = document.createElement('div');
+            div.className = 'log-entry';
 
-		window.addEventListener('message', event => {
-			const data = event.data;
-			
-			const li = document.createElement('li');
-			
-			const timeSpan = document.createElement('span');
-			timeSpan.className = 'timestamp';
-			timeSpan.textContent = new Date().toLocaleTimeString();
-			li.appendChild(timeSpan);
+            let headerHTML = '';
+            let bodyHTML = '';
+            let statusClass = 'log-info';
 
-			const contentSpan = document.createElement('span');
-			
-			// Format data nicely
-			let content = '';
-			if (data.message) {
-				content = data.message;
-			} else if (data.name) {
-				content = data.name + (data.status ? ' - ' + data.status : '');
-			} else {
-				content = JSON.stringify(data);
-			}
-			contentSpan.textContent = content;
+            if (message.type === 'telemetry') {
+                const name = message.name || 'Task';
+                const status = message.status || 'running';
+                
+                if (status === 'success') statusClass = 'log-success';
+                else if (status === 'error' || status === 'failed') statusClass = 'log-error';
 
-			if (data.level) {
-				contentSpan.className = 'level-' + data.level.toLowerCase();
-			} else if (data.status === 'error') {
-				contentSpan.className = 'level-error';
-			} else {
-				contentSpan.className = 'level-info';
-			}
-			
-			li.appendChild(contentSpan);
-			logList.appendChild(li);
-			
-			window.scrollTo(0, document.body.scrollHeight);
-		});
-	</script>
+                headerHTML = \`<span class="log-header \${statusClass}">[\${name}]</span><span class="status-badge">\${status}</span>\`;
+                
+                if (message.message) {
+                    bodyHTML = \`<div class="log-body">\${escapeHtml(message.message)}</div>\`;
+                } else if (message.error) {
+                     bodyHTML = \`<div class="log-body log-error">\${escapeHtml(message.error)}</div>\`;
+                }
+            } else {
+                 headerHTML = \`<span class="log-header">[Log]</span>\`;
+                 bodyHTML = \`<div class="log-body">\${escapeHtml(JSON.stringify(message))}</div>\`;
+            }
+
+            div.innerHTML = headerHTML + bodyHTML;
+            container.appendChild(div);
+            
+            // Auto-scroll
+            container.scrollTop = container.scrollHeight;
+        });
+
+        function escapeHtml(unsafe) {
+            if (typeof unsafe !== 'string') return unsafe;
+            return unsafe
+                 .replace(/&/g, "&amp;")
+                 .replace(/</g, "&lt;")
+                 .replace(/>/g, "&gt;")
+                 .replace(/"/g, "&quot;")
+                 .replace(/'/g, "&#039;");
+        }
+    </script>
 </body>
 </html>`;
-	}
-}
+	},
+};

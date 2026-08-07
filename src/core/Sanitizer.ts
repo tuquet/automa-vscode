@@ -11,8 +11,8 @@ function generateShortId(): string {
 	return id;
 }
 
-export class WorkflowSanitizer {
-	static sanitize(json: Record<string, unknown>): boolean {
+export const WorkflowSanitizer = {
+	sanitize(json: Record<string, unknown>): boolean {
 		let isModified = false;
 
 		// 1. Ensure Root properties
@@ -172,5 +172,5 @@ export class WorkflowSanitizer {
 		sanitizeNodesAndEdges(nodes, edges);
 
 		return isModified;
-	}
-}
+	},
+};

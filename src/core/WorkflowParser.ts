@@ -1,5 +1,5 @@
-export class WorkflowParser {
-	public static extractImplicitVariables(content: string): Set<string> {
+export const WorkflowParser = {
+	extractImplicitVariables(content: string): Set<string> {
 		const implicitVars = new Set<string>();
 
 		// 1. Scan for {{variables.xyz}}
@@ -16,9 +16,9 @@ export class WorkflowParser {
 		}
 
 		return implicitVars;
-	}
+	},
 
-	public static extractTriggerParameters(
+	extractTriggerParameters(
 		jsonObj: unknown,
 		implicitVars: Set<string>,
 	): Record<string, unknown>[] {
@@ -81,5 +81,5 @@ export class WorkflowParser {
 			}
 		}
 		return triggerParams;
-	}
-}
+	},
+};

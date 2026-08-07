@@ -15,10 +15,10 @@ export interface TaskOptions {
 	statusBarText?: string;
 }
 
-export class TaskRunner {
-	public static telemetryEmitter = new EventEmitter();
+export const TaskRunner = {
+	telemetryEmitter: new EventEmitter(),
 
-	public static runAutomaCli(
+	runAutomaCli(
 		cliArgs: string[],
 		taskConfig: Omit<TaskOptions, "command" | "args"> & {
 			useTelemetry?: boolean;
@@ -38,9 +38,9 @@ export class TaskRunner {
 		} else {
 			return TaskRunner.run(options);
 		}
-	}
+	},
 
-	public static run(options: TaskOptions): Promise<void> {
+	run(options: TaskOptions): Promise<void> {
 		if (options.startMessage) {
 			vscode.window.showInformationMessage(options.startMessage);
 		}
@@ -112,9 +112,9 @@ export class TaskRunner {
 				}
 			});
 		});
-	}
+	},
 
-	public static runWithTelemetry(options: TaskOptions): Promise<void> {
+	runWithTelemetry(options: TaskOptions): Promise<void> {
 		if (options.startMessage) {
 			vscode.window.showInformationMessage(options.startMessage);
 		}
@@ -195,5 +195,5 @@ export class TaskRunner {
 				resolve();
 			});
 		});
-	}
-}
+	},
+};

@@ -372,7 +372,7 @@ export class StudioWebviewPanel {
 						);
 						try {
 							await vscode.workspace.fs.createDirectory(workflowsDir);
-						} catch (dirErr) {
+						} catch (_dirErr) {
 							// Ignore if exists
 						}
 
@@ -484,7 +484,7 @@ export class StudioWebviewPanel {
 				const folderDir = vscode.Uri.joinPath(workspaceRoot, folderName);
 				try {
 					await vscode.workspace.fs.createDirectory(folderDir);
-				} catch (dirErr) {
+				} catch (_dirErr) {
 					// Ignore if exists
 				}
 				targetUri = vscode.Uri.joinPath(folderDir, defaultFileName);
