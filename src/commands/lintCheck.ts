@@ -108,12 +108,35 @@ export async function lintCheckCommand(nodeOrUri?: any, nodesOrUris?: any[]) {
 				const lines = content.split("\n");
 
 				try {
-					const { stdout, stderr } =
-						await DaemonManager.getInstance().executeRawCliCommand([
-							"lint",
-							filePath,
-						]);
-					const output = `${stdout}\n${stderr}`;
+					let output = "";
+
+					try {
+						const daemon = DaemonManager.getInstance();
+						const port = daemon.getPort();
+						const res = await fetch(`http://localhost:${port}/api/lint`, {
+							method: "POST",
+							headers: { "Content-Type": "application/json" },
+							body: JSON.stringify({ content }),
+						});
+						if (!res.ok) throw new Error("Daemon not ready");
+
+						const data = (await res.json()) as any;
+						const errStrs = (data.errors || []).map(
+							(e: string) => `- [Error] ${e}`,
+						);
+						const warnStrs = (data.warnings || []).map(
+							(w: string) => `- [Warning] ${w}`,
+						);
+						output = [...errStrs, ...warnStrs].join("\n");
+					} catch (_err) {
+						// Fallback to CLI
+						const { stdout, stderr } =
+							await DaemonManager.getInstance().executeRawCliCommand([
+								"lint",
+								filePath,
+							]);
+						output = `${stdout}\n${stderr}`;
+					}
 
 					const diagnostics = parseDiagnosticsFromOutput(output, lines);
 					diagnosticCollection.set(uri, diagnostics);

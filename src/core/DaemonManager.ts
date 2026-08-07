@@ -122,20 +122,43 @@ export class DaemonManager {
 				return JSON.parse(str);
 			} catch (_e) {}
 
-			// The CLI outputs the final JSON at the end of stdout.
-			// It might be single-line or multi-line (pretty-printed).
-			// We build the string from the bottom up and try to parse it.
-			const lines = str.split("\n");
-			let current = "";
-			for (let i = lines.length - 1; i >= 0; i--) {
-				current = lines[i] + (current ? "\n" + current : "");
-				const trimmed = current.trim();
-				if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+			// The CLI might output trailing logs (e.g. info/warn logs).
+			// We search for the last valid JSON block from the end of the string.
+			const firstBrace = str.indexOf("{");
+			const firstBracket = str.indexOf("[");
+			let startIndex = -1;
+			if (firstBrace !== -1 && firstBracket !== -1) {
+				startIndex = Math.min(firstBrace, firstBracket);
+			} else {
+				startIndex = Math.max(firstBrace, firstBracket);
+			}
+
+			if (startIndex !== -1) {
+				const lastBrace = str.lastIndexOf("}");
+				const lastBracket = str.lastIndexOf("]");
+				const endIndex = Math.max(lastBrace, lastBracket);
+
+				if (endIndex > startIndex) {
 					try {
-						return JSON.parse(trimmed);
-					} catch (_e) {
-						// Continue adding lines upwards until it forms valid JSON
-					}
+						return JSON.parse(str.substring(startIndex, endIndex + 1));
+					} catch (_e) {}
+				}
+			}
+
+			// Fallback line-by-line assembly in case of weird formatting
+			const lines = str.split("\n");
+			for (let start = 0; start < lines.length; start++) {
+				let current = "";
+				for (let end = lines.length - 1; end >= start; end--) {
+					current = lines
+						.slice(start, end + 1)
+						.join("\n")
+						.trim();
+					if (!current.startsWith("{") && !current.startsWith("[")) break;
+					if (!current.endsWith("}") && !current.endsWith("]")) continue;
+					try {
+						return JSON.parse(current);
+					} catch (_e) {}
 				}
 			}
 
