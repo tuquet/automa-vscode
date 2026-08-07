@@ -147,9 +147,9 @@ export class HistoryTreeDataProvider
 		this.refresh();
 	}
 
-	setFilter(taskId: string) {
+	async setFilter(taskId: string) {
 		this.taskIdFilter = taskId;
-		vscode.commands.executeCommand(
+		await vscode.commands.executeCommand(
 			"setContext",
 			"automa.history.isFiltered",
 			true,
@@ -158,9 +158,9 @@ export class HistoryTreeDataProvider
 		this.refresh();
 	}
 
-	clearFilter() {
+	async clearFilter() {
 		this.taskIdFilter = undefined;
-		vscode.commands.executeCommand(
+		await vscode.commands.executeCommand(
 			"setContext",
 			"automa.history.isFiltered",
 			false,

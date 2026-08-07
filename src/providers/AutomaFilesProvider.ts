@@ -36,8 +36,8 @@ export class AutomaFilesProvider implements vscode.TreeDataProvider<FileItem> {
 			treeDataProvider: this,
 		});
 		context.subscriptions.push(treeView);
-		treeView.onDidChangeVisibility((e) => {
-			if (e.visible) this.setSearchQuery("");
+		treeView.onDidChangeVisibility(async (e) => {
+			if (e.visible) await this.setSearchQuery("");
 		});
 
 		context.subscriptions.push(
@@ -52,13 +52,14 @@ export class AutomaFilesProvider implements vscode.TreeDataProvider<FileItem> {
 					const query = await vscode.window.showInputBox({
 						placeHolder: `Search ${entityName}...`,
 					});
-					if (query !== undefined) this.setSearchQuery(query);
+					if (query !== undefined) await this.setSearchQuery(query);
 				},
 			),
 		);
 		context.subscriptions.push(
-			vscode.commands.registerCommand(`automa.clearSearch${entityName}`, () =>
-				this.setSearchQuery(""),
+			vscode.commands.registerCommand(
+				`automa.clearSearch${entityName}`,
+				async () => await this.setSearchQuery(""),
 			),
 		);
 	}
@@ -68,9 +69,9 @@ export class AutomaFilesProvider implements vscode.TreeDataProvider<FileItem> {
 		this._onDidChangeTreeData.fire(undefined);
 	}
 
-	setSearchQuery(query: string): void {
+	async setSearchQuery(query: string): Promise<void> {
 		this.searchQuery = query.toLowerCase();
-		vscode.commands.executeCommand(
+		await vscode.commands.executeCommand(
 			"setContext",
 			`${this.viewId}.isFiltered`,
 			this.searchQuery !== "",

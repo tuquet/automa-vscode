@@ -1,3 +1,4 @@
+import * as path from "node:path";
 import * as vscode from "vscode";
 
 export abstract class BaseCustomEditorProvider {
@@ -28,7 +29,10 @@ export abstract class BaseCustomEditorProvider {
 		} else {
 			// Fallback to FileSystemWatcher for CustomDocument
 			const watcher = vscode.workspace.createFileSystemWatcher(
-				document.uri.fsPath,
+				new vscode.RelativePattern(
+					vscode.Uri.file(path.dirname(document.uri.fsPath)),
+					path.basename(document.uri.fsPath),
+				),
 			);
 			const uriStr = document.uri.toString();
 			const handleChange = () => {
