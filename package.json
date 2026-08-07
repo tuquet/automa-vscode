@@ -1,678 +1,678 @@
 {
-  "name": "automa-vscode",
-  "publisher": "NguyenDinhTu",
-  "displayName": "Automa CLI Toolkit",
-  "description": "VS Code integration for the Automa Ecosystem CLI",
-  "version": "0.0.1",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/tuquet/automa-vscode.git"
-  },
-  "engines": {
-    "vscode": "^1.80.0"
-  },
-  "categories": [
-    "Other"
-  ],
-  "activationEvents": [
-    "onStartupFinished"
-  ],
-  "main": "./dist/extension.js",
-  "contributes": {
-    "menus": {
-      "explorer/context": [
-        {
-          "submenu": "automa.explorerSubmenu",
-          "when": "resourceExtname == .json && resourceFilename =~ /^(?!.*automa-log).*$/",
-          "group": "automa@1"
-        }
-      ],
-      "automa.explorerSubmenu": [
-        {
-          "command": "automa.runWorkflow",
-          "when": "resourceExtname == .json && resourceFilename =~ /^(?!.*automa-log).*$/",
-          "group": "1_run@1"
-        },
-        {
-          "command": "automa.runWorkflowWithParams",
-          "when": "resourceExtname == .json && resourceFilename =~ /^(?!.*automa-log).*$/",
-          "group": "1_run@2"
-        },
-        {
-          "command": "automa.runFleet",
-          "when": "resourceExtname == .json && resourceFilename =~ /.*\\.fleets\\.json$/",
-          "group": "1_run@3"
-        },
-        {
-          "command": "automa.fixWorkflowId",
-          "when": "resourceExtname == .json && resourceFilename =~ /^(?!.*automa-log).*$/",
-          "group": "2_tools@1"
-        },
-        {
-          "command": "automa.lintCheck",
-          "when": "resourceExtname == .json && resourceFilename =~ /^(?!.*automa-log).*$/",
-          "group": "2_tools@2"
-        }
-      ],
-      "editor/title/run": [
-        {
-          "command": "automa.runWorkflow",
-          "when": "resourceExtname == .json && resourceFilename =~ /^(?!.*automa-log).*$/",
-          "group": "navigation"
-        },
-        {
-          "command": "automa.runWorkflowWithParams",
-          "when": "resourceExtname == .json && resourceFilename =~ /^(?!.*automa-log).*$/",
-          "group": "navigation"
-        },
-        {
-          "command": "automa.runFleet",
-          "when": "resourceExtname == .json && resourceFilename =~ /.*\\.fleets\\.json$/",
-          "group": "navigation"
-        }
-      ],
-      "editor/title": [
-        {
-          "command": "automa.showWorkflowSource",
-          "when": "activeCustomEditorId == 'automa.workflowPreview'",
-          "group": "navigation"
-        },
-        {
-          "command": "automa.showWorkflowPreview",
-          "when": "resourceFilename =~ /\\.(workflow|package)\\.json/ && activeCustomEditorId != 'automa.workflowPreview'",
-          "group": "navigation"
-        },
-        {
-          "command": "automa.showFleetSource",
-          "when": "activeCustomEditorId == 'automa.fleetPreview'",
-          "group": "navigation"
-        },
-        {
-          "command": "automa.showFleetPreview",
-          "when": "resourceExtname == .json && resourceFilename =~ /.*\\.fleets\\.json$/ && activeCustomEditorId != 'automa.fleetPreview'",
-          "group": "navigation"
-        },
-        {
-          "command": "automa.showLogSource",
-          "when": "activeCustomEditorId == 'automa.logEditor'",
-          "group": "navigation"
-        },
-        {
-          "command": "automa.showLogPreview",
-          "when": "resourceFilename =~ /automa-log.json/ && activeCustomEditorId != 'automa.logEditor'",
-          "group": "navigation"
-        }
-      ],
-      "editor/title/context": [
-        {
-          "command": "automa.showWorkflowPreview",
-          "when": "resourceFilename =~ /\\.(workflow|package)\\.json/ && activeCustomEditorId != 'automa.workflowPreview'",
-          "group": "navigation"
-        },
-        {
-          "command": "automa.showFleetPreview",
-          "when": "resourceExtname == .json && resourceFilename =~ /.*\\.fleets\\.json$/ && activeCustomEditorId != 'automa.fleetPreview'",
-          "group": "navigation"
-        }
-      ],
-      "view/title": [
-        {
-          "command": "automa.refreshRunners",
-          "when": "view == automa.activeRunners",
-          "group": "navigation"
-        },
-        {
-          "command": "automa.refreshHistory",
-          "when": "view == automa.executionHistory",
-          "group": "navigation"
-        },
-        {
-          "command": "automa.filterHistoryByTaskId",
-          "when": "view == automa.executionHistory",
-          "group": "navigation@1"
-        },
-        {
-          "command": "automa.clearHistoryFilter",
-          "when": "view == automa.executionHistory && automa.history.isFiltered",
-          "group": "navigation@2"
-        },
-        {
-          "command": "automa.clearHistory",
-          "when": "view == automa.executionHistory",
-          "group": "navigation@3"
-        },
-        {
-          "command": "automa.searchProfiles",
-          "when": "view == automa.browserProfiles",
-          "group": "navigation@1"
-        },
-        {
-          "command": "automa.createProfile",
-          "when": "view == automa.browserProfiles",
-          "group": "navigation@0"
-        },
-        {
-          "command": "automa.clearSearchProfiles",
-          "when": "view == automa.browserProfiles && automa.browserProfiles.isFiltered",
-          "group": "navigation@2"
-        },
-        {
-          "command": "automa.searchWorkflows",
-          "when": "view == automa.workflows",
-          "group": "navigation@1"
-        },
-        {
-          "command": "automa.createWorkflow",
-          "when": "view == automa.workflows",
-          "group": "navigation@0"
-        },
-        {
-          "command": "automa.clearSearchWorkflows",
-          "when": "view == automa.workflows && automa.workflows.isFiltered",
-          "group": "navigation@2"
-        },
-        {
-          "command": "automa.searchPackages",
-          "when": "view == automa.packages",
-          "group": "navigation@1"
-        },
-        {
-          "command": "automa.createPackage",
-          "when": "view == automa.packages",
-          "group": "navigation@0"
-        },
-        {
-          "command": "automa.clearSearchPackages",
-          "when": "view == automa.packages && automa.packages.isFiltered",
-          "group": "navigation@2"
-        },
-        {
-          "command": "automa.searchFleets",
-          "when": "view == automa.fleets",
-          "group": "navigation@1"
-        },
-        {
-          "command": "automa.clearSearchFleets",
-          "when": "view == automa.fleets && automa.fleets.isFiltered",
-          "group": "navigation@2"
-        },
-        {
-          "command": "automa.refreshVault",
-          "when": "view == automa.globalVault",
-          "group": "navigation@1"
-        },
-        {
-          "command": "automa.addVariable",
-          "when": "view == automa.globalVault",
-          "group": "navigation@2"
-        },
-        {
-          "command": "automa.addCredential",
-          "when": "view == automa.globalVault",
-          "group": "navigation@3"
-        },
-        {
-          "command": "automa.addTable",
-          "when": "view == automa.globalVault",
-          "group": "navigation@4"
-        }
-      ],
-      "view/item/context": [
-        {
-          "command": "automa.killRunner",
-          "when": "view == automa.activeRunners",
-          "group": "inline"
-        },
-        {
-          "command": "automa.showLiveLog",
-          "when": "view == automa.activeRunners",
-          "group": "inline"
-        },
-        {
-          "command": "automa.deleteHistoryItem",
-          "when": "view == automa.executionHistory",
-          "group": "inline"
-        },
-        {
-          "command": "automa.runWorkflow",
-          "when": "viewItem == automaFileItem-automa.workflows",
-          "group": "inline"
-        },
-        {
-          "command": "automa.runFleet",
-          "when": "viewItem == automaFileItem-automa.fleets",
-          "group": "inline"
-        }
-      ]
-    },
-    "submenus": [
-      {
-        "id": "automa.explorerSubmenu",
-        "label": "Automa Toolkit"
-      }
-    ],
-    "viewsContainers": {
-      "activitybar": [
-        {
-          "id": "automa-activity-bar",
-          "title": "Automa Ecosystem",
-          "icon": "resources/automa-icon.svg"
-        }
-      ]
-    },
-    "views": {
-      "automa-activity-bar": [
-        {
-          "id": "automa.activeRunners",
-          "name": "Active Runners",
-          "icon": "assets/icons/rocket.svg",
-          "contextualTitle": "Automa Active Runners"
-        },
-        {
-          "id": "automa.executionHistory",
-          "name": "Execution History",
-          "icon": "assets/icons/rocket.svg",
-          "contextualTitle": "Automa Execution History"
-        },
-        {
-          "id": "automa.fleets",
-          "name": "Fleets",
-          "icon": "$(rocket)",
-          "contextualTitle": "Automa Fleets"
-        },
-        {
-          "id": "automa.workflows",
-          "name": "Workflows",
-          "icon": "$(file-code)",
-          "contextualTitle": "Automa Workflows"
-        },
-        {
-          "id": "automa.globalVault",
-          "name": "Global Vault",
-          "icon": "$(shield)",
-          "contextualTitle": "Automa Global Vault"
-        },
-        {
-          "id": "automa.browserProfiles",
-          "name": "Profiles",
-          "icon": "$(account)",
-          "contextualTitle": "Automa Profiles"
-        },
-        {
-          "id": "automa.packages",
-          "name": "Packages",
-          "icon": "$(package)",
-          "contextualTitle": "Automa Packages"
-        }
-      ]
-    },
-    "languages": [
-      {
-        "id": "json",
-        "extensions": [
-          ".workflow.json",
-          ".package.json",
-          ".automa-var.json",
-          ".automa-table.json",
-          ".automa-rows.json",
-          ".automa-cred.json",
-          ".automa-folder.json",
-          ".fleets.json"
-        ]
-      }
-    ],
-    "commands": [
-      {
-        "command": "automa.showWorkflowSource",
-        "title": "Show Workflow Source",
-        "icon": "$(code)"
-      },
-      {
-        "command": "automa.showWorkflowPreview",
-        "title": "Preview Workflow",
-        "icon": "$(preview)"
-      },
-      {
-        "command": "automa.showFleetSource",
-        "title": "Show Fleet Source",
-        "icon": "$(code)"
-      },
-      {
-        "command": "automa.showFleetPreview",
-        "title": "Preview Fleet",
-        "icon": "$(preview)"
-      },
-      {
-        "command": "automa.runWorkflow",
-        "title": "Automa: Run Workflow",
-        "icon": "$(play)"
-      },
-      {
-        "command": "automa.runWorkflowWithParams",
-        "title": "Automa: Run Workflow with Parameters",
-        "icon": "$(play-circle)"
-      },
-      {
-        "command": "automa.runFleet",
-        "title": "Automa: Run Fleet",
-        "icon": "$(play)"
-      },
-      {
-        "command": "automa.fixWorkflowId",
-        "title": "Automa: Auto-Fix Workflow ID",
-        "icon": "$(wrench)"
-      },
-      {
-        "command": "automa.lintCheck",
-        "title": "Automa: Lint Check Workflow",
-        "icon": "$(checklist)"
-      },
-      {
-        "command": "automa.showLogSource",
-        "title": "Show Source",
-        "icon": "$(code)"
-      },
-      {
-        "command": "automa.showLogPreview",
-        "title": "Open Preview",
-        "icon": "$(preview)"
-      },
-      {
-        "command": "automa.history.loadMore",
-        "title": "Load More...",
-        "icon": "$(sync)"
-      },
-      {
-        "command": "automa.openInStudio",
-        "title": "Open in Studio",
-        "icon": "$(link-external)"
-      },
-      {
-        "command": "automa.focusActiveRunners",
-        "title": "Focus Active Runners"
-      },
-      {
-        "command": "automa.createWorkflow",
-        "title": "Create Workflow",
-        "icon": "$(add)"
-      },
-      {
-        "command": "automa.createPackage",
-        "title": "Create Package",
-        "icon": "$(add)"
-      },
-      {
-        "command": "automa.createProfile",
-        "title": "Create Profile",
-        "icon": "$(add)"
-      },
-      {
-        "command": "automa.refreshRunners",
-        "title": "Refresh Runners",
-        "icon": "$(refresh)"
-      },
-      {
-        "command": "automa.refreshHistory",
-        "title": "Refresh History",
-        "icon": "$(refresh)"
-      },
-      {
-        "command": "automa.deleteHistoryItem",
-        "title": "Delete",
-        "icon": "$(trash)"
-      },
-      {
-        "command": "automa.clearHistory",
-        "title": "Clear History",
-        "icon": "$(trash)"
-      },
-      {
-        "command": "automa.filterHistoryByTaskId",
-        "title": "Filter by Task ID",
-        "icon": "$(filter)"
-      },
-      {
-        "command": "automa.clearHistoryFilter",
-        "title": "Clear Filter",
-        "icon": "$(clear-all)"
-      },
-      {
-        "command": "automa.killRunner",
-        "title": "Kill Runner",
-        "icon": "$(close)"
-      },
-      {
-        "command": "automa.vault.encryptSecret",
-        "title": "Automa: Encrypt Secret",
-        "category": "Automa Vault"
-      },
-      {
-        "command": "automa.showLiveLog",
-        "title": "Live Log",
-        "icon": "$(output)"
-      },
-      {
-        "command": "automa.searchProfiles",
-        "title": "Search",
-        "icon": "$(search)"
-      },
-      {
-        "command": "automa.searchWorkflows",
-        "title": "Search",
-        "icon": "$(search)"
-      },
-      {
-        "command": "automa.searchPackages",
-        "title": "Search",
-        "icon": "$(search)"
-      },
-      {
-        "command": "automa.searchFleets",
-        "title": "Search",
-        "icon": "$(search)"
-      },
-      {
-        "command": "automa.clearSearchProfiles",
-        "title": "Clear Search",
-        "icon": "$(clear-all)"
-      },
-      {
-        "command": "automa.clearSearchWorkflows",
-        "title": "Clear Search",
-        "icon": "$(clear-all)"
-      },
-      {
-        "command": "automa.clearSearchPackages",
-        "title": "Clear Search",
-        "icon": "$(clear-all)"
-      },
-      {
-        "command": "automa.clearSearchFleets",
-        "title": "Clear Search",
-        "icon": "$(clear-all)"
-      },
-      {
-        "command": "automa.addVariable",
-        "title": "Add Variable",
-        "icon": "$(add)"
-      },
-      {
-        "command": "automa.addCredential",
-        "title": "Add Credential",
-        "icon": "$(key)"
-      },
-      {
-        "command": "automa.addTable",
-        "title": "Add Table",
-        "icon": "$(list-flat)"
-      },
-      {
-        "command": "automa.refreshVault",
-        "title": "Refresh",
-        "icon": "$(refresh)"
-      }
-    ],
-    "customEditors": [
-      {
-        "viewType": "automa.logEditor",
-        "displayName": "Automa Execution Log",
-        "selector": [
-          {
-            "filenamePattern": "*.automa-log.json"
-          }
-        ]
-      },
-      {
-        "viewType": "automa.workflowPreview",
-        "displayName": "Automa Workflow Preview",
-        "selector": [
-          {
-            "filenamePattern": "*.workflow.json"
-          },
-          {
-            "filenamePattern": "*.package.json"
-          }
-        ]
-      },
-      {
-        "viewType": "automa.fleetPreview",
-        "displayName": "Fleet Preview",
-        "selector": [
-          {
-            "filenamePattern": "*.fleet.json"
-          },
-          {
-            "filenamePattern": "*.fleets.json"
-          }
-        ]
-      },
-      {
-        "viewType": "automa.bprofileEditor",
-        "displayName": "Automa Data Editor",
-        "selector": [
-          {
-            "filenamePattern": "*.profile.json"
-          },
-          {
-            "filenamePattern": "*.bprofile.json"
-          },
-          {
-            "filenamePattern": "*.variables.json"
-          },
-          {
-            "filenamePattern": "*.credentials.json"
-          },
-          {
-            "filenamePattern": "*.tables.json"
-          }
-        ]
-      }
-    ],
-    "configuration": [
-      {
-        "title": "Automa: Editor & Preview",
-        "properties": {
-          "automa.preview.defaultOnClick": {
-            "type": "boolean",
-            "default": true,
-            "description": "Set Automa Workflow/Package Preview as the default editor when clicking on *.workflow.json or *.package.json files."
-          }
-        }
-      },
-      {
-        "title": "Automa: Workflow Execution",
-        "properties": {
-          "automa.run.useDefaultParameters": {
-            "type": "boolean",
-            "default": false,
-            "description": "Skip interactive prompts for workflow trigger parameters and always use default values."
-          },
-          "automa.vault.run.defaultBrowser": {
-            "type": "string",
-            "enum": [
-              "chromium",
-              "chrome",
-              "edge",
-              "firefox",
-              "brave",
-              "active-tab"
-            ],
-            "default": "chromium",
-            "description": "Default browser to use when running a workflow in the Vault. 'chromium' uses the isolated built-in browser."
-          },
-          "automa.vault.run.headless": {
-            "type": "boolean",
-            "default": false,
-            "description": "Run the browser in headless mode."
-          },
-          "automa.vault.run.closeBrowserOnFinish": {
-            "type": "boolean",
-            "default": true,
-            "description": "Automatically close the browser when the workflow finishes."
-          },
-          "automa.vault.run.debug": {
-            "type": "boolean",
-            "default": false,
-            "description": "Enable verbose debug logging for CLI execution"
-          },
-          "automa.vault.run.fleetGridSystem": {
-            "type": "boolean",
-            "default": true,
-            "description": "Enable Grid System to automatically allocate and position browser windows when running Automa Fleet."
-          },
-          "automa.cliPath": {
-            "type": "string",
-            "default": "",
-            "description": "Absolute path to the automa-cli executable. Leave empty to auto-detect or use npx."
-          },
-          "automa.daemon.port": {
-            "type": "number",
-            "default": 8765,
-            "description": "Base port for the Automa background daemon. The extension will automatically find the next available port if this one is in use."
-          },
-          "automa.encryptionPassphrase": {
-            "type": "string",
-            "default": "",
-            "description": "Passphrase used to encrypt credentials in the Automa Global Vault."
-          }
-        }
-      },
-      {
-        "title": "Automa: Environment & Logs",
-        "properties": {
-          "automa.vault.run.globalVariables": {
-            "type": "object",
-            "default": {},
-            "description": "Global variables (JSON object) appended to the workflow run parameters.",
-            "additionalProperties": {
-              "type": "string"
-            }
-          }
-        }
-      }
-    ]
-  },
-  "scripts": {
-    "vscode:prepublish": "pnpm run package",
-    "compile": "tsup src/extension.ts --format cjs --external vscode --sourcemap",
-    "watch": "tsup src/extension.ts --format cjs --external vscode --sourcemap --watch",
-    "package": "tsup src/extension.ts --format cjs --external vscode --minify",
-    "compile-tests": "tsc -p . --outDir out",
-    "watch-tests": "tsc -p . -w --outDir out",
-    "pretest": "pnpm run compile-tests && pnpm run compile && pnpm run check",
-    "check": "biome check --write",
-    "test": "vitest run"
-  },
-  "devDependencies": {
-    "@biomejs/biome": "2.5.5",
-    "@types/node": "18.x",
-    "@types/vscode": "^1.80.0",
-    "tsup": "^8.0.2",
-    "typescript": "^5.3.3",
-    "vitest": "^4.1.10"
-  },
-  "dependencies": {
-    "leader-line-new": "^1.1.9",
-    "sortablejs": "^1.15.7"
-  }
+	"name": "automa-vscode",
+	"publisher": "NguyenDinhTu",
+	"displayName": "Automa CLI Toolkit",
+	"description": "VS Code integration for the Automa Ecosystem CLI",
+	"version": "0.0.1",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/tuquet/automa-vscode.git"
+	},
+	"engines": {
+		"vscode": "^1.80.0"
+	},
+	"categories": [
+		"Other"
+	],
+	"activationEvents": [
+		"onStartupFinished"
+	],
+	"main": "./dist/extension.js",
+	"contributes": {
+		"menus": {
+			"explorer/context": [
+				{
+					"submenu": "automa.explorerSubmenu",
+					"when": "resourceExtname == .json && resourceFilename =~ /^(?!.*automa-log).*$/",
+					"group": "automa@1"
+				}
+			],
+			"automa.explorerSubmenu": [
+				{
+					"command": "automa.runWorkflow",
+					"when": "resourceExtname == .json && resourceFilename =~ /^(?!.*automa-log).*$/",
+					"group": "1_run@1"
+				},
+				{
+					"command": "automa.runWorkflowWithParams",
+					"when": "resourceExtname == .json && resourceFilename =~ /^(?!.*automa-log).*$/",
+					"group": "1_run@2"
+				},
+				{
+					"command": "automa.runFleet",
+					"when": "resourceExtname == .json && resourceFilename =~ /.*\\.fleets\\.json$/",
+					"group": "1_run@3"
+				},
+				{
+					"command": "automa.fixWorkflowId",
+					"when": "resourceExtname == .json && resourceFilename =~ /^(?!.*automa-log).*$/",
+					"group": "2_tools@1"
+				},
+				{
+					"command": "automa.lintCheck",
+					"when": "resourceExtname == .json && resourceFilename =~ /^(?!.*automa-log).*$/",
+					"group": "2_tools@2"
+				}
+			],
+			"editor/title/run": [
+				{
+					"command": "automa.runWorkflow",
+					"when": "resourceExtname == .json && resourceFilename =~ /^(?!.*automa-log).*$/",
+					"group": "navigation"
+				},
+				{
+					"command": "automa.runWorkflowWithParams",
+					"when": "resourceExtname == .json && resourceFilename =~ /^(?!.*automa-log).*$/",
+					"group": "navigation"
+				},
+				{
+					"command": "automa.runFleet",
+					"when": "resourceExtname == .json && resourceFilename =~ /.*\\.fleets\\.json$/",
+					"group": "navigation"
+				}
+			],
+			"editor/title": [
+				{
+					"command": "automa.showWorkflowSource",
+					"when": "activeCustomEditorId == 'automa.workflowPreview'",
+					"group": "navigation"
+				},
+				{
+					"command": "automa.showWorkflowPreview",
+					"when": "resourceFilename =~ /\\.(workflow|package)\\.json/ && activeCustomEditorId != 'automa.workflowPreview'",
+					"group": "navigation"
+				},
+				{
+					"command": "automa.showFleetSource",
+					"when": "activeCustomEditorId == 'automa.fleetPreview'",
+					"group": "navigation"
+				},
+				{
+					"command": "automa.showFleetPreview",
+					"when": "resourceExtname == .json && resourceFilename =~ /.*\\.fleets\\.json$/ && activeCustomEditorId != 'automa.fleetPreview'",
+					"group": "navigation"
+				},
+				{
+					"command": "automa.showLogSource",
+					"when": "activeCustomEditorId == 'automa.logEditor'",
+					"group": "navigation"
+				},
+				{
+					"command": "automa.showLogPreview",
+					"when": "resourceFilename =~ /automa-log.json/ && activeCustomEditorId != 'automa.logEditor'",
+					"group": "navigation"
+				}
+			],
+			"editor/title/context": [
+				{
+					"command": "automa.showWorkflowPreview",
+					"when": "resourceFilename =~ /\\.(workflow|package)\\.json/ && activeCustomEditorId != 'automa.workflowPreview'",
+					"group": "navigation"
+				},
+				{
+					"command": "automa.showFleetPreview",
+					"when": "resourceExtname == .json && resourceFilename =~ /.*\\.fleets\\.json$/ && activeCustomEditorId != 'automa.fleetPreview'",
+					"group": "navigation"
+				}
+			],
+			"view/title": [
+				{
+					"command": "automa.refreshRunners",
+					"when": "view == automa.activeRunners",
+					"group": "navigation"
+				},
+				{
+					"command": "automa.refreshHistory",
+					"when": "view == automa.executionHistory",
+					"group": "navigation"
+				},
+				{
+					"command": "automa.filterHistoryByTaskId",
+					"when": "view == automa.executionHistory",
+					"group": "navigation@1"
+				},
+				{
+					"command": "automa.clearHistoryFilter",
+					"when": "view == automa.executionHistory && automa.history.isFiltered",
+					"group": "navigation@2"
+				},
+				{
+					"command": "automa.clearHistory",
+					"when": "view == automa.executionHistory",
+					"group": "navigation@3"
+				},
+				{
+					"command": "automa.searchProfiles",
+					"when": "view == automa.browserProfiles",
+					"group": "navigation@1"
+				},
+				{
+					"command": "automa.createProfile",
+					"when": "view == automa.browserProfiles",
+					"group": "navigation@0"
+				},
+				{
+					"command": "automa.clearSearchProfiles",
+					"when": "view == automa.browserProfiles && automa.browserProfiles.isFiltered",
+					"group": "navigation@2"
+				},
+				{
+					"command": "automa.searchWorkflows",
+					"when": "view == automa.workflows",
+					"group": "navigation@1"
+				},
+				{
+					"command": "automa.createWorkflow",
+					"when": "view == automa.workflows",
+					"group": "navigation@0"
+				},
+				{
+					"command": "automa.clearSearchWorkflows",
+					"when": "view == automa.workflows && automa.workflows.isFiltered",
+					"group": "navigation@2"
+				},
+				{
+					"command": "automa.searchPackages",
+					"when": "view == automa.packages",
+					"group": "navigation@1"
+				},
+				{
+					"command": "automa.createPackage",
+					"when": "view == automa.packages",
+					"group": "navigation@0"
+				},
+				{
+					"command": "automa.clearSearchPackages",
+					"when": "view == automa.packages && automa.packages.isFiltered",
+					"group": "navigation@2"
+				},
+				{
+					"command": "automa.searchFleets",
+					"when": "view == automa.fleets",
+					"group": "navigation@1"
+				},
+				{
+					"command": "automa.clearSearchFleets",
+					"when": "view == automa.fleets && automa.fleets.isFiltered",
+					"group": "navigation@2"
+				},
+				{
+					"command": "automa.refreshVault",
+					"when": "view == automa.globalVault",
+					"group": "navigation@1"
+				},
+				{
+					"command": "automa.addVariable",
+					"when": "view == automa.globalVault",
+					"group": "navigation@2"
+				},
+				{
+					"command": "automa.addCredential",
+					"when": "view == automa.globalVault",
+					"group": "navigation@3"
+				},
+				{
+					"command": "automa.addTable",
+					"when": "view == automa.globalVault",
+					"group": "navigation@4"
+				}
+			],
+			"view/item/context": [
+				{
+					"command": "automa.killRunner",
+					"when": "view == automa.activeRunners",
+					"group": "inline"
+				},
+				{
+					"command": "automa.showLiveLog",
+					"when": "view == automa.activeRunners",
+					"group": "inline"
+				},
+				{
+					"command": "automa.deleteHistoryItem",
+					"when": "view == automa.executionHistory",
+					"group": "inline"
+				},
+				{
+					"command": "automa.runWorkflow",
+					"when": "viewItem == automaFileItem-automa.workflows",
+					"group": "inline"
+				},
+				{
+					"command": "automa.runFleet",
+					"when": "viewItem == automaFileItem-automa.fleets",
+					"group": "inline"
+				}
+			]
+		},
+		"submenus": [
+			{
+				"id": "automa.explorerSubmenu",
+				"label": "Automa Toolkit"
+			}
+		],
+		"viewsContainers": {
+			"activitybar": [
+				{
+					"id": "automa-activity-bar",
+					"title": "Automa Ecosystem",
+					"icon": "resources/automa-icon.svg"
+				}
+			]
+		},
+		"views": {
+			"automa-activity-bar": [
+				{
+					"id": "automa.activeRunners",
+					"name": "Active Runners",
+					"icon": "assets/icons/rocket.svg",
+					"contextualTitle": "Automa Active Runners"
+				},
+				{
+					"id": "automa.executionHistory",
+					"name": "Execution History",
+					"icon": "assets/icons/rocket.svg",
+					"contextualTitle": "Automa Execution History"
+				},
+				{
+					"id": "automa.fleets",
+					"name": "Fleets",
+					"icon": "$(rocket)",
+					"contextualTitle": "Automa Fleets"
+				},
+				{
+					"id": "automa.workflows",
+					"name": "Workflows",
+					"icon": "$(file-code)",
+					"contextualTitle": "Automa Workflows"
+				},
+				{
+					"id": "automa.globalVault",
+					"name": "Global Vault",
+					"icon": "$(shield)",
+					"contextualTitle": "Automa Global Vault"
+				},
+				{
+					"id": "automa.browserProfiles",
+					"name": "Profiles",
+					"icon": "$(account)",
+					"contextualTitle": "Automa Profiles"
+				},
+				{
+					"id": "automa.packages",
+					"name": "Packages",
+					"icon": "$(package)",
+					"contextualTitle": "Automa Packages"
+				}
+			]
+		},
+		"languages": [
+			{
+				"id": "json",
+				"extensions": [
+					".workflow.json",
+					".package.json",
+					".automa-var.json",
+					".automa-table.json",
+					".automa-rows.json",
+					".automa-cred.json",
+					".automa-folder.json",
+					".fleets.json"
+				]
+			}
+		],
+		"commands": [
+			{
+				"command": "automa.showWorkflowSource",
+				"title": "Show Workflow Source",
+				"icon": "$(code)"
+			},
+			{
+				"command": "automa.showWorkflowPreview",
+				"title": "Preview Workflow",
+				"icon": "$(preview)"
+			},
+			{
+				"command": "automa.showFleetSource",
+				"title": "Show Fleet Source",
+				"icon": "$(code)"
+			},
+			{
+				"command": "automa.showFleetPreview",
+				"title": "Preview Fleet",
+				"icon": "$(preview)"
+			},
+			{
+				"command": "automa.runWorkflow",
+				"title": "Automa: Run Workflow",
+				"icon": "$(play)"
+			},
+			{
+				"command": "automa.runWorkflowWithParams",
+				"title": "Automa: Run Workflow with Parameters",
+				"icon": "$(play-circle)"
+			},
+			{
+				"command": "automa.runFleet",
+				"title": "Automa: Run Fleet",
+				"icon": "$(play)"
+			},
+			{
+				"command": "automa.fixWorkflowId",
+				"title": "Automa: Auto-Fix Workflow ID",
+				"icon": "$(wrench)"
+			},
+			{
+				"command": "automa.lintCheck",
+				"title": "Automa: Lint Check Workflow",
+				"icon": "$(checklist)"
+			},
+			{
+				"command": "automa.showLogSource",
+				"title": "Show Source",
+				"icon": "$(code)"
+			},
+			{
+				"command": "automa.showLogPreview",
+				"title": "Open Preview",
+				"icon": "$(preview)"
+			},
+			{
+				"command": "automa.history.loadMore",
+				"title": "Load More...",
+				"icon": "$(sync)"
+			},
+			{
+				"command": "automa.openInStudio",
+				"title": "Open in Studio",
+				"icon": "$(link-external)"
+			},
+			{
+				"command": "automa.focusActiveRunners",
+				"title": "Focus Active Runners"
+			},
+			{
+				"command": "automa.createWorkflow",
+				"title": "Create Workflow",
+				"icon": "$(add)"
+			},
+			{
+				"command": "automa.createPackage",
+				"title": "Create Package",
+				"icon": "$(add)"
+			},
+			{
+				"command": "automa.createProfile",
+				"title": "Create Profile",
+				"icon": "$(add)"
+			},
+			{
+				"command": "automa.refreshRunners",
+				"title": "Refresh Runners",
+				"icon": "$(refresh)"
+			},
+			{
+				"command": "automa.refreshHistory",
+				"title": "Refresh History",
+				"icon": "$(refresh)"
+			},
+			{
+				"command": "automa.deleteHistoryItem",
+				"title": "Delete",
+				"icon": "$(trash)"
+			},
+			{
+				"command": "automa.clearHistory",
+				"title": "Clear History",
+				"icon": "$(trash)"
+			},
+			{
+				"command": "automa.filterHistoryByTaskId",
+				"title": "Filter by Task ID",
+				"icon": "$(filter)"
+			},
+			{
+				"command": "automa.clearHistoryFilter",
+				"title": "Clear Filter",
+				"icon": "$(clear-all)"
+			},
+			{
+				"command": "automa.killRunner",
+				"title": "Kill Runner",
+				"icon": "$(close)"
+			},
+			{
+				"command": "automa.vault.encryptSecret",
+				"title": "Automa: Encrypt Secret",
+				"category": "Automa Vault"
+			},
+			{
+				"command": "automa.showLiveLog",
+				"title": "Live Log",
+				"icon": "$(output)"
+			},
+			{
+				"command": "automa.searchProfiles",
+				"title": "Search",
+				"icon": "$(search)"
+			},
+			{
+				"command": "automa.searchWorkflows",
+				"title": "Search",
+				"icon": "$(search)"
+			},
+			{
+				"command": "automa.searchPackages",
+				"title": "Search",
+				"icon": "$(search)"
+			},
+			{
+				"command": "automa.searchFleets",
+				"title": "Search",
+				"icon": "$(search)"
+			},
+			{
+				"command": "automa.clearSearchProfiles",
+				"title": "Clear Search",
+				"icon": "$(clear-all)"
+			},
+			{
+				"command": "automa.clearSearchWorkflows",
+				"title": "Clear Search",
+				"icon": "$(clear-all)"
+			},
+			{
+				"command": "automa.clearSearchPackages",
+				"title": "Clear Search",
+				"icon": "$(clear-all)"
+			},
+			{
+				"command": "automa.clearSearchFleets",
+				"title": "Clear Search",
+				"icon": "$(clear-all)"
+			},
+			{
+				"command": "automa.addVariable",
+				"title": "Add Variable",
+				"icon": "$(add)"
+			},
+			{
+				"command": "automa.addCredential",
+				"title": "Add Credential",
+				"icon": "$(key)"
+			},
+			{
+				"command": "automa.addTable",
+				"title": "Add Table",
+				"icon": "$(list-flat)"
+			},
+			{
+				"command": "automa.refreshVault",
+				"title": "Refresh",
+				"icon": "$(refresh)"
+			}
+		],
+		"customEditors": [
+			{
+				"viewType": "automa.logEditor",
+				"displayName": "Automa Execution Log",
+				"selector": [
+					{
+						"filenamePattern": "*.automa-log.json"
+					}
+				]
+			},
+			{
+				"viewType": "automa.workflowPreview",
+				"displayName": "Automa Workflow Preview",
+				"selector": [
+					{
+						"filenamePattern": "*.workflow.json"
+					},
+					{
+						"filenamePattern": "*.package.json"
+					}
+				]
+			},
+			{
+				"viewType": "automa.fleetPreview",
+				"displayName": "Fleet Preview",
+				"selector": [
+					{
+						"filenamePattern": "*.fleet.json"
+					},
+					{
+						"filenamePattern": "*.fleets.json"
+					}
+				]
+			},
+			{
+				"viewType": "automa.bprofileEditor",
+				"displayName": "Automa Data Editor",
+				"selector": [
+					{
+						"filenamePattern": "*.profile.json"
+					},
+					{
+						"filenamePattern": "*.bprofile.json"
+					},
+					{
+						"filenamePattern": "*.variables.json"
+					},
+					{
+						"filenamePattern": "*.credentials.json"
+					},
+					{
+						"filenamePattern": "*.tables.json"
+					}
+				]
+			}
+		],
+		"configuration": [
+			{
+				"title": "Automa: Editor & Preview",
+				"properties": {
+					"automa.preview.defaultOnClick": {
+						"type": "boolean",
+						"default": true,
+						"description": "Set Automa Workflow/Package Preview as the default editor when clicking on *.workflow.json or *.package.json files."
+					}
+				}
+			},
+			{
+				"title": "Automa: Workflow Execution",
+				"properties": {
+					"automa.run.useDefaultParameters": {
+						"type": "boolean",
+						"default": false,
+						"description": "Skip interactive prompts for workflow trigger parameters and always use default values."
+					},
+					"automa.vault.run.defaultBrowser": {
+						"type": "string",
+						"enum": [
+							"chromium",
+							"chrome",
+							"edge",
+							"firefox",
+							"brave",
+							"active-tab"
+						],
+						"default": "chromium",
+						"description": "Default browser to use when running a workflow in the Vault. 'chromium' uses the isolated built-in browser."
+					},
+					"automa.vault.run.headless": {
+						"type": "boolean",
+						"default": false,
+						"description": "Run the browser in headless mode."
+					},
+					"automa.vault.run.closeBrowserOnFinish": {
+						"type": "boolean",
+						"default": true,
+						"description": "Automatically close the browser when the workflow finishes."
+					},
+					"automa.vault.run.debug": {
+						"type": "boolean",
+						"default": false,
+						"description": "Enable verbose debug logging for CLI execution"
+					},
+					"automa.vault.run.fleetGridSystem": {
+						"type": "boolean",
+						"default": true,
+						"description": "Enable Grid System to automatically allocate and position browser windows when running Automa Fleet."
+					},
+					"automa.cliPath": {
+						"type": "string",
+						"default": "",
+						"description": "Absolute path to the automa-cli executable. Leave empty to auto-detect or use npx."
+					},
+					"automa.daemon.port": {
+						"type": "number",
+						"default": 8765,
+						"description": "Base port for the Automa background daemon. The extension will automatically find the next available port if this one is in use."
+					},
+					"automa.encryptionPassphrase": {
+						"type": "string",
+						"default": "",
+						"description": "Passphrase used to encrypt credentials in the Automa Global Vault."
+					}
+				}
+			},
+			{
+				"title": "Automa: Environment & Logs",
+				"properties": {
+					"automa.vault.run.globalVariables": {
+						"type": "object",
+						"default": {},
+						"description": "Global variables (JSON object) appended to the workflow run parameters.",
+						"additionalProperties": {
+							"type": "string"
+						}
+					}
+				}
+			}
+		]
+	},
+	"scripts": {
+		"vscode:prepublish": "pnpm run package",
+		"compile": "tsup src/extension.ts --format cjs --external vscode --sourcemap",
+		"watch": "tsup src/extension.ts --format cjs --external vscode --sourcemap --watch",
+		"package": "tsup src/extension.ts --format cjs --external vscode --minify",
+		"compile-tests": "tsc -p . --outDir out",
+		"watch-tests": "tsc -p . -w --outDir out",
+		"pretest": "pnpm run compile-tests && pnpm run compile && pnpm run check",
+		"check": "biome check --write",
+		"test": "vitest run"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "2.5.5",
+		"@types/node": "18.x",
+		"@types/vscode": "^1.80.0",
+		"tsup": "^8.0.2",
+		"typescript": "^5.3.3",
+		"vitest": "^4.1.10"
+	},
+	"dependencies": {
+		"leader-line-new": "^1.1.9",
+		"sortablejs": "^1.15.7"
+	}
 }

@@ -12,7 +12,8 @@ export async function encryptSecretCommand() {
 	if (!plaintext) return;
 
 	const passphrase = await vscode.window.showInputBox({
-		prompt: "Enter your Automa Passphrase (or leave empty to use AUTOMA_PASSPHRASE env)",
+		prompt:
+			"Enter your Automa Passphrase (or leave empty to use AUTOMA_PASSPHRASE env)",
 		password: true,
 	});
 
@@ -47,9 +48,7 @@ export async function encryptSecretCommand() {
 					`Secret '${secretName}' encrypted and saved!`,
 				);
 			} catch (err: any) {
-				vscode.window.showErrorMessage(
-					`Encryption failed: ${err.message}`,
-				);
+				vscode.window.showErrorMessage(`Encryption failed: ${err.message}`);
 				throw err;
 			}
 		},

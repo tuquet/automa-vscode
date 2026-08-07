@@ -3,23 +3,23 @@
  * message passing and state management between the webview and extension.
  */
 class VSCodeAPIWrapper {
-    private readonly vsCodeApi: any;
+	private readonly vsCodeApi: any;
 
-    constructor() {
-        // @ts-ignore
-        if (typeof acquireVsCodeApi === "function") {
-            // @ts-ignore
-            this.vsCodeApi = acquireVsCodeApi();
-        }
-    }
+	constructor() {
+		// @ts-expect-error
+		if (typeof acquireVsCodeApi === "function") {
+			// @ts-expect-error
+			this.vsCodeApi = acquireVsCodeApi();
+		}
+	}
 
-    public postMessage(message: any) {
-        if (this.vsCodeApi) {
-            this.vsCodeApi.postMessage(message);
-        } else {
-            console.log("postMessage:", message);
-        }
-    }
+	public postMessage(message: any) {
+		if (this.vsCodeApi) {
+			this.vsCodeApi.postMessage(message);
+		} else {
+			console.log("postMessage:", message);
+		}
+	}
 }
 
 export const vscode = new VSCodeAPIWrapper();

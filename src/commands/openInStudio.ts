@@ -39,13 +39,7 @@ export async function openInStudioCommand(uri: vscode.Uri) {
 		const foundCli = candidates.find((p) => fs.existsSync(p));
 		if (foundCli) {
 			cmd = "node";
-			args = [
-				foundCli,
-				"studio",
-				uri.fsPath,
-				"--vault-path",
-				workspaceRoot,
-			];
+			args = [foundCli, "studio", uri.fsPath, "--vault-path", workspaceRoot];
 		}
 	}
 

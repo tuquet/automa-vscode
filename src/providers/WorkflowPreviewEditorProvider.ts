@@ -123,66 +123,7 @@ export class WorkflowPreviewEditorProvider
 						keepBrowserOpen: message.keepBrowserOpen,
 					});
 				} else if (message.command === "saveWorkflow") {
-					try {
-						const content = document.getText();
-						const json = JSON.parse(content);
-
-						// Update fields
-						const updateData = message.data;
-						if (updateData.name !== undefined) json.name = updateData.name;
-						if (updateData.description !== undefined)
-							json.description = updateData.description;
-						if (updateData.version !== undefined)
-							json.version = updateData.version;
-						if (updateData.extVersion !== undefined)
-							json.extVersion = updateData.extVersion;
-						if (updateData.icon !== undefined) json.icon = updateData.icon;
-						if (updateData.globalData !== undefined)
-							json.globalData = updateData.globalData;
-
-						// JSON parse for objects/arrays
-						try {
-							if (updateData.settings)
-								json.settings = JSON.parse(updateData.settings);
-						} catch (_e) {}
-						try {
-							if (updateData.table) json.table = JSON.parse(updateData.table);
-						} catch (_e) {}
-						try {
-							if (updateData.includedWorkflows)
-								json.includedWorkflows = JSON.parse(
-									updateData.includedWorkflows,
-								);
-						} catch (_e) {}
-
-						// Update Trigger Parameters Default Values
-						if (updateData.triggerParams && json.drawflow?.nodes) {
-							const triggerNode = json.drawflow.nodes.find(
-								(n: any) =>
-									n.label === "trigger" ||
-									n.name === "trigger" ||
-									n.type === "BlockTrigger",
-							);
-							if (triggerNode && Array.isArray(triggerNode.data?.parameters)) {
-								for (const param of triggerNode.data.parameters) {
-									if (updateData.triggerParams[param.name] !== undefined) {
-										param.defaultValue = updateData.triggerParams[param.name];
-									}
-								}
-							}
-						}
-
-						// Apply edits to document
-						await this.saveDocument(document, JSON.stringify(json, null, 4));
-
-						vscode.window.showInformationMessage(
-							"Workflow saved successfully!",
-						);
-					} catch (e: any) {
-						vscode.window.showErrorMessage(
-							`Failed to save workflow: ${e.message}`,
-						);
-					}
+					await this.handleSaveWorkflow(document, message.data);
 				} else if (message.command === "openInStudio") {
 					vscode.commands.executeCommand("automa.openInStudio", document.uri);
 				}
@@ -195,6 +136,71 @@ export class WorkflowPreviewEditorProvider
 
 		// Initial render
 		updateWebview();
+	}
+
+	private async handleSaveWorkflow(
+		document: vscode.TextDocument,
+		updateData: any,
+	) {
+		try {
+			const content = document.getText();
+			const json = JSON.parse(content);
+
+			// Update fields
+			if (updateData.name !== undefined) json.name = updateData.name;
+			if (updateData.description !== undefined)
+				json.description = updateData.description;
+			if (updateData.version !== undefined)
+				json.version = updateData.version;
+			if (updateData.extVersion !== undefined)
+				json.extVersion = updateData.extVersion;
+			if (updateData.icon !== undefined) json.icon = updateData.icon;
+			if (updateData.globalData !== undefined)
+				json.globalData = updateData.globalData;
+
+			// JSON parse for objects/arrays
+			try {
+				if (updateData.settings)
+					json.settings = JSON.parse(updateData.settings);
+			} catch (_e) {}
+			try {
+				if (updateData.table) json.table = JSON.parse(updateData.table);
+			} catch (_e) {}
+			try {
+				if (updateData.includedWorkflows)
+					json.includedWorkflows = JSON.parse(
+						updateData.includedWorkflows,
+					);
+			} catch (_e) {}
+
+			// Update Trigger Parameters Default Values
+			if (updateData.triggerParams && json.drawflow?.nodes) {
+				const triggerNode = json.drawflow.nodes.find(
+					(n: any) =>
+						n.label === "trigger" ||
+						n.name === "trigger" ||
+						n.type === "BlockTrigger",
+				);
+				if (triggerNode && Array.isArray(triggerNode.data?.parameters)) {
+					for (const param of triggerNode.data.parameters) {
+						if (updateData.triggerParams[param.name] !== undefined) {
+							param.defaultValue = updateData.triggerParams[param.name];
+						}
+					}
+				}
+			}
+
+			// Apply edits to document
+			await this.saveDocument(document, JSON.stringify(json, null, 4));
+
+			vscode.window.showInformationMessage(
+				"Workflow saved successfully!",
+			);
+		} catch (e: any) {
+			vscode.window.showErrorMessage(
+				`Failed to save workflow: ${e.message}`,
+			);
+		}
 	}
 
 	private getWorkflowHtml(

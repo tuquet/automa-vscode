@@ -124,14 +124,14 @@ export class DaemonManager {
 			execCmd = `${cmd} "${cliPath}" ${argsStr}`;
 		}
 
-		const { stdout, stderr } = await execAsync(execCmd).catch(e => e);
+		const { stdout, stderr } = await execAsync(execCmd).catch((e) => e);
 		const output = stdout || stderr || "";
-		
+
 		let jsonStr = output.trim();
 		const firstBrace = jsonStr.indexOf("{");
 		const firstBracket = jsonStr.indexOf("[");
 		let startIndex = -1;
-		
+
 		if (firstBrace !== -1 && firstBracket !== -1) {
 			startIndex = Math.min(firstBrace, firstBracket);
 		} else if (firstBrace !== -1) {
@@ -139,15 +139,17 @@ export class DaemonManager {
 		} else if (firstBracket !== -1) {
 			startIndex = firstBracket;
 		}
-		
+
 		if (startIndex !== -1 && startIndex > 0) {
 			jsonStr = jsonStr.substring(startIndex);
 		}
-		
+
 		try {
 			return JSON.parse(jsonStr);
-		} catch(e: any) {
-			throw new Error(`Failed to parse CLI JSON output: ${e.message}\nOutput was: ${output}`);
+		} catch (e: any) {
+			throw new Error(
+				`Failed to parse CLI JSON output: ${e.message}\nOutput was: ${output}`,
+			);
 		}
 	}
 

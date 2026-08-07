@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { vscode } from './vscode'
+import { vscode } from "./vscode";
 
 function installBrowser() {
-  vscode.postMessage({
-    command: 'installBrowser'
-  })
+	vscode.postMessage({
+		command: "installBrowser",
+	});
 }
 </script>
 

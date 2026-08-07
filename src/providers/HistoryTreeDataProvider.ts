@@ -22,6 +22,87 @@ export class HistoryTreeDataProvider
 		this.refresh();
 	}
 
+	public registerCommands() {
+		this.context.subscriptions.push(
+			vscode.commands.registerCommand("automa.refreshHistory", () => {
+				this.refresh();
+			}),
+		);
+		this.context.subscriptions.push(
+			vscode.commands.registerCommand("automa.history.loadMore", () => {
+				this.loadMore();
+			}),
+		);
+		this.context.subscriptions.push(
+			vscode.commands.registerCommand(
+				"automa.filterHistoryByTaskId",
+				async () => {
+					const taskId = await vscode.window.showInputBox({
+						prompt: "Enter Task ID to filter history",
+						placeHolder: "e.g. tsk_dev002",
+					});
+					if (taskId) {
+						this.setFilter(taskId);
+					}
+				},
+			),
+		);
+		this.context.subscriptions.push(
+			vscode.commands.registerCommand("automa.clearHistoryFilter", () => {
+				this.clearFilter();
+			}),
+		);
+		this.context.subscriptions.push(
+			vscode.commands.registerCommand(
+				"automa.deleteHistoryItem",
+				async (item: vscode.TreeItem) => {
+					if (!item?.id) return;
+					const confirm = await vscode.window.showWarningMessage(
+						`Are you sure you want to delete this log?`,
+						"Yes",
+						"No",
+					);
+					if (confirm !== "Yes") return;
+
+					try {
+						await DaemonManager.getInstance().executeCliCommand([
+							"history",
+							"--delete",
+							item.id,
+						]);
+						this.refresh();
+					} catch (err: any) {
+						vscode.window.showErrorMessage(
+							`Failed to delete log: ${err.message}`,
+						);
+					}
+				},
+			),
+		);
+		this.context.subscriptions.push(
+			vscode.commands.registerCommand("automa.clearHistory", async () => {
+				const confirm = await vscode.window.showWarningMessage(
+					`Are you sure you want to clear all execution history?`,
+					"Yes",
+					"No",
+				);
+				if (confirm !== "Yes") return;
+
+				try {
+					await DaemonManager.getInstance().executeCliCommand([
+						"history",
+						"--clear",
+					]);
+					this.refresh();
+				} catch (err: any) {
+					vscode.window.showErrorMessage(
+						`Failed to clear history: ${err.message}`,
+					);
+				}
+			}),
+		);
+	}
+
 	loadMore() {
 		this.currentLimit += 50;
 		this.refresh();
