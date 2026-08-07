@@ -23,7 +23,7 @@ export class TaskRunner {
 		taskConfig: Omit<TaskOptions, "command" | "args"> & {
 			useTelemetry?: boolean;
 		},
-	): void {
+	): Promise<void> {
 		const { cmd, args } =
 			DaemonManager.getInstance().resolveCommandAndArgs(cliArgs);
 
@@ -34,13 +34,13 @@ export class TaskRunner {
 		};
 
 		if (taskConfig.useTelemetry) {
-			TaskRunner.runWithTelemetry(options);
+			return TaskRunner.runWithTelemetry(options);
 		} else {
-			TaskRunner.run(options);
+			return TaskRunner.run(options);
 		}
 	}
 
-	public static run(options: TaskOptions): void {
+	public static run(options: TaskOptions): Promise<void> {
 		if (options.startMessage) {
 			vscode.window.showInformationMessage(options.startMessage);
 		}
@@ -88,30 +88,33 @@ export class TaskRunner {
 
 		vscode.tasks.executeTask(task);
 
-		const disposable = vscode.tasks.onDidEndTaskProcess((e) => {
-			if (e.execution.task === task) {
-				if (statusBarItem) {
-					statusBarItem.hide();
-					statusBarItem.dispose();
-				}
-				disposable.dispose();
+		return new Promise((resolve) => {
+			const disposable = vscode.tasks.onDidEndTaskProcess((e) => {
+				if (e.execution.task === task) {
+					if (statusBarItem) {
+						statusBarItem.hide();
+						statusBarItem.dispose();
+					}
+					disposable.dispose();
 
-				if (e.exitCode === 0) {
-					if (options.successMessage) {
-						vscode.window.showInformationMessage(options.successMessage);
+					if (e.exitCode === 0) {
+						if (options.successMessage) {
+							vscode.window.showInformationMessage(options.successMessage);
+						}
+					} else {
+						if (options.errorMessage) {
+							vscode.window.showErrorMessage(
+								`${options.errorMessage} (Exit code ${e.exitCode})`,
+							);
+						}
 					}
-				} else {
-					if (options.errorMessage) {
-						vscode.window.showErrorMessage(
-							`${options.errorMessage} (Exit code ${e.exitCode})`,
-						);
-					}
+					resolve();
 				}
-			}
+			});
 		});
 	}
 
-	public static runWithTelemetry(options: TaskOptions): void {
+	public static runWithTelemetry(options: TaskOptions): Promise<void> {
 		if (options.startMessage) {
 			vscode.window.showInformationMessage(options.startMessage);
 		}
@@ -165,23 +168,26 @@ export class TaskRunner {
 			outputChannel.append(data.toString());
 		});
 
-		child.on("close", (code) => {
-			if (statusBarItem) {
-				statusBarItem.hide();
-				statusBarItem.dispose();
-			}
+		return new Promise((resolve) => {
+			child.on("close", (code) => {
+				if (statusBarItem) {
+					statusBarItem.hide();
+					statusBarItem.dispose();
+				}
 
-			if (code === 0) {
-				if (options.successMessage) {
-					vscode.window.showInformationMessage(options.successMessage);
+				if (code === 0) {
+					if (options.successMessage) {
+						vscode.window.showInformationMessage(options.successMessage);
+					}
+				} else {
+					if (options.errorMessage) {
+						vscode.window.showErrorMessage(
+							`${options.errorMessage} (Exit code ${code})`,
+						);
+					}
 				}
-			} else {
-				if (options.errorMessage) {
-					vscode.window.showErrorMessage(
-						`${options.errorMessage} (Exit code ${code})`,
-					);
-				}
-			}
+				resolve();
+			});
 		});
 	}
 }
