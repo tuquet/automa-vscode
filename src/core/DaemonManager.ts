@@ -95,11 +95,6 @@ export class DaemonManager {
 			? resolvedArgs
 			: [...resolvedArgs, "--json"];
 
-		const argsStr = finalArgs
-			.map((a) => `"${a.replace(/"/g, '\\"')}"`)
-			.join(" ");
-		const execCmd = `${cmd} ${argsStr}`;
-
 		const config = vscode.workspace.getConfiguration("automa");
 		const browserPathOverride = config.get<string>("browserPathOverride") || "";
 		const extensionPaths = config.get<string>("extensionPaths") || "";
@@ -111,11 +106,40 @@ export class DaemonManager {
 			env.EXTENSION_PATHS = extensionPaths;
 		}
 
-		const { stdout, stderr } = await execAsync(execCmd, {
-			maxBuffer: 1024 * 1024 * 50,
-			env,
-		}).catch((e) => e);
-		const output = `${stdout || ""}\n${stderr || ""}`.trim();
+		const cmdParts = cmd.split(" ");
+		const executable = cmdParts[0];
+		const spawnArgs = [...cmdParts.slice(1), ...finalArgs];
+
+		let output = "";
+		try {
+			output = await new Promise((resolve, reject) => {
+				const child = spawn(executable, spawnArgs, {
+					env,
+					shell:
+						process.platform === "win32" &&
+						(executable === "npx" || executable === "npx.cmd"),
+				});
+
+				let stdoutData = "";
+				let stderrData = "";
+
+				child.stdout?.on("data", (data) => {
+					stdoutData += data.toString();
+				});
+
+				child.stderr?.on("data", (data) => {
+					stderrData += data.toString();
+				});
+
+				child.on("error", reject);
+
+				child.on("close", (code) => {
+					resolve(`${stdoutData}\n${stderrData}`.trim());
+				});
+			});
+		} catch (e: any) {
+			output = e.message || String(e);
+		}
 
 		const extractJSON = (str: string) => {
 			try {
@@ -189,11 +213,38 @@ export class DaemonManager {
 		args: string[],
 	): Promise<{ stdout: string; stderr: string }> {
 		const { cmd, args: finalArgs } = this.resolveCommandAndArgs(args);
-		const commandStr = `${cmd} ${finalArgs.map((a) => `"${a.replace(/"/g, '\\"')}"`).join(" ")}`;
-		const { stdout, stderr } = await execAsync(commandStr, {
-			maxBuffer: 1024 * 1024 * 50,
-		}).catch((e) => e);
-		return { stdout: stdout || "", stderr: stderr || "" };
+		const cmdParts = cmd.split(" ");
+		const executable = cmdParts[0];
+		const spawnArgs = [...cmdParts.slice(1), ...finalArgs];
+
+		try {
+			return await new Promise((resolve, reject) => {
+				const child = spawn(executable, spawnArgs, {
+					shell:
+						process.platform === "win32" &&
+						(executable === "npx" || executable === "npx.cmd"),
+				});
+
+				let stdoutData = "";
+				let stderrData = "";
+
+				child.stdout?.on("data", (data) => {
+					stdoutData += data.toString();
+				});
+
+				child.stderr?.on("data", (data) => {
+					stderrData += data.toString();
+				});
+
+				child.on("error", reject);
+
+				child.on("close", () => {
+					resolve({ stdout: stdoutData || "", stderr: stderrData || "" });
+				});
+			});
+		} catch (e: any) {
+			return { stdout: "", stderr: e.message || String(e) };
+		}
 	}
 
 	public getPort(): number {

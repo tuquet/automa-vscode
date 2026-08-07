@@ -158,10 +158,16 @@ export class StudioWebviewPanel {
 							error instanceof Error ? error : new Error(String(error));
 						// Fallback to CLI if Daemon isn't reachable
 						try {
-							const result = await daemon.executeCliCommand([
-								"run",
-								workflowData.id,
-							]);
+							const os = require("node:os");
+							const path = require("node:path");
+							const fs = require("node:fs");
+							const tempFile = path.join(
+								os.tmpdir(),
+								`automa-run-${Date.now()}.json`,
+							);
+							fs.writeFileSync(tempFile, JSON.stringify(workflowData), "utf-8");
+							const result = await daemon.executeCliCommand(["run", tempFile]);
+							fs.unlinkSync(tempFile);
 							return result;
 						} catch (cliErr: unknown) {
 							const ce =
