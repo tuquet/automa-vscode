@@ -97,9 +97,7 @@ export class HistoryTreeDataProvider
 			]);
 			this.refresh();
 		} catch (err: any) {
-			vscode.window.showErrorMessage(
-				`Failed to delete log: ${err.message}`,
-			);
+			vscode.window.showErrorMessage(`Failed to delete log: ${err.message}`);
 		}
 	}
 
@@ -118,9 +116,7 @@ export class HistoryTreeDataProvider
 			]);
 			this.refresh();
 		} catch (err: any) {
-			vscode.window.showErrorMessage(
-				`Failed to clear history: ${err.message}`,
-			);
+			vscode.window.showErrorMessage(`Failed to clear history: ${err.message}`);
 		}
 	}
 

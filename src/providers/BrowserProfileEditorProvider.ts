@@ -59,7 +59,10 @@ export class BrowserProfileEditorProvider
 		updateWebview();
 	}
 
-	private renderWebview(document: vscode.TextDocument, webviewPanel: vscode.WebviewPanel) {
+	private renderWebview(
+		document: vscode.TextDocument,
+		webviewPanel: vscode.WebviewPanel,
+	) {
 		try {
 			const content = document.getText();
 			const json = JSON.parse(content || "{}");
@@ -81,7 +84,10 @@ export class BrowserProfileEditorProvider
 		}
 	}
 
-	private async handleSaveProfile(document: vscode.TextDocument, newJsonStr: string) {
+	private async handleSaveProfile(
+		document: vscode.TextDocument,
+		newJsonStr: string,
+	) {
 		try {
 			const edit = new vscode.WorkspaceEdit();
 			edit.replace(
@@ -96,9 +102,7 @@ export class BrowserProfileEditorProvider
 				"Browser Profile saved successfully!",
 			);
 		} catch (e: any) {
-			vscode.window.showErrorMessage(
-				`Failed to save profile: ${e.message}`,
-			);
+			vscode.window.showErrorMessage(`Failed to save profile: ${e.message}`);
 		}
 	}
 

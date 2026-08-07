@@ -55,6 +55,75 @@ export class WorkflowPreviewEditorProvider
 		updateWebview();
 	}
 
+	private async sanitizeDocument(
+		document: vscode.TextDocument,
+		json: any,
+	): Promise<void> {
+		const { WorkflowSanitizer } = await import("../core/Sanitizer");
+		const isModified = WorkflowSanitizer.sanitize(json);
+
+		if (isModified) {
+			const edit = new vscode.WorkspaceEdit();
+			edit.replace(
+				document.uri,
+				new vscode.Range(0, 0, document.lineCount, 0),
+				JSON.stringify(json, null, 4),
+			);
+			// Apply silently in the background
+			await vscode.workspace.applyEdit(edit);
+		}
+	}
+
+	private async prepareTriggerParameters(
+		document: vscode.TextDocument,
+		json: any,
+		content: string,
+	): Promise<any[]> {
+		const { WorkflowParser } = await import("../core/WorkflowParser");
+		const implicitVars = WorkflowParser.extractImplicitVariables(content);
+		const triggerParams = WorkflowParser.extractTriggerParameters(
+			json,
+			implicitVars,
+		);
+
+		// Get workspace settings to pre-fill global variables
+		const config = vscode.workspace.getConfiguration("automa", document.uri);
+		const globalVariables = config.get<any>("vault.run.globalVariables", {});
+
+		for (const varName of implicitVars) {
+			let defaultVal = "";
+			if (
+				globalVariables &&
+				typeof globalVariables === "object" &&
+				globalVariables[varName] !== undefined
+			) {
+				defaultVal = globalVariables[varName];
+			}
+			triggerParams.push({
+				name: varName,
+				description: varName.startsWith("$$")
+					? "(Auto-detected Global Var)"
+					: "(Auto-detected Implicit Var)",
+				defaultValue: defaultVal,
+				value: defaultVal,
+				required: false,
+				isImplicit: true,
+			});
+		}
+
+		return triggerParams;
+	}
+
+	private getUpdatedAtString(uri: vscode.Uri): string {
+		try {
+			if (uri.scheme === "file") {
+				const updatedAt = fs.statSync(uri.fsPath).mtimeMs;
+				return new Date(updatedAt).toLocaleString();
+			}
+		} catch (_err) {}
+		return "";
+	}
+
 	private async renderWebview(
 		document: vscode.TextDocument,
 		webviewPanel: vscode.WebviewPanel,
@@ -63,31 +132,7 @@ export class WorkflowPreviewEditorProvider
 			const content = document.getText();
 			const json = JSON.parse(content);
 
-			const { WorkflowSanitizer } = await import("../core/Sanitizer");
-			const isModified = WorkflowSanitizer.sanitize(json);
-
-			if (isModified) {
-				const edit = new vscode.WorkspaceEdit();
-				edit.replace(
-					document.uri,
-					new vscode.Range(0, 0, document.lineCount, 0),
-					JSON.stringify(json, null, 4),
-				);
-				// Apply silently in the background
-				vscode.workspace.applyEdit(edit).then((success) => {
-					if (success) {
-						// We don't auto-save to disk, just leave it as an unsaved editor change
-						// Or we can save. Let's just apply to the document buffer.
-					}
-				});
-			}
-
-			const { WorkflowParser } = await import("../core/WorkflowParser");
-			const implicitVars = WorkflowParser.extractImplicitVariables(content);
-			const triggerParams = WorkflowParser.extractTriggerParameters(
-				json,
-				implicitVars,
-			);
+			await this.sanitizeDocument(document, json);
 
 			if (
 				!(json.drawflow?.nodes && json.drawflow.edges) &&
@@ -97,43 +142,12 @@ export class WorkflowPreviewEditorProvider
 				return;
 			}
 
-			// Get workspace settings to pre-fill global variables
-			const config = vscode.workspace.getConfiguration(
-				"automa",
-				document.uri,
+			const triggerParams = await this.prepareTriggerParameters(
+				document,
+				json,
+				content,
 			);
-			const globalVariables = config.get<any>(
-				"vault.run.globalVariables",
-				{},
-			);
-
-			for (const varName of implicitVars) {
-				let defaultVal = "";
-				if (
-					globalVariables &&
-					typeof globalVariables === "object" &&
-					globalVariables[varName] !== undefined
-				) {
-					defaultVal = globalVariables[varName];
-				}
-				triggerParams.push({
-					name: varName,
-					description: varName.startsWith("$$")
-						? "(Auto-detected Global Var)"
-						: "(Auto-detected Implicit Var)",
-					defaultValue: defaultVal,
-					value: defaultVal,
-					required: false,
-					isImplicit: true,
-				});
-			}
-
-			let updatedAt = 0;
-			try {
-				if (document.uri.scheme === "file") {
-					updatedAt = fs.statSync(document.uri.fsPath).mtimeMs;
-				}
-			} catch (_err) {}
+			const updatedAtStr = this.getUpdatedAtString(document.uri);
 
 			const isPackage =
 				json.settings?.asBlock === true ||
@@ -147,7 +161,7 @@ export class WorkflowPreviewEditorProvider
 			webviewPanel.webview.html = this.getHtmlContent(
 				json,
 				triggerParams,
-				updatedAt,
+				updatedAtStr,
 				isPackage,
 				pkgInputs,
 				pkgOutputs,
@@ -383,7 +397,7 @@ export class WorkflowPreviewEditorProvider
 	private getHtmlContent(
 		json: any,
 		triggerParams: any[],
-		updatedAt: number,
+		updatedAtStr: string,
 		isPackage: boolean = false,
 		pkgInputs: any[] = [],
 		pkgOutputs: any[] = [],
@@ -397,7 +411,6 @@ export class WorkflowPreviewEditorProvider
 						.replace(/\$\{/g, "\\${")
 						.replace(/<\/script>/gi, "<\\/script>")
 				: "";
-		const updatedAtStr = updatedAt ? new Date(updatedAt).toLocaleString() : "";
 
 		if (isPackage) {
 			return this.getPackageHtml(
