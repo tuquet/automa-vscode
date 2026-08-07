@@ -97,32 +97,37 @@ export class AutomaFilesProvider implements vscode.TreeDataProvider<FileItem> {
 	}
 
 	private async fetchChildren(): Promise<FileItem[]> {
-		let files = await vscode.workspace.findFiles(
+		const files = await vscode.workspace.findFiles(
 			this.globPattern,
-			"**/node_modules/**",
+			"**/{node_modules,.git,dist,out,.gemini,tmp,build}/**",
 		);
 
+		let filteredFiles = files;
 		if (this.filterType !== "all") {
-			files = files.filter((file) => {
-				try {
-					const content = fs.readFileSync(file.fsPath, "utf8");
-					const json = JSON.parse(content);
-					const isPackage =
-						json.settings?.asBlock === true ||
-						Array.isArray(json.inputs) ||
-						Array.isArray(json.outputs);
+			const filterResults = await Promise.all(
+				files.map(async (file) => {
+					try {
+						const contentArray = await vscode.workspace.fs.readFile(file);
+						const content = Buffer.from(contentArray).toString("utf8");
+						const json = JSON.parse(content);
+						const isPackage =
+							json.settings?.asBlock === true ||
+							Array.isArray(json.inputs) ||
+							Array.isArray(json.outputs);
 
-					if (this.filterType === "package") return isPackage;
-					if (this.filterType === "workflow") return !isPackage;
-				} catch (_e) {
-					// If parsing fails, consider it a normal workflow by default
-					return this.filterType === "workflow";
-				}
-				return false;
-			});
+						if (this.filterType === "package") return isPackage;
+						if (this.filterType === "workflow") return !isPackage;
+					} catch (_e) {
+						// If parsing fails, consider it a normal workflow by default
+						return this.filterType === "workflow";
+					}
+					return false;
+				}),
+			);
+			filteredFiles = files.filter((_, index) => filterResults[index]);
 		}
 
-		let result = files.map((file) => {
+		let result = filteredFiles.map((file) => {
 			return new FileItem(
 				path.basename(file.fsPath),
 				file,
