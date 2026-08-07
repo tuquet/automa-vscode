@@ -22,10 +22,29 @@ export class WorkflowParser {
 	public static extractTriggerParameters(
 		json: any,
 		implicitVars: Set<string>,
-	): any[] {
-		const triggerParams: any[] = [];
-		if (json.drawflow?.nodes && json.drawflow.edges) {
-			const nodesList = json.drawflow.nodes;
+	): Record<string, unknown>[] {
+		const triggerParams: Record<string, unknown>[] = [];
+		let nodesList: Record<string, unknown>[] = [];
+
+		if (json.data && Array.isArray(json.data.nodes)) {
+			nodesList = json.data.nodes;
+		} else if (json.drawflow) {
+			if (Array.isArray(json.drawflow.nodes)) {
+				nodesList = json.drawflow.nodes;
+			} else {
+				Object.keys(json.drawflow).forEach((tab) => {
+					if (json.drawflow[tab] && json.drawflow[tab].data) {
+						Object.entries(json.drawflow[tab].data).forEach(
+							([_key, node]: [string, Record<string, unknown>]) => {
+								nodesList.push(node);
+							},
+						);
+					}
+				});
+			}
+		}
+
+		if (nodesList.length > 0) {
 			for (const node of nodesList) {
 				if (
 					(node.label === "trigger" ||

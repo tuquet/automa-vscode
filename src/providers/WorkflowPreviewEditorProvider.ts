@@ -228,8 +228,27 @@ export class WorkflowPreviewEditorProvider
 			}
 
 			// Update Trigger Parameters Default Values
-			if (updateData.triggerParams && json.drawflow?.nodes) {
-				const triggerNode = json.drawflow.nodes.find(
+			if (updateData.triggerParams && (json.drawflow || json.data)) {
+				let nodesList: Record<string, unknown>[] = [];
+				if (json.data && Array.isArray(json.data.nodes)) {
+					nodesList = json.data.nodes;
+				} else if (json.drawflow) {
+					if (Array.isArray(json.drawflow.nodes)) {
+						nodesList = json.drawflow.nodes;
+					} else {
+						Object.keys(json.drawflow).forEach((tab) => {
+							if (json.drawflow[tab] && json.drawflow[tab].data) {
+								Object.entries(json.drawflow[tab].data).forEach(
+									([_key, node]: [string, Record<string, unknown>]) => {
+										nodesList.push(node);
+									},
+								);
+							}
+						});
+					}
+				}
+
+				const triggerNode = nodesList.find(
 					(n: Record<string, unknown>) =>
 						n.label === "trigger" ||
 						n.name === "trigger" ||
