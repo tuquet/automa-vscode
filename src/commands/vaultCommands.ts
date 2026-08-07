@@ -37,42 +37,18 @@ function getGlobalsFilePath(filename: string): string | undefined {
 	return path.join(globalsDir, filename);
 }
 
-function _loadVariables(
-	varsPath: string,
-): Array<{ name?: string; key?: string; value: unknown }> {
-	if (!fs.existsSync(varsPath)) return [];
+function readVaultFileSafely(filePath: string): {
+	data: Record<string, unknown>[] | Record<string, unknown>;
+	success: boolean;
+} {
+	if (!fs.existsSync(filePath)) return { data: [], success: true };
 	try {
-		const content = fs.readFileSync(varsPath, "utf8");
-		const data = JSON.parse(content);
-		if (Array.isArray(data)) {
-			return data;
-		}
-		if (typeof data === "object" && data !== null) {
-			return Object.entries(data).map(([k, v]) => ({
-				name: k,
-				value: v,
-			}));
-		}
+		const content = fs.readFileSync(filePath, "utf8");
+		return { data: JSON.parse(content), success: true };
 	} catch (_e) {
-		vscode.window.showErrorMessage(`Failed to read ${path.basename(varsPath)}`);
+		vscode.window.showErrorMessage(`Failed to read ${path.basename(filePath)}`);
+		return { data: [], success: false };
 	}
-	return [];
-}
-
-function _loadTables(tablesPath: string): ITable[] {
-	if (!fs.existsSync(tablesPath)) return [];
-	try {
-		const content = fs.readFileSync(tablesPath, "utf8");
-		const data = JSON.parse(content);
-		if (Array.isArray(data)) {
-			return data;
-		}
-	} catch (_e) {
-		vscode.window.showErrorMessage(
-			`Failed to read ${path.basename(tablesPath)}`,
-		);
-	}
-	return [];
 }
 
 function writeJsonFile(filePath: string, data: unknown): void {
@@ -94,16 +70,10 @@ export async function addVariableCommand() {
 	const varsPath = getGlobalsFilePath("globals.variable.json");
 	if (!varsPath) return;
 
-	let data: Record<string, unknown>[] | Record<string, unknown> = [];
-	if (fs.existsSync(varsPath)) {
-		try {
-			const content = fs.readFileSync(varsPath, "utf8");
-			data = JSON.parse(content);
-		} catch (_e) {
-			vscode.window.showErrorMessage(`Failed to read globals.variable.json`);
-			return;
-		}
-	}
+	const { data: rawData, success } = readVaultFileSafely(varsPath);
+	if (!success) return;
+
+	let data = rawData;
 
 	if (Array.isArray(data)) {
 		const existingIndex = data.findIndex(
@@ -169,16 +139,10 @@ export async function addTableCommand() {
 	const tablesPath = getGlobalsFilePath("globals.table.json");
 	if (!tablesPath) return;
 
-	let data: Record<string, unknown>[] | Record<string, unknown> = [];
-	if (fs.existsSync(tablesPath)) {
-		try {
-			const content = fs.readFileSync(tablesPath, "utf8");
-			data = JSON.parse(content);
-		} catch (_e) {
-			vscode.window.showErrorMessage(`Failed to read globals.table.json`);
-			return;
-		}
-	}
+	const { data: rawData, success } = readVaultFileSafely(tablesPath);
+	if (!success) return;
+
+	let data = rawData;
 
 	const newTableId = `table_${Date.now().toString(36)}`;
 	const newTable = {
