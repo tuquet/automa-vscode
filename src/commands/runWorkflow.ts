@@ -7,18 +7,27 @@ let _automaOutputChannel: vscode.OutputChannel;
 
 // biome-ignore lint/suspicious/noExplicitAny: nodeOrUri can be a vscode.Uri or TreeItem depending on context
 async function resolveTarget(
-	nodeOrUri?: any,
+	nodeOrUri?: unknown,
 ): Promise<{ targetPath: string; displayName: string } | null> {
 	let targetPath = "";
 	let displayName = "";
 
-	if (nodeOrUri?.fsPath) {
+	if (nodeOrUri instanceof vscode.Uri) {
 		targetPath = nodeOrUri.fsPath;
 		displayName = path.basename(nodeOrUri.fsPath);
-	} else if (nodeOrUri?.fullPath) {
-		targetPath = nodeOrUri.fullPath;
-		displayName = nodeOrUri.label;
-	} else {
+	} else if (nodeOrUri && typeof nodeOrUri === "object") {
+		const node = nodeOrUri as Record<string, unknown>;
+		if ("fsPath" in node && typeof node.fsPath === "string") {
+			targetPath = node.fsPath;
+			displayName = path.basename(node.fsPath);
+		} else if ("fullPath" in node && typeof node.fullPath === "string") {
+			targetPath = node.fullPath;
+			displayName =
+				typeof node.label === "string" ? node.label : path.basename(targetPath);
+		}
+	}
+
+	if (!targetPath) {
 		const input = await vscode.window.showInputBox({
 			prompt: "Enter absolute path to workflow JSON",
 			placeHolder: "e.g. C:\\path\\to\\workflow.json",
@@ -88,7 +97,7 @@ function buildBaseArgs(
 
 // biome-ignore lint/suspicious/noExplicitAny: nodeOrUri can be various types from VSCode tree view
 export async function runWorkflowCommand(
-	nodeOrUri?: any,
+	nodeOrUri?: unknown,
 	params?: Record<string, unknown>,
 	runOptions?: { keepBrowserOpen?: boolean },
 ) {
@@ -130,7 +139,7 @@ export async function runWorkflowCommand(
 }
 
 // biome-ignore lint/suspicious/noExplicitAny: nodeOrUri can be various types from VSCode tree view
-export async function runWorkflowWithParamsCommand(nodeOrUri?: any) {
+export async function runWorkflowWithParamsCommand(nodeOrUri?: unknown) {
 	const target = await resolveTarget(nodeOrUri);
 	if (!target) return;
 	const { targetPath, displayName } = target;

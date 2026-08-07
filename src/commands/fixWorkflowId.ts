@@ -14,24 +14,38 @@ function generateShortId(): string {
 	return id;
 }
 
-function isValidNanoId(id: any): boolean {
+function isValidNanoId(id: unknown): boolean {
 	if (!id || typeof id !== "string") return false;
 	return /^[A-Za-z0-9_-]{21}$/.test(id);
 }
 
 export async function fixWorkflowIdCommand(
-	nodeOrUri?: any,
-	nodesOrUris?: any[],
+	nodeOrUri?: unknown,
+	nodesOrUris?: unknown[],
 ) {
 	// Support multi-selection
 	let urisToProcess: vscode.Uri[] = [];
 
 	if (nodesOrUris && Array.isArray(nodesOrUris) && nodesOrUris.length > 0) {
-		urisToProcess = nodesOrUris.map((n) =>
-			n.fsPath ? vscode.Uri.file(n.fsPath) : n,
-		);
-	} else if (nodeOrUri?.fsPath) {
-		urisToProcess = [vscode.Uri.file(nodeOrUri.fsPath)];
+		urisToProcess = nodesOrUris
+			.map((n) =>
+				n instanceof vscode.Uri
+					? n
+					: typeof n === "object" && n !== null && "fsPath" in n
+						? vscode.Uri.file((n as Record<string, unknown>).fsPath as string)
+						: (n as vscode.Uri),
+			)
+			.filter(Boolean);
+	} else if (nodeOrUri instanceof vscode.Uri) {
+		urisToProcess = [nodeOrUri];
+	} else if (
+		nodeOrUri &&
+		typeof nodeOrUri === "object" &&
+		"fsPath" in nodeOrUri
+	) {
+		urisToProcess = [
+			vscode.Uri.file((nodeOrUri as Record<string, unknown>).fsPath as string),
+		];
 	}
 
 	if (urisToProcess.length === 0) {
@@ -69,17 +83,18 @@ export async function fixWorkflowIdCommand(
 		}
 	}
 
-	if (fixedCount > 0) {
-		vscode.window.showInformationMessage(
-			`[Automa Auto-Fix] Đã tạo ID mới cho ${fixedCount} file(s).`,
-		);
-	} else if (skippedCount > 0) {
-		vscode.window.showInformationMessage(
-			`[Automa Auto-Fix] ${skippedCount} file(s) đã có ID hợp lệ, không cần sửa.`,
-		);
-	} else if (errorCount > 0) {
-		vscode.window.showErrorMessage(
-			`[Automa Auto-Fix] Lỗi khi xử lý ${errorCount} file(s). Kiểm tra console.`,
-		);
+	const messages: string[] = [];
+	if (fixedCount > 0) messages.push(`Đã tạo ID mới cho ${fixedCount} file(s).`);
+	if (skippedCount > 0) messages.push(`${skippedCount} file(s) đã hợp lệ.`);
+	if (errorCount > 0)
+		messages.push(`Lỗi khi xử lý ${errorCount} file(s). Kiểm tra console.`);
+
+	if (messages.length > 0) {
+		const fullMessage = `[Automa Auto-Fix] ${messages.join(" ")}`;
+		if (errorCount > 0) {
+			vscode.window.showWarningMessage(fullMessage);
+		} else {
+			vscode.window.showInformationMessage(fullMessage);
+		}
 	}
 }
