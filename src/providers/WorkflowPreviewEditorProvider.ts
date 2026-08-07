@@ -165,8 +165,7 @@ export class WorkflowPreviewEditorProvider
 			if (updateData.name !== undefined) json.name = updateData.name;
 			if (updateData.description !== undefined)
 				json.description = updateData.description;
-			if (updateData.version !== undefined)
-				json.version = updateData.version;
+			if (updateData.version !== undefined) json.version = updateData.version;
 			if (updateData.extVersion !== undefined)
 				json.extVersion = updateData.extVersion;
 			if (updateData.icon !== undefined) json.icon = updateData.icon;
@@ -183,9 +182,7 @@ export class WorkflowPreviewEditorProvider
 			} catch (_e) {}
 			try {
 				if (updateData.includedWorkflows)
-					json.includedWorkflows = JSON.parse(
-						updateData.includedWorkflows,
-					);
+					json.includedWorkflows = JSON.parse(updateData.includedWorkflows);
 			} catch (_e) {}
 
 			// Update Trigger Parameters Default Values
@@ -208,13 +205,9 @@ export class WorkflowPreviewEditorProvider
 			// Apply edits to document
 			await this.saveDocument(document, JSON.stringify(json, null, 4));
 
-			vscode.window.showInformationMessage(
-				"Workflow saved successfully!",
-			);
+			vscode.window.showInformationMessage("Workflow saved successfully!");
 		} catch (e: any) {
-			vscode.window.showErrorMessage(
-				`Failed to save workflow: ${e.message}`,
-			);
+			vscode.window.showErrorMessage(`Failed to save workflow: ${e.message}`);
 		}
 	}
 

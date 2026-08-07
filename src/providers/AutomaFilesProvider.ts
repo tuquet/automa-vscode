@@ -47,12 +47,15 @@ export class AutomaFilesProvider implements vscode.TreeDataProvider<FileItem> {
 			}),
 		);
 		context.subscriptions.push(
-			vscode.commands.registerCommand(`automa.search${entityName}`, async () => {
-				const query = await vscode.window.showInputBox({
-					placeHolder: `Search ${entityName}...`,
-				});
-				if (query !== undefined) this.setSearchQuery(query);
-			}),
+			vscode.commands.registerCommand(
+				`automa.search${entityName}`,
+				async () => {
+					const query = await vscode.window.showInputBox({
+						placeHolder: `Search ${entityName}...`,
+					});
+					if (query !== undefined) this.setSearchQuery(query);
+				},
+			),
 		);
 		context.subscriptions.push(
 			vscode.commands.registerCommand(`automa.clearSearch${entityName}`, () =>

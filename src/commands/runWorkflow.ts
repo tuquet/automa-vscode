@@ -5,7 +5,9 @@ import { TaskRunner } from "../core/TaskRunner";
 
 let _automaOutputChannel: vscode.OutputChannel;
 
-async function resolveTarget(nodeOrUri?: any): Promise<{ targetPath: string; displayName: string } | null> {
+async function resolveTarget(
+	nodeOrUri?: any,
+): Promise<{ targetPath: string; displayName: string } | null> {
 	let targetPath = "";
 	let displayName = "";
 
@@ -99,8 +101,14 @@ export async function runWorkflowCommand(
 
 	const args = buildBaseArgs(targetPath, config, keepBrowserOpen);
 
-	if (params && Object.keys(params).length > 0) {
-		args.push("--variables", JSON.stringify(params));
+	const globalVariables = config.get<Record<string, string>>(
+		"vault.run.globalVariables",
+		{},
+	);
+	const mergedVariables = { ...globalVariables, ...(params || {}) };
+
+	if (Object.keys(mergedVariables).length > 0) {
+		args.push("--variables", JSON.stringify(mergedVariables));
 	}
 
 	if (config.get<boolean>("run.useDefaultParameters", false)) {
@@ -142,6 +150,14 @@ export async function runWorkflowWithParamsCommand(nodeOrUri?: any) {
 	);
 
 	const args = buildBaseArgs(targetPath, config, keepBrowserOpen);
+
+	const globalVariables = config.get<Record<string, string>>(
+		"vault.run.globalVariables",
+		{},
+	);
+	if (Object.keys(globalVariables).length > 0) {
+		args.push("--variables", JSON.stringify(globalVariables));
+	}
 
 	TaskRunner.runAutomaCli(args, {
 		id: `workflow-${Date.now()}`,

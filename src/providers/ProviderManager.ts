@@ -1,4 +1,4 @@
-import * as vscode from "vscode";
+import type * as vscode from "vscode";
 import { DaemonManager } from "../core/DaemonManager";
 import { AutomaFilesProvider } from "./AutomaFilesProvider";
 import { BrowserProfileEditorProvider } from "./BrowserProfileEditorProvider";
@@ -66,7 +66,6 @@ export class ProviderManager {
 			"automa.fleets",
 		);
 		fleetsProvider.register(this.context, "Fleets");
-
 
 		// 6. Global Vault Panel
 		const vaultProvider = new VaultTreeDataProvider();
