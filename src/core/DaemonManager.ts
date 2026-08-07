@@ -232,7 +232,9 @@ export class DaemonManager {
 			if (arrStr) {
 				try {
 					return JSON.parse(arrStr);
-				} catch (_e: unknown) {}
+				} catch (_e: unknown) {
+					// Ignored
+				}
 			}
 			if (objStr) {
 				try {

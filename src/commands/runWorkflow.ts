@@ -5,6 +5,7 @@ import { TaskRunner } from "../core/TaskRunner";
 import {
 	extractFsPath,
 	hasStringProp,
+	isRecord,
 	isString,
 	toError,
 } from "../utils/typeGuards";
@@ -107,6 +108,10 @@ export async function runWorkflowCommand(
 	params?: Record<string, unknown>,
 	runOptions?: { keepBrowserOpen?: boolean },
 ) {
+	if (!isRecord(params)) {
+		params = undefined;
+	}
+
 	const target = await resolveTarget(nodeOrUri);
 	if (!target) return;
 	const { targetPath, displayName } = target;
