@@ -138,7 +138,15 @@ export class LogCustomEditorProvider
 				const results = parsed.results || { table: [], variables: {} };
 
 				job.results = results;
-				webviewPanel.webview.html = this.getWebviewContent(job, logs);
+				if (isInitial) {
+					webviewPanel.webview.html = this.getWebviewContent(job, logs);
+				} else {
+					webviewPanel.webview.postMessage({
+						type: "update",
+						job,
+						logs,
+					});
+				}
 			} catch (error: unknown) {
 				if (isInitial) {
 					const e = toError(error);
