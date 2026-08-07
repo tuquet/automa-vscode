@@ -53,7 +53,7 @@ export class FleetPreviewEditorProvider
 		};
 
 		// Listen to telemetry
-		const telemetryListener = (telemetry: any) => {
+		const telemetryListener = (telemetry: unknown) => {
 			webviewPanel.webview.postMessage({
 				type: "telemetry",
 				data: telemetry,
@@ -97,16 +97,17 @@ export class FleetPreviewEditorProvider
 	private async buildDictionaryFromFiles(
 		globPattern: string,
 		extractItem: (
-			json: any,
+			json: Record<string, unknown>,
 			filePath: string,
 		) => { id?: string; name?: string } | undefined,
 		errorContext: string,
 	): Promise<Record<string, string>> {
 		const dict: Record<string, string> = {};
+		const parseErrors: string[] = [];
 		try {
 			const files = await vscode.workspace.findFiles(
 				globPattern,
-				"**/node_modules/**",
+				"**/{node_modules,.git,dist,out,.gemini,tmp,build}/**",
 			);
 			for (const file of files) {
 				try {
@@ -116,11 +117,24 @@ export class FleetPreviewEditorProvider
 					if (item?.id && item.name) {
 						dict[item.id] = item.name;
 					}
-				} catch (_e) {
-					// Ignore parse errors for individual files
+				} catch (e: unknown) {
+					const msg = e instanceof Error ? e.message : String(e);
+					parseErrors.push(`${path.basename(file.fsPath)}: ${msg}`);
 				}
 			}
-		} catch (e) {
+
+			if (parseErrors.length > 0) {
+				const limit = 3;
+				const displayErrors = parseErrors.slice(0, limit).join(", ");
+				const more =
+					parseErrors.length > limit
+						? ` and ${parseErrors.length - limit} more`
+						: "";
+				vscode.window.showWarningMessage(
+					`Fleet Preview failed to parse ${parseErrors.length} file(s) for ${errorContext}: ${displayErrors}${more}`,
+				);
+			}
+		} catch (e: unknown) {
 			console.error(`Failed to scan ${errorContext}:`, e);
 		}
 		return dict;

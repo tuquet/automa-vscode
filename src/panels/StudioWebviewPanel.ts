@@ -213,13 +213,17 @@ export class StudioWebviewPanel {
 					vscode.workspace.findFiles("**/*.table.json", EXCLUDE_PATTERN),
 				]);
 
+			const parseErrors: string[] = [];
 			const readJsonFiles = async (files: vscode.Uri[]) => {
 				const contents = await Promise.all(
 					files.map(async (file) => {
 						try {
 							const bytes = await vscode.workspace.fs.readFile(file);
 							return JSON.parse(Buffer.from(bytes).toString("utf-8"));
-						} catch (_e) {
+						} catch (e: unknown) {
+							const msg = e instanceof Error ? e.message : String(e);
+							const path = require("node:path");
+							parseErrors.push(`${path.basename(file.fsPath)}: ${msg}`);
 							return null;
 						}
 					}),
@@ -233,6 +237,18 @@ export class StudioWebviewPanel {
 				readJsonFiles(credentialFiles),
 				readJsonFiles(tableFiles),
 			]);
+
+			if (parseErrors.length > 0) {
+				const limit = 3;
+				const displayErrors = parseErrors.slice(0, limit).join(", ");
+				const more =
+					parseErrors.length > limit
+						? ` and ${parseErrors.length - limit} more`
+						: "";
+				vscode.window.showWarningMessage(
+					`Studio Webview failed to parse ${parseErrors.length} file(s): ${displayErrors}${more}`,
+				);
+			}
 
 			result.workflows = workflows;
 			result.variables = rawVars.flat();
