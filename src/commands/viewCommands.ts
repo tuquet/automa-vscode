@@ -3,10 +3,12 @@ import { LiveLogEditorProvider } from "../providers/LiveLogEditorProvider";
 
 export function showWorkflowSourceCommand() {
 	return async (nodeOrUri: unknown) => {
-		const uri =
+		let uri =
 			nodeOrUri instanceof vscode.Uri
 				? nodeOrUri
 				: (nodeOrUri as { resourceUri?: vscode.Uri })?.resourceUri;
+		if (!uri) uri = vscode.window.activeTextEditor?.document.uri;
+
 		if (uri) {
 			await vscode.workspace
 				.getConfiguration("automa")
@@ -22,10 +24,12 @@ export function showWorkflowSourceCommand() {
 
 export function showWorkflowPreviewCommand() {
 	return async (nodeOrUri: unknown) => {
-		const uri =
+		let uri =
 			nodeOrUri instanceof vscode.Uri
 				? nodeOrUri
 				: (nodeOrUri as { resourceUri?: vscode.Uri })?.resourceUri;
+		if (!uri) uri = vscode.window.activeTextEditor?.document.uri;
+
 		if (uri) {
 			await vscode.workspace
 				.getConfiguration("automa")
@@ -45,10 +49,12 @@ export function showWorkflowPreviewCommand() {
 
 export function showFleetSourceCommand() {
 	return async (nodeOrUri: unknown) => {
-		const uri =
+		let uri =
 			nodeOrUri instanceof vscode.Uri
 				? nodeOrUri
 				: (nodeOrUri as { resourceUri?: vscode.Uri })?.resourceUri;
+		if (!uri) uri = vscode.window.activeTextEditor?.document.uri;
+
 		if (uri) {
 			await vscode.commands.executeCommand("vscode.openWith", uri, "default");
 		}
@@ -57,10 +63,12 @@ export function showFleetSourceCommand() {
 
 export function showFleetPreviewCommand() {
 	return async (nodeOrUri: unknown) => {
-		const uri =
+		let uri =
 			nodeOrUri instanceof vscode.Uri
 				? nodeOrUri
 				: (nodeOrUri as { resourceUri?: vscode.Uri })?.resourceUri;
+		if (!uri) uri = vscode.window.activeTextEditor?.document.uri;
+
 		if (uri) {
 			await vscode.commands.executeCommand(
 				"vscode.openWith",
@@ -73,10 +81,12 @@ export function showFleetPreviewCommand() {
 
 export function showLogSourceCommand() {
 	return async (nodeOrUri: unknown) => {
-		const uri =
+		let uri =
 			nodeOrUri instanceof vscode.Uri
 				? nodeOrUri
 				: (nodeOrUri as { resourceUri?: vscode.Uri })?.resourceUri;
+		if (!uri) uri = vscode.window.activeTextEditor?.document.uri;
+
 		if (uri) {
 			await vscode.commands.executeCommand("vscode.openWith", uri, "default");
 		} else {
@@ -87,10 +97,12 @@ export function showLogSourceCommand() {
 
 export function showLogPreviewCommand(context: vscode.ExtensionContext) {
 	return async (nodeOrUri: unknown) => {
-		const uri =
+		let uri =
 			nodeOrUri instanceof vscode.Uri
 				? nodeOrUri
 				: (nodeOrUri as { resourceUri?: vscode.Uri })?.resourceUri;
+		if (!uri) uri = vscode.window.activeTextEditor?.document.uri;
+
 		if (uri && uri.scheme === "automa-log") {
 			const jobId = uri.authority || uri.path.replace(/^\//, "");
 			const {
