@@ -51,17 +51,22 @@ export class WorkflowPreviewEditorProvider
 		// Message Listener
 		const messageDisposable = webviewPanel.webview.onDidReceiveMessage(
 			async (message) => {
-				if (message.command === "runWorkflow") {
-					await runWorkflowCommand(document.uri, message.parameters, {
-						keepBrowserOpen: message.keepBrowserOpen,
-					});
-				} else if (message.command === "saveWorkflow") {
-					await this.handleSaveWorkflow(document, message.data);
-				} else if (message.command === "openInStudio") {
-					await vscode.commands.executeCommand(
-						"automa.openInStudio",
-						document.uri,
-					);
+				try {
+					if (message.command === "runWorkflow") {
+						await runWorkflowCommand(document.uri, message.parameters, {
+							keepBrowserOpen: message.keepBrowserOpen,
+						});
+					} else if (message.command === "saveWorkflow") {
+						await this.handleSaveWorkflow(document, message.data);
+					} else if (message.command === "openInStudio") {
+						await vscode.commands.executeCommand(
+							"automa.openInStudio",
+							document.uri,
+						);
+					}
+				} catch (error: unknown) {
+					const e = toError(error);
+					vscode.window.showErrorMessage(`Action failed: ${e.message}`);
 				}
 			},
 		);
@@ -138,7 +143,7 @@ export class WorkflowPreviewEditorProvider
 				const updatedAt = fs.statSync(uri.fsPath).mtimeMs;
 				return new Date(updatedAt).toLocaleString();
 			}
-		} catch (_err) {}
+		} catch (_err: unknown) {}
 		return "";
 	}
 

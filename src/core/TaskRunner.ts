@@ -163,7 +163,7 @@ export const TaskRunner = {
 							trimmed.substring(start, end + 1),
 						) as Record<string, unknown>;
 						TaskRunner.telemetryEmitter.emit("telemetry", telemetry);
-					} catch (_e) {
+					} catch (_e: unknown) {
 						// ignore parse error
 					}
 				}

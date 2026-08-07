@@ -289,7 +289,7 @@ export class StudioWebviewPanel {
 								validParsed = data.data;
 							}
 						}
-					} catch (_e) {
+					} catch (_e: unknown) {
 						// Ignore fetch error, just use un-sanitized data
 					}
 				}

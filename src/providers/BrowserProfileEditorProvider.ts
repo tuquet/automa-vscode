@@ -52,11 +52,16 @@ export class BrowserProfileEditorProvider
 
 		const messageDisposable = webviewPanel.webview.onDidReceiveMessage(
 			async (message) => {
-				if (message.type === "save-profile") {
-					await this.handleSaveProfile(document, message.data);
-				}
-				if (message.command === "error" || message.type === "error") {
-					vscode.window.showErrorMessage(message.text || "Webview Error");
+				try {
+					if (message.type === "save-profile") {
+						await this.handleSaveProfile(document, message.data);
+					}
+					if (message.command === "error" || message.type === "error") {
+						vscode.window.showErrorMessage(message.text || "Webview Error");
+					}
+				} catch (error: unknown) {
+					const e = toError(error);
+					vscode.window.showErrorMessage(`Action failed: ${e.message}`);
 				}
 			},
 		);

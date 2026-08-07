@@ -157,7 +157,7 @@ export async function lintCheckCommand(
 							(w: string) => `- [Warning] ${w}`,
 						);
 						output = [...errStrs, ...warnStrs].join("\n");
-					} catch (_err) {
+					} catch (_err: unknown) {
 						// Fallback to CLI
 						const { stdout, stderr } =
 							await DaemonManager.getInstance().executeRawCliCommand([

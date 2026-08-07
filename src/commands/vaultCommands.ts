@@ -46,7 +46,7 @@ function readVaultFileSafely(filePath: string): {
 	try {
 		const content = fs.readFileSync(filePath, "utf8");
 		return { data: JSON.parse(content), success: true };
-	} catch (_e) {
+	} catch (_e: unknown) {
 		vscode.window.showErrorMessage(`Failed to read ${path.basename(filePath)}`);
 		return { data: [], success: false };
 	}

@@ -160,7 +160,7 @@ export class DaemonManager {
 		const extractJSON = (str: string) => {
 			try {
 				return JSON.parse(str);
-			} catch (_e) {}
+			} catch (_e: unknown) {}
 
 			str = str.trim();
 
@@ -184,7 +184,7 @@ export class DaemonManager {
 				) {
 					try {
 						return JSON.parse(line);
-					} catch (_e) {}
+					} catch (_e: unknown) {}
 				}
 
 				if (nextIdx === -1) break;
@@ -259,7 +259,7 @@ export class DaemonManager {
 				const data = (await res.json()) as { status?: string };
 				return data.status === "ok";
 			}
-		} catch (_e) {
+		} catch (_e: unknown) {
 			// Ignore fetch errors (e.g. connection refused)
 		}
 		return false;
