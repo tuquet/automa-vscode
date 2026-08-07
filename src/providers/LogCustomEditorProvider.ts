@@ -2,7 +2,7 @@ import * as fsSync from "node:fs";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as vscode from "vscode";
-import { toError } from "../utils/typeGuards";
+import { isString, toError } from "../utils/typeGuards";
 import { BaseCustomEditorProvider } from "./BaseCustomEditorProvider";
 
 interface AutomaJobLog {

@@ -155,7 +155,7 @@ export const LiveLogEditorProvider = {
         });
 
         function escapeHtml(unsafe) {
-            if (!isString(unsafe)) return unsafe;
+            if (typeof unsafe !== 'string') return unsafe;
             return unsafe
                  .replace(/&/g, "&amp;")
                  .replace(/</g, "&lt;")

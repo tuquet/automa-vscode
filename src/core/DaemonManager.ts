@@ -42,7 +42,7 @@ export class DaemonManager {
 				);
 				if (res.ok) return await res.json();
 			}
-		} catch (_e) {
+		} catch (_e: unknown) {
 			// ignore and fallback
 		}
 		return undefined;
@@ -292,12 +292,12 @@ export class DaemonManager {
 					let stderrStr = "";
 					try {
 						stdoutStr = Buffer.concat(stdoutChunks).toString("utf-8");
-					} catch (_e) {
+					} catch (_e: unknown) {
 						stdoutStr = "[Stdout exceeded string length limit]";
 					}
 					try {
 						stderrStr = Buffer.concat(stderrChunks).toString("utf-8");
-					} catch (_e) {
+					} catch (_e: unknown) {
 						stderrStr = "[Stderr exceeded string length limit]";
 					}
 					resolve({ stdout: stdoutStr || "", stderr: stderrStr || "", code });
