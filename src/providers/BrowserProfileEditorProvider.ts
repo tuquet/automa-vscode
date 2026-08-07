@@ -62,6 +62,7 @@ export class BrowserProfileEditorProvider
 			const fileName = path.basename(document.uri.fsPath);
 			const isProfile =
 				fileName.includes(".profile.") || fileName.includes(".bprofile.");
+			const isTable = fileName.includes(".table.");
 			const label = isProfile ? "Profile" : "Data";
 			const icon = isProfile ? "ri-window-line" : "ri-database-2-line";
 			webviewPanel.title = `${label}: ${json.name || fileName}`;
@@ -70,6 +71,7 @@ export class BrowserProfileEditorProvider
 				label,
 				icon,
 				fileName,
+				isTable,
 			);
 		} catch (error: unknown) {
 			const e = error instanceof Error ? error : new Error(String(error));
@@ -98,6 +100,7 @@ export class BrowserProfileEditorProvider
 		label: string,
 		icon: string,
 		fileName: string,
+		isTable: boolean = false,
 	): string {
 		try {
 			const htmlPath = path.join(
@@ -127,6 +130,10 @@ export class BrowserProfileEditorProvider
 			);
 			htmlContent = htmlContent.replace("{{LABEL}}", label);
 			htmlContent = htmlContent.replace("{{ICON}}", icon);
+			htmlContent = htmlContent.replace(
+				"{{IS_TABLE}}",
+				isTable ? "true" : "false",
+			);
 
 			return htmlContent;
 		} catch (error: unknown) {

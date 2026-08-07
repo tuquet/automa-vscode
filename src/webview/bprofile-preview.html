@@ -95,10 +95,10 @@
             </div>
             
             <div class="flex border border-vsc-border rounded overflow-hidden shadow-sm">
-                <button @click="viewMode = 'form'" :class="['px-3 py-1 text-xs font-medium transition-colors flex items-center gap-1', viewMode === 'form' ? 'bg-vsc-button text-vsc-buttonText' : 'bg-vsc-bg text-vsc-fg hover:bg-vsc-widget']">
+                <button v-if="!isTable" @click="viewMode = 'form'" :class="['px-3 py-1 text-xs font-medium transition-colors flex items-center gap-1', viewMode === 'form' ? 'bg-vsc-button text-vsc-buttonText' : 'bg-vsc-bg text-vsc-fg hover:bg-vsc-widget']">
                     <i class="ri-layout-masonry-line"></i> Form
                 </button>
-                <button @click="viewMode = 'json'" :class="['px-3 py-1 text-xs font-medium transition-colors border-l border-vsc-border flex items-center gap-1', viewMode === 'json' ? 'bg-vsc-button text-vsc-buttonText' : 'bg-vsc-bg text-vsc-fg hover:bg-vsc-widget']">
+                <button @click="viewMode = 'json'" :class="['px-3 py-1 text-xs font-medium transition-colors flex items-center gap-1', (!isTable) ? 'border-l border-vsc-border' : '', viewMode === 'json' ? 'bg-vsc-button text-vsc-buttonText' : 'bg-vsc-bg text-vsc-fg hover:bg-vsc-widget']">
                     <i class="ri-code-s-slash-line"></i> JSON
                 </button>
             </div>
@@ -204,6 +204,7 @@
         const vscode = acquireVsCodeApi();
         const initialData = `{{PROFILE_DATA}}`;
         const initialName = `{{PROFILE_NAME}}`;
+        const isTable = {{IS_TABLE}};
 
         const { createApp, ref, onMounted, watch } = Vue;
 
@@ -263,7 +264,8 @@
                 }
                 
                 return {
-                    viewMode: state.viewMode || 'form',
+                    viewMode: state.viewMode || (isTable ? 'json' : 'form'),
+                    isTable,
                     profileName: initialName,
                     profileDataStr: loadedDataStr,
                     initialDataStr: initialData,
