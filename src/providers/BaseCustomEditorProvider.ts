@@ -1,6 +1,8 @@
 import * as vscode from "vscode";
 
 export abstract class BaseCustomEditorProvider {
+	protected isInternalSave = false;
+
 	constructor(protected readonly context: vscode.ExtensionContext) {}
 
 	protected setupWebviewPanel(
@@ -17,7 +19,9 @@ export abstract class BaseCustomEditorProvider {
 		if ("getText" in document) {
 			changeDisposable = vscode.workspace.onDidChangeTextDocument((e) => {
 				if (e.document.uri.toString() === document.uri.toString()) {
-					updateWebview();
+					if (!this.isInternalSave) {
+						updateWebview();
+					}
 				}
 			});
 		} else {
@@ -26,7 +30,9 @@ export abstract class BaseCustomEditorProvider {
 				document.uri.fsPath,
 			);
 			const handleChange = () => {
-				setTimeout(() => updateWebview(), 50);
+				if (!this.isInternalSave) {
+					setTimeout(() => updateWebview(), 50);
+				}
 			};
 
 			const changeSub = watcher.onDidChange(handleChange);
@@ -51,16 +57,24 @@ export abstract class BaseCustomEditorProvider {
 		document: vscode.TextDocument,
 		content: string,
 	): Promise<boolean> {
-		const edit = new vscode.WorkspaceEdit();
-		edit.replace(
-			document.uri,
-			new vscode.Range(0, 0, document.lineCount, 0),
-			content,
-		);
-		const success = await vscode.workspace.applyEdit(edit);
-		if (success) {
-			await document.save();
+		this.isInternalSave = true;
+		try {
+			const edit = new vscode.WorkspaceEdit();
+			edit.replace(
+				document.uri,
+				new vscode.Range(0, 0, document.lineCount, 0),
+				content,
+			);
+			const success = await vscode.workspace.applyEdit(edit);
+			if (success) {
+				await document.save();
+			}
+			return success;
+		} finally {
+			// Small delay to ensure the onDidChangeTextDocument event is caught
+			setTimeout(() => {
+				this.isInternalSave = false;
+			}, 150);
 		}
-		return success;
 	}
 }

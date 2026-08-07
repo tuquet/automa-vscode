@@ -1,8 +1,10 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as vscode from "vscode";
+import { BaseCustomEditorProvider } from "./BaseCustomEditorProvider";
 
 export class BrowserProfileEditorProvider
+	extends BaseCustomEditorProvider
 	implements vscode.CustomTextEditorProvider
 {
 	public static readonly viewType = "automa.browserProfileEditor";
@@ -22,15 +24,11 @@ export class BrowserProfileEditorProvider
 		);
 	}
 
-	constructor(private readonly context: vscode.ExtensionContext) {}
-
 	public async resolveCustomTextEditor(
 		document: vscode.TextDocument,
 		webviewPanel: vscode.WebviewPanel,
 		_token: vscode.CancellationToken,
 	): Promise<void> {
-		webviewPanel.webview.options = { enableScripts: true };
-
 		const updateWebview = () => {
 			this.renderWebview(document, webviewPanel);
 		};
@@ -43,18 +41,9 @@ export class BrowserProfileEditorProvider
 			},
 		);
 
-		const changeDocumentDisposable = vscode.workspace.onDidChangeTextDocument(
-			(e) => {
-				if (e.document.uri.toString() === document.uri.toString()) {
-					updateWebview();
-				}
-			},
-		);
-
-		webviewPanel.onDidDispose(() => {
-			messageDisposable.dispose();
-			changeDocumentDisposable.dispose();
-		});
+		this.setupWebviewPanel(document, webviewPanel, updateWebview, [
+			messageDisposable,
+		]);
 
 		updateWebview();
 	}
@@ -90,14 +79,7 @@ export class BrowserProfileEditorProvider
 		newJsonStr: string,
 	) {
 		try {
-			const edit = new vscode.WorkspaceEdit();
-			edit.replace(
-				document.uri,
-				new vscode.Range(0, 0, document.lineCount, 0),
-				newJsonStr,
-			);
-			await vscode.workspace.applyEdit(edit);
-			await document.save();
+			await this.saveDocument(document, newJsonStr);
 
 			vscode.window.showInformationMessage(
 				"Browser Profile saved successfully!",

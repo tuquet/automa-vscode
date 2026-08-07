@@ -421,7 +421,8 @@
 
                     vscode.postMessage({
                         command: 'runWorkflow',
-                        parameters: params
+                        parameters: params,
+                        keepBrowserOpen: keepBrowserOpen.value
                     });
                 };
 
