@@ -21,21 +21,27 @@ export class DaemonManager {
 		const cmd = args[0];
 		try {
 			if (cmd === "history") {
-				const res = await fetch(
-					`http://localhost:${this.port}/api/jobs/history`,
-				);
-				if (res.ok) return await res.json();
-			} else if (cmd === "clear-history") {
-				const res = await fetch(`http://localhost:${this.port}/api/jobs`, {
-					method: "DELETE",
-				});
-				if (res.ok) return await res.json();
-			} else if (cmd === "delete-history" && args[1]) {
-				const res = await fetch(
-					`http://localhost:${this.port}/api/jobs/${args[1]}`,
-					{ method: "DELETE" },
-				);
-				if (res.ok) return await res.json();
+				if (args.includes("--clear")) {
+					const res = await fetch(`http://localhost:${this.port}/api/jobs`, {
+						method: "DELETE",
+					});
+					if (res.ok) return await res.json();
+				} else if (args.includes("--delete")) {
+					const delIndex = args.indexOf("--delete");
+					const jobId = args[delIndex + 1];
+					if (jobId) {
+						const res = await fetch(
+							`http://localhost:${this.port}/api/jobs/${jobId}`,
+							{ method: "DELETE" },
+						);
+						if (res.ok) return await res.json();
+					}
+				} else {
+					const res = await fetch(
+						`http://localhost:${this.port}/api/jobs/history`,
+					);
+					if (res.ok) return await res.json();
+				}
 			} else if (cmd === "log" && args[1]) {
 				const res = await fetch(
 					`http://localhost:${this.port}/api/jobs/${args[1]}/logs`,
@@ -220,7 +226,6 @@ export class DaemonManager {
 				}
 			}
 
-			// Fallback: extract valid JSON blocks using bracket matching (AST-like)
 			const findValidJson = (
 				text: string,
 				startChar: string,
@@ -261,16 +266,22 @@ export class DaemonManager {
 						}
 					}
 
+					let parsedSuccessfully = false;
 					if (endIndex !== -1) {
 						const possibleJson = text.substring(startIndex, endIndex + 1);
 						try {
 							lastValidJson = JSON.parse(possibleJson);
+							parsedSuccessfully = true;
 						} catch (_e: unknown) {
 							// Invalid JSON
 						}
 					}
 
-					startIndex = text.indexOf(startChar, startIndex + 1);
+					if (parsedSuccessfully && endIndex !== -1) {
+						startIndex = text.indexOf(startChar, endIndex + 1);
+					} else {
+						startIndex = text.indexOf(startChar, startIndex + 1);
+					}
 				}
 				return lastValidJson;
 			};
