@@ -98,9 +98,10 @@ export class StudioWebviewPanel {
 
 					if (typeof message.data === "string") {
 						url = message.data;
-					} else if (message.data?.resource) {
-						url = message.data.resource.url || message.data.resource;
-						options = message.data.resource;
+					} else if ((message.data as any)?.resource) {
+						const res = (message.data as any).resource;
+						url = res.url || res;
+						options = res;
 					}
 
 					if (!url) throw new Error("Fetch URL missing");
@@ -112,7 +113,7 @@ export class StudioWebviewPanel {
 						return await res.text();
 					}
 
-					const type = message.data?.type || "json";
+					const type = (message.data as any)?.type || "json";
 					if (type === "json") return await res.json();
 					if (type === "text") return await res.text();
 
@@ -129,14 +130,14 @@ export class StudioWebviewPanel {
 					const { DaemonManager } = require("../core/DaemonManager");
 					const daemon = DaemonManager.getInstance();
 
-					const workflowData = message.data?.workflowData || message.data;
+					const workflowData = (message.data as any)?.workflowData || message.data;
 					if (!workflowData?.id)
 						return { success: false, error: "Missing workflow ID" };
 
+					const reqOptions = (message.data as any)?.options || {};
 					try {
 						const port = daemon.getPort();
 						const executeUrl = `http://localhost:${port}/api/jobs/run`;
-						const reqOptions = message.data?.options || {};
 						if (
 							!reqOptions.vaultPath &&
 							vscode.workspace.workspaceFolders?.length
@@ -237,6 +238,7 @@ export class StudioWebviewPanel {
 				files: vscode.Uri[],
 				shouldSanitize = false,
 			) => {
+				const { DaemonManager } = require("../core/DaemonManager");
 				const daemon = DaemonManager.getInstance();
 				const port = daemon.getPort();
 				const contents = await Promise.all(

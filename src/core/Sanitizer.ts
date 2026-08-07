@@ -32,24 +32,25 @@ export class WorkflowSanitizer {
 		let edges: Record<string, unknown>[] = [];
 
 		if (isPackage && json.data) {
-			if (Array.isArray(json.data.nodes)) nodes = json.data.nodes;
-			if (Array.isArray(json.data.edges)) edges = json.data.edges;
+			if (Array.isArray((json.data as any).nodes)) nodes = (json.data as any).nodes;
+			if (Array.isArray((json.data as any).edges)) edges = (json.data as any).edges;
 		} else if (!isPackage && json.drawflow) {
-			if (Array.isArray(json.drawflow.nodes)) nodes = json.drawflow.nodes;
-			if (Array.isArray(json.drawflow.edges)) edges = json.drawflow.edges;
+			if (Array.isArray((json.drawflow as any).nodes)) nodes = (json.drawflow as any).nodes;
+			if (Array.isArray((json.drawflow as any).edges)) edges = (json.drawflow as any).edges;
 			// Fallback for object-based nodes
 			if (
-				!Array.isArray(json.drawflow.nodes) &&
-				json.drawflow.Home &&
-				json.drawflow.Home.data
+				!Array.isArray((json.drawflow as any).nodes) &&
+				(json.drawflow as any).Home &&
+				(json.drawflow as any).Home.data
 			) {
-				Object.entries(json.drawflow.Home.data).forEach(
-					([key, node]: [string, Record<string, unknown>]) => {
-						if (!node.id) node.id = key;
-						nodes.push(node);
+				Object.entries((json.drawflow as any).Home.data).forEach(
+					([key, node]) => {
+						const n = node as Record<string, unknown>;
+						if (!n.id) n.id = key;
+						nodes.push(n);
 					},
 				);
-				json.drawflow.nodes = nodes; // normalize to array
+				(json.drawflow as any).nodes = nodes; // normalize to array
 				isModified = true;
 			}
 		}
@@ -77,26 +78,26 @@ export class WorkflowSanitizer {
 			// Sanitize Nodes
 			nList.forEach((node: Record<string, unknown>) => {
 				const originalId = node.id;
-				if (!node.id || !idRegex.test(node.id)) {
+				if (!node.id || !idRegex.test(String(node.id))) {
 					const newId = generateShortId();
 					node.id = newId;
-					if (originalId) idMap.set(originalId, newId);
+					if (originalId) idMap.set(String(originalId), newId);
 					isModified = true;
 				}
 
-				if (!node.type || !validTypes.includes(node.type)) {
+				if (!node.type || !validTypes.includes(String(node.type))) {
 					node.type = "BlockBasic";
 					isModified = true;
 				}
 
 				if (node.data) {
-					if (typeof node.data.disableBlock !== "boolean") {
-						node.data.disableBlock = false;
+					if (typeof (node.data as any).disableBlock !== "boolean") {
+						(node.data as any).disableBlock = false;
 						isModified = true;
 					}
 
 					// Recursively sanitize nested nodes/edges (e.g. in BlockPackage/BlockGroup)
-					const nestedData = node.data.data ? node.data.data : node.data;
+					const nestedData = (node.data as any).data ? (node.data as any).data : node.data;
 					if (
 						nestedData &&
 						Array.isArray(nestedData.nodes) &&
@@ -109,7 +110,7 @@ export class WorkflowSanitizer {
 
 			// Sanitize Edges
 			eList.forEach((edge: Record<string, unknown>) => {
-				if (!edge.id || !idRegex.test(edge.id)) {
+				if (!edge.id || !idRegex.test(String(edge.id))) {
 					edge.id = generateShortId();
 					isModified = true;
 				}
@@ -118,8 +119,8 @@ export class WorkflowSanitizer {
 					const newSource =
 						idMap.get(edge.source as string) || (edge.source as string);
 					if (edge.sourceHandle) {
-						edge.sourceHandle = edge.sourceHandle.replace(
-							edge.source,
+						edge.sourceHandle = String(edge.sourceHandle).replace(
+							String(edge.source),
 							newSource,
 						);
 					}
@@ -131,8 +132,8 @@ export class WorkflowSanitizer {
 					const newTarget =
 						idMap.get(edge.target as string) || (edge.target as string);
 					if (edge.targetHandle) {
-						edge.targetHandle = edge.targetHandle.replace(
-							edge.target,
+						edge.targetHandle = String(edge.targetHandle).replace(
+							String(edge.target),
 							newTarget,
 						);
 					}

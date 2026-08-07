@@ -26,6 +26,10 @@ export class Logger {
 		Logger.log("ERROR", message);
 	}
 
+	public static debug(message: string) {
+		Logger.log("DEBUG", message);
+	}
+
 	private static log(level: string, message: string) {
 		if (Logger.outputChannel) {
 			const timestamp = new Date().toISOString();

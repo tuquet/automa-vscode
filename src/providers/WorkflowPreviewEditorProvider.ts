@@ -96,9 +96,9 @@ export class WorkflowPreviewEditorProvider
 					? varName.slice(2)
 					: varName;
 				if (globalVariables[varName] !== undefined) {
-					defaultVal = globalVariables[varName];
+					defaultVal = String(globalVariables[varName]);
 				} else if (globalVariables[strippedName] !== undefined) {
-					defaultVal = globalVariables[strippedName];
+					defaultVal = String(globalVariables[strippedName]);
 				}
 			}
 			triggerParams.push({
@@ -197,10 +197,11 @@ export class WorkflowPreviewEditorProvider
 			// JSON parse for objects/arrays
 			if (updateData.settings !== undefined) {
 				try {
+					const settingsStr = String(updateData.settings);
 					json.settings =
-						updateData.settings.trim() === ""
+						settingsStr.trim() === ""
 							? {}
-							: JSON.parse(updateData.settings);
+							: JSON.parse(settingsStr);
 				} catch (error: unknown) {
 					const e = error instanceof Error ? error : new Error(String(error));
 					throw new Error(`Invalid JSON in Settings: ${e.message}`);
@@ -208,8 +209,9 @@ export class WorkflowPreviewEditorProvider
 			}
 			if (updateData.table !== undefined) {
 				try {
+					const tableStr = String(updateData.table);
 					json.table =
-						updateData.table.trim() === "" ? [] : JSON.parse(updateData.table);
+						tableStr.trim() === "" ? [] : JSON.parse(tableStr);
 				} catch (error: unknown) {
 					const e = error instanceof Error ? error : new Error(String(error));
 					throw new Error(`Invalid JSON in Table: ${e.message}`);
@@ -217,10 +219,11 @@ export class WorkflowPreviewEditorProvider
 			}
 			if (updateData.includedWorkflows !== undefined) {
 				try {
+					const workflowsStr = String(updateData.includedWorkflows);
 					json.includedWorkflows =
-						updateData.includedWorkflows.trim() === ""
+						workflowsStr.trim() === ""
 							? {}
-							: JSON.parse(updateData.includedWorkflows);
+							: JSON.parse(workflowsStr);
 				} catch (error: unknown) {
 					const e = error instanceof Error ? error : new Error(String(error));
 					throw new Error(`Invalid JSON in Included Workflows: ${e.message}`);
@@ -230,17 +233,18 @@ export class WorkflowPreviewEditorProvider
 			// Update Trigger Parameters Default Values
 			if (updateData.triggerParams && (json.drawflow || json.data)) {
 				let nodesList: Record<string, unknown>[] = [];
-				if (json.data && Array.isArray(json.data.nodes)) {
-					nodesList = json.data.nodes;
-				} else if (json.drawflow) {
-					if (Array.isArray(json.drawflow.nodes)) {
-						nodesList = json.drawflow.nodes;
+				if (json.data && typeof json.data === "object" && json.data !== null && Array.isArray((json.data as any).nodes)) {
+					nodesList = (json.data as any).nodes;
+				} else if (json.drawflow && typeof json.drawflow === "object" && json.drawflow !== null) {
+					if (Array.isArray((json.drawflow as any).nodes)) {
+						nodesList = (json.drawflow as any).nodes;
 					} else {
 						Object.keys(json.drawflow).forEach((tab) => {
-							if (json.drawflow[tab]?.data) {
-								Object.entries(json.drawflow[tab].data).forEach(
-									([_key, node]: [string, Record<string, unknown>]) => {
-										nodesList.push(node);
+							const tabData = (json.drawflow as any)[tab]?.data;
+							if (tabData) {
+								Object.entries(tabData).forEach(
+									([_key, node]) => {
+										nodesList.push(node as Record<string, unknown>);
 									},
 								);
 							}
@@ -254,10 +258,11 @@ export class WorkflowPreviewEditorProvider
 						n.name === "trigger" ||
 						n.type === "BlockTrigger",
 				);
-				if (triggerNode && Array.isArray(triggerNode.data?.parameters)) {
-					for (const param of triggerNode.data.parameters) {
-						if (updateData.triggerParams[param.name] !== undefined) {
-							param.defaultValue = updateData.triggerParams[param.name];
+				if (triggerNode && triggerNode.data && typeof triggerNode.data === "object" && Array.isArray((triggerNode.data as any).parameters)) {
+					const triggerParamsData = updateData.triggerParams as Record<string, unknown>;
+					for (const param of (triggerNode.data as any).parameters) {
+						if (triggerParamsData && triggerParamsData[param.name] !== undefined) {
+							param.defaultValue = triggerParamsData[param.name];
 						}
 					}
 				}
@@ -306,10 +311,12 @@ export class WorkflowPreviewEditorProvider
 
 			htmlContent = htmlContent.replace(
 				/\{\{WORKFLOW_NAME\}\}/g,
-				json.name ||
-					(templateName.includes("package")
-						? "Untitled Package"
-						: "Untitled Workflow"),
+				String(
+					json.name ||
+						(templateName.includes("package")
+							? "Untitled Package"
+							: "Untitled Workflow")
+				),
 			);
 			htmlContent = htmlContent.replace("{{UPDATED_AT_HTML}}", updatedAtHtml);
 			htmlContent = htmlContent.replace(
@@ -327,7 +334,7 @@ export class WorkflowPreviewEditorProvider
 			);
 			htmlContent = htmlContent.replace(
 				"{{JSON_ICON}}",
-				json.icon || "riGlobalLine",
+				String(json.icon || "riGlobalLine"),
 			);
 
 			// Additional fields common but maybe not in both, replacing won't hurt if they don't exist in template

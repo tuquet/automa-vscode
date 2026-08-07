@@ -116,7 +116,7 @@ export class DaemonManager {
 
 		let output = "";
 		try {
-			const result: { stdout: string; stderr: string } = await new Promise(
+			const result = await new Promise<{ stdout: string; stderr: string }>(
 				(resolve, reject) => {
 					const child = spawn(executable, spawnArgs, {
 						env,
