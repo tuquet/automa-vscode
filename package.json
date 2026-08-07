@@ -40,12 +40,12 @@
 				},
 				{
 					"command": "automa.runFleet",
-					"when": "resourceExtname == .json && resourceFilename =~ /.*\\.fleets\\.json$/",
+					"when": "resourceExtname == .json && resourceFilename =~ /.*\\.(fleet|fleets)\\.json$/",
 					"group": "1_run@3"
 				},
 				{
 					"command": "automa.stopFleet",
-					"when": "resourceExtname == .json && resourceFilename =~ /.*\\.fleets\\.json$/",
+					"when": "resourceExtname == .json && resourceFilename =~ /.*\\.(fleet|fleets)\\.json$/",
 					"group": "1_run@3_1"
 				},
 				{
@@ -77,12 +77,12 @@
 				},
 				{
 					"command": "automa.runFleet",
-					"when": "resourceExtname == .json && resourceFilename =~ /.*\\.fleets\\.json$/",
+					"when": "resourceExtname == .json && resourceFilename =~ /.*\\.(fleet|fleets)\\.json$/",
 					"group": "navigation"
 				},
 				{
 					"command": "automa.stopFleet",
-					"when": "resourceExtname == .json && resourceFilename =~ /.*\\.fleets\\.json$/",
+					"when": "resourceExtname == .json && resourceFilename =~ /.*\\.(fleet|fleets)\\.json$/",
 					"group": "navigation"
 				}
 			],
@@ -104,7 +104,7 @@
 				},
 				{
 					"command": "automa.showFleetPreview",
-					"when": "resourceExtname == .json && resourceFilename =~ /.*\\.fleets\\.json$/ && activeCustomEditorId != 'automa.fleetPreview'",
+					"when": "resourceExtname == .json && resourceFilename =~ /.*\\.(fleet|fleets)\\.json$/ && activeCustomEditorId != 'automa.fleetPreview'",
 					"group": "navigation"
 				},
 				{
@@ -126,7 +126,7 @@
 				},
 				{
 					"command": "automa.showFleetPreview",
-					"when": "resourceExtname == .json && resourceFilename =~ /.*\\.fleets\\.json$/ && activeCustomEditorId != 'automa.fleetPreview'",
+					"when": "resourceExtname == .json && resourceFilename =~ /.*\\.(fleet|fleets)\\.json$/ && activeCustomEditorId != 'automa.fleetPreview'",
 					"group": "navigation"
 				}
 			],

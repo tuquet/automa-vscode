@@ -24,7 +24,7 @@ export const stopFleetCommand = async (nodeOrUri?: unknown) => {
 		);
 	} else {
 		const activeEditor = vscode.window.activeTextEditor;
-		if (activeEditor?.document.uri.fsPath.endsWith(".fleets.json")) {
+		if (activeEditor?.document.uri.fsPath.match(/\\.(fleet|fleets)\\.json$/)) {
 			targetPath = activeEditor.document.uri.fsPath;
 			const displayName = path.basename(targetPath);
 			targetExecution = fleetExecutions.find(

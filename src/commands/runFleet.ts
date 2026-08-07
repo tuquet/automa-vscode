@@ -15,7 +15,7 @@ export async function runFleetCommand(
 		displayName = path.basename(pathFromNode);
 	} else {
 		const activeEditor = vscode.window.activeTextEditor;
-		if (activeEditor?.document.uri.fsPath.endsWith(".fleets.json")) {
+		if (activeEditor?.document.uri.fsPath.match(/\\.(fleet|fleets)\\.json$/)) {
 			targetPath = activeEditor.document.uri.fsPath;
 			displayName = path.basename(targetPath);
 		} else {
@@ -23,7 +23,7 @@ export async function runFleetCommand(
 				canSelectMany: false,
 				openLabel: "Select Fleet",
 				filters: {
-					"Fleet files": ["fleets.json"],
+					"Fleet files": ["fleet.json", "fleets.json"],
 				},
 			});
 			if (!uris || uris.length === 0) return;

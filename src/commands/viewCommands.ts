@@ -69,7 +69,10 @@ export function showFleetSourceCommand() {
 			const uris = await vscode.window.showOpenDialog({
 				canSelectMany: false,
 				openLabel: "Select Fleet Source",
-				filters: { "Fleet files": ["fleets.json"], "JSON files": ["json"] },
+				filters: {
+					"Fleet files": ["fleet.json", "fleets.json"],
+					"JSON files": ["json"],
+				},
 			});
 			if (uris && uris.length > 0) uri = uris[0];
 		}
@@ -89,7 +92,10 @@ export function showFleetPreviewCommand() {
 			const uris = await vscode.window.showOpenDialog({
 				canSelectMany: false,
 				openLabel: "Select Fleet to Preview",
-				filters: { "Fleet files": ["fleets.json"], "JSON files": ["json"] },
+				filters: {
+					"Fleet files": ["fleet.json", "fleets.json"],
+					"JSON files": ["json"],
+				},
 			});
 			if (uris && uris.length > 0) uri = uris[0];
 		}
