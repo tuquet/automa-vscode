@@ -117,7 +117,10 @@ export class AutomaFilesProvider implements vscode.TreeDataProvider<FileItem> {
 
 						if (this.filterType === "package") return isPackage;
 						if (this.filterType === "workflow") return !isPackage;
-					} catch (_e) {
+					} catch (e: any) {
+						vscode.window.showErrorMessage(
+							`Failed to parse file ${file.fsPath}: ${e.message}`,
+						);
 						// If parsing fails, consider it a normal workflow by default
 						return this.filterType === "workflow";
 					}

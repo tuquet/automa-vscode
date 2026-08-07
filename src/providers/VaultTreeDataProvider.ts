@@ -228,7 +228,11 @@ export class VaultTreeDataProvider
 								);
 							}
 						}
-					} catch (_e) {}
+					} catch (e: any) {
+						vscode.window.showErrorMessage(
+							`Failed to parse vault file ${file.fsPath}: ${e.message}`,
+						);
+					}
 				}
 				return items;
 			} catch (_e) {
