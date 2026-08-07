@@ -94,18 +94,33 @@ export async function addVariableCommand() {
 	const varsPath = getGlobalsFilePath("globals.variable.json");
 	if (!varsPath) return;
 
-	const variables = loadVariables(varsPath);
-
-	const existingIndex = variables.findIndex(
-		(v) => v.name === key || v.key === key,
-	);
-	if (existingIndex >= 0) {
-		variables[existingIndex].value = value;
-	} else {
-		variables.push({ name: key, value: value });
+	let data: any = [];
+	if (fs.existsSync(varsPath)) {
+		try {
+			const content = fs.readFileSync(varsPath, "utf8");
+			data = JSON.parse(content);
+		} catch (_e) {
+			vscode.window.showErrorMessage(`Failed to read globals.variable.json`);
+			return;
+		}
 	}
 
-	writeJsonFile(varsPath, variables);
+	if (Array.isArray(data)) {
+		const existingIndex = data.findIndex(
+			(v: any) => v.name === key || v.key === key,
+		);
+		if (existingIndex >= 0) {
+			data[existingIndex].value = value;
+		} else {
+			data.push({ name: key, value: value });
+		}
+	} else if (typeof data === "object" && data !== null) {
+		data[key] = value;
+	} else {
+		data = [{ name: key, value: value }];
+	}
+
+	writeJsonFile(varsPath, data);
 	vscode.window.showInformationMessage(`Variable ${key} added successfully.`);
 }
 
@@ -154,10 +169,19 @@ export async function addTableCommand() {
 	const tablesPath = getGlobalsFilePath("globals.table.json");
 	if (!tablesPath) return;
 
-	const tables = loadTables(tablesPath);
+	let data: any = [];
+	if (fs.existsSync(tablesPath)) {
+		try {
+			const content = fs.readFileSync(tablesPath, "utf8");
+			data = JSON.parse(content);
+		} catch (_e) {
+			vscode.window.showErrorMessage(`Failed to read globals.table.json`);
+			return;
+		}
+	}
 
 	const newTableId = `table_${Date.now().toString(36)}`;
-	tables.push({
+	const newTable = {
 		id: newTableId,
 		name: name,
 		columns: [],
@@ -165,9 +189,17 @@ export async function addTableCommand() {
 		columnsIndex: {},
 		createdAt: Date.now(),
 		modifiedAt: Date.now(),
-	});
+	};
 
-	writeJsonFile(tablesPath, tables);
+	if (Array.isArray(data)) {
+		data.push(newTable);
+	} else if (typeof data === "object" && data !== null) {
+		data[newTableId] = newTable;
+	} else {
+		data = [newTable];
+	}
+
+	writeJsonFile(tablesPath, data);
 	vscode.window.showInformationMessage(`Table ${name} added successfully.`);
 }
 
