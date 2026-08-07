@@ -120,6 +120,9 @@ export class FleetPreviewEditorProvider
 					TaskRunner.telemetryEmitter.off("telemetry", telemetryListener),
 			},
 		]);
+
+		// Initial render
+		updateWebview();
 	}
 
 	private async buildDictionaryFromFiles(
