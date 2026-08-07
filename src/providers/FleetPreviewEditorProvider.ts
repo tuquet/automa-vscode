@@ -109,19 +109,21 @@ export class FleetPreviewEditorProvider
 				globPattern,
 				"**/{node_modules,.git,dist,out,.gemini,tmp,build}/**",
 			);
-			for (const file of files) {
-				try {
-					const content = await vscode.workspace.fs.readFile(file);
-					const json = JSON.parse(Buffer.from(content).toString("utf8"));
-					const item = extractItem(json, file.fsPath);
-					if (item?.id && item.name) {
-						dict[item.id] = item.name;
+			await Promise.all(
+				files.map(async (file) => {
+					try {
+						const content = await vscode.workspace.fs.readFile(file);
+						const json = JSON.parse(Buffer.from(content).toString("utf8"));
+						const item = extractItem(json, file.fsPath);
+						if (item?.id && item.name) {
+							dict[item.id] = item.name;
+						}
+					} catch (e: unknown) {
+						const msg = e instanceof Error ? e.message : String(e);
+						parseErrors.push(`${path.basename(file.fsPath)}: ${msg}`);
 					}
-				} catch (e: unknown) {
-					const msg = e instanceof Error ? e.message : String(e);
-					parseErrors.push(`${path.basename(file.fsPath)}: ${msg}`);
-				}
-			}
+				}),
+			);
 
 			if (parseErrors.length > 0) {
 				const limit = 3;
@@ -155,7 +157,7 @@ export class FleetPreviewEditorProvider
 
 	private async getProfileDictionary(): Promise<Record<string, string>> {
 		return this.buildDictionaryFromFiles(
-			"**/*.profile.json",
+			"**/*.{profile,bprofile}.json",
 			(json, filePath) => {
 				const id = json.id || path.basename(filePath, path.extname(filePath));
 				const name = json.name || id;

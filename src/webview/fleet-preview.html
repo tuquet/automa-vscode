@@ -405,9 +405,14 @@
                         return;
                     }
                     this.isModified = false;
+                    const dataStr = JSON.stringify(this.fleetData, null, 2);
+                    
+                    const state = vscode.getState() || {};
+                    vscode.setState({ ...state, lastDocumentData: dataStr });
+
                     vscode.postMessage({ 
                         type: 'save-fleet', 
-                        data: JSON.stringify(this.fleetData, null, 2) 
+                        data: dataStr 
                     });
                 },
                 getWorkflowName(id) {

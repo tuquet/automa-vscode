@@ -351,6 +351,10 @@
                         return;
                     }
                     this.initialDataStr = this.profileDataStr;
+                    
+                    const state = vscode.getState() || {};
+                    vscode.setState({ ...state, lastDocumentData: this.profileDataStr });
+
                     vscode.postMessage({ 
                         type: 'save-profile', 
                         data: this.profileDataStr 
