@@ -180,21 +180,57 @@ export class DaemonManager {
 				}
 			}
 
-			// Robust fallback: find all start blocks and parse backwards
-			const starts = [];
+			// Robust fallback: O(N) single-pass balanced brace matching to find valid JSON blocks
+			let depth = 0;
+			let inString = false;
+			let isEscaped = false;
+			const validBlocks: string[] = [];
+			let currentBlockStart = -1;
+			let currentBlockType = "";
+
 			for (let i = 0; i < str.length; i++) {
-				if (str[i] === "{" || str[i] === "[") starts.push(i);
-			}
-			for (let i = starts.length - 1; i >= 0; i--) {
-				const start = starts[i];
-				const endChar = str[start] === "{" ? "}" : "]";
-				let end = str.lastIndexOf(endChar);
-				while (end > start) {
-					try {
-						return JSON.parse(str.substring(start, end + 1));
-					} catch (_e) {}
-					end = str.lastIndexOf(endChar, end - 1);
+				const char = str[i];
+				if (isEscaped) {
+					isEscaped = false;
+					continue;
 				}
+				if (char === "\\") {
+					isEscaped = true;
+					continue;
+				}
+				if (char === '"') {
+					inString = !inString;
+					continue;
+				}
+				if (!inString) {
+					if (char === "{" || char === "[") {
+						if (depth === 0) {
+							currentBlockStart = i;
+							currentBlockType = char;
+						}
+						depth++;
+					} else if (char === "}" || char === "]") {
+						depth--;
+						if (depth === 0 && currentBlockStart !== -1) {
+							if (
+								(currentBlockType === "{" && char === "}") ||
+								(currentBlockType === "[" && char === "]")
+							) {
+								validBlocks.push(str.substring(currentBlockStart, i + 1));
+							}
+							currentBlockStart = -1;
+						} else if (depth < 0) {
+							depth = 0; // reset on unmatched closing brace
+						}
+					}
+				}
+			}
+
+			// Parse backwards so we get the last valid JSON block
+			for (let i = validBlocks.length - 1; i >= 0; i--) {
+				try {
+					return JSON.parse(validBlocks[i]);
+				} catch (_e) {}
 			}
 
 			throw new Error("No valid JSON found in output");
