@@ -96,7 +96,7 @@ export function hasProp<K extends string>(
 	value: unknown,
 	key: K,
 ): value is Record<K, unknown> {
-	return isRecord(value) && key in value;
+	return isRecord(value) && Object.hasOwn(value, key);
 }
 
 export function castRecord(value: unknown): Record<string, unknown> {
@@ -129,7 +129,11 @@ export function assertHasProp<K extends string>(
 	message?: string,
 ): asserts value is Record<K, unknown> {
 	assertIsRecord(value, message);
-	if (!(key in value)) {
+	if (!Object.hasOwn(value, key)) {
 		throw new Error(message || `Missing property ${key}`);
 	}
+}
+
+export function isTextDocument(doc: unknown): doc is vscode.TextDocument {
+	return hasProp(doc, "getText") && isFunction(doc.getText);
 }

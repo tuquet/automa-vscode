@@ -1,5 +1,6 @@
 import * as path from "node:path";
 import * as vscode from "vscode";
+import { isTextDocument } from "../utils/typeGuards";
 
 export abstract class BaseCustomEditorProvider {
 	protected internalSaves = new Set<string>();
@@ -17,7 +18,7 @@ export abstract class BaseCustomEditorProvider {
 		let changeDisposable: vscode.Disposable;
 
 		// Check if it's a TextDocument
-		if ("getText" in document) {
+		if (isTextDocument(document)) {
 			changeDisposable = vscode.workspace.onDidChangeTextDocument((e) => {
 				const uriStr = document.uri.toString();
 				if (e.document.uri.toString() === uriStr) {
