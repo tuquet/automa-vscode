@@ -20,23 +20,34 @@ export class WorkflowParser {
 	}
 
 	public static extractTriggerParameters(
-		json: any,
+		jsonObj: unknown,
 		implicitVars: Set<string>,
 	): Record<string, unknown>[] {
 		const triggerParams: Record<string, unknown>[] = [];
 		let nodesList: Record<string, unknown>[] = [];
 
-		if (json.data && Array.isArray(json.data.nodes)) {
-			nodesList = json.data.nodes;
-		} else if (json.drawflow) {
-			if (Array.isArray(json.drawflow.nodes)) {
-				nodesList = json.drawflow.nodes;
+		const json = (jsonObj || {}) as Record<string, unknown>;
+
+		if (
+			json.data &&
+			typeof json.data === "object" &&
+			Array.isArray((json.data as Record<string, unknown>).nodes)
+		) {
+			nodesList = (json.data as Record<string, unknown>).nodes as Record<
+				string,
+				unknown
+			>[];
+		} else if (json.drawflow && typeof json.drawflow === "object") {
+			const drawflow = json.drawflow as Record<string, unknown>;
+			if (Array.isArray(drawflow.nodes)) {
+				nodesList = drawflow.nodes as Record<string, unknown>[];
 			} else {
-				Object.keys(json.drawflow).forEach((tab) => {
-					if (json.drawflow[tab] && json.drawflow[tab].data) {
-						Object.entries(json.drawflow[tab].data).forEach(
-							([_key, node]: [string, Record<string, unknown>]) => {
-								nodesList.push(node);
+				Object.keys(drawflow).forEach((tab) => {
+					const tabData = drawflow[tab] as Record<string, unknown>;
+					if (tabData && tabData.data) {
+						Object.entries(tabData.data as Record<string, unknown>).forEach(
+							([_key, node]: [string, unknown]) => {
+								nodesList.push(node as Record<string, unknown>);
 							},
 						);
 					}
@@ -50,9 +61,12 @@ export class WorkflowParser {
 					(node.label === "trigger" ||
 						node.name === "trigger" ||
 						node.type === "BlockTrigger") &&
-					Array.isArray(node.data?.parameters)
+					node.data &&
+					typeof node.data === "object" &&
+					Array.isArray((node.data as Record<string, unknown>).parameters)
 				) {
-					for (const param of node.data.parameters) {
+					for (const param of (node.data as Record<string, unknown>)
+						.parameters as Record<string, unknown>[]) {
 						if (
 							param.name &&
 							!triggerParams.some((p) => p.name === param.name)
@@ -61,7 +75,7 @@ export class WorkflowParser {
 								...param,
 								isImplicit: false,
 							});
-							implicitVars.delete(param.name);
+							implicitVars.delete(param.name as string);
 						}
 					}
 				}
