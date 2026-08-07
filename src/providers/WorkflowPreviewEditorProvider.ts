@@ -36,13 +36,16 @@ export class WorkflowPreviewEditorProvider
 		const messageDisposable = webviewPanel.webview.onDidReceiveMessage(
 			async (message) => {
 				if (message.command === "runWorkflow") {
-					runWorkflowCommand(document.uri, message.parameters, {
+					await runWorkflowCommand(document.uri, message.parameters, {
 						keepBrowserOpen: message.keepBrowserOpen,
 					});
 				} else if (message.command === "saveWorkflow") {
 					await this.handleSaveWorkflow(document, message.data);
 				} else if (message.command === "openInStudio") {
-					vscode.commands.executeCommand("automa.openInStudio", document.uri);
+					await vscode.commands.executeCommand(
+						"automa.openInStudio",
+						document.uri,
+					);
 				}
 			},
 		);
