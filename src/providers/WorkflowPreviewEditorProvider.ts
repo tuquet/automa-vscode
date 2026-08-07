@@ -63,21 +63,7 @@ export class WorkflowPreviewEditorProvider
 		const isModified = WorkflowSanitizer.sanitize(json);
 
 		if (isModified) {
-			this.isInternalSave = true;
-			try {
-				const edit = new vscode.WorkspaceEdit();
-				edit.replace(
-					document.uri,
-					new vscode.Range(0, 0, document.lineCount, 0),
-					JSON.stringify(json, null, 4),
-				);
-				// Apply silently in the background
-				await vscode.workspace.applyEdit(edit);
-			} finally {
-				setTimeout(() => {
-					this.isInternalSave = false;
-				}, 150);
-			}
+			await this.saveDocument(document, JSON.stringify(json, null, 4));
 		}
 	}
 
