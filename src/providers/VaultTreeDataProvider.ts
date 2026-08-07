@@ -139,7 +139,8 @@ export class VaultTreeDataProvider
 			"Unnamed",
 			"Error reading variables",
 			"No *.variable.json found",
-			(item, isArray, _key, val) => (isArray ? item.value : String(val)),
+			(item, isArray, _key, val) =>
+				isArray ? (item.value as string | undefined) : String(val),
 			true,
 		);
 	}

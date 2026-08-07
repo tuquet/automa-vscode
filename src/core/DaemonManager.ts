@@ -10,7 +10,7 @@ const execAsync = promisify(exec);
 
 export class DaemonManager {
 	private static instance: DaemonManager;
-	private daemonProcess: ChildProcess | null = null;
+	public daemonProcess: ChildProcess | null = null;
 	private port = 8765;
 	private hasLoggedReuse = false;
 	private statusBarItem: vscode.StatusBarItem;
@@ -88,7 +88,7 @@ export class DaemonManager {
 		return { cmd, args: [cliPath, ...baseArgs] };
 	}
 
-	public async executeCliCommand(args: string[]): Promise<any> {
+	public async executeCliCommand(args: string[]): Promise<unknown> {
 		const { cmd, args: resolvedArgs } = this.resolveCommandAndArgs(args);
 
 		const finalArgs = resolvedArgs.includes("--json")
@@ -154,7 +154,7 @@ export class DaemonManager {
 			throw new Error("No valid JSON found in output");
 		};
 
-		let parsed: any;
+		let parsed: unknown;
 		try {
 			parsed = extractJSON(output);
 			return parsed;
@@ -187,7 +187,7 @@ export class DaemonManager {
 				method: "GET",
 			});
 			if (res.ok) {
-				const data = (await res.json()) as any;
+				const data = (await res.json()) as { status?: string };
 				return data.status === "ok";
 			}
 		} catch (_e) {

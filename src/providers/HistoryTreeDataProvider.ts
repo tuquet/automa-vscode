@@ -1,6 +1,13 @@
 import * as vscode from "vscode";
 import { DaemonManager } from "../core/DaemonManager";
 
+interface AutomaJob {
+	id: string;
+	name?: string;
+	status: string;
+	created_at: string;
+}
+
 export class HistoryTreeDataProvider
 	implements vscode.TreeDataProvider<vscode.TreeItem>
 {
@@ -193,7 +200,7 @@ export class HistoryTreeDataProvider
 
 	private async fetchChildren(): Promise<vscode.TreeItem[]> {
 		try {
-			let jobs: any;
+			let jobs: AutomaJob[];
 
 			try {
 				const daemon = DaemonManager.getInstance();
@@ -204,13 +211,15 @@ export class HistoryTreeDataProvider
 				}
 				const res = await fetch(url);
 				if (!res.ok) throw new Error("Daemon not ready");
-				jobs = await res.json();
+				jobs = (await res.json()) as AutomaJob[];
 			} catch (_err) {
 				const args = ["history", "--limit", this.currentLimit.toString()];
 				if (this.taskIdFilter) {
 					args.push("--task-id", this.taskIdFilter);
 				}
-				jobs = await DaemonManager.getInstance().executeCliCommand(args);
+				jobs = (await DaemonManager.getInstance().executeCliCommand(
+					args,
+				)) as AutomaJob[];
 			}
 
 			if (!jobs || jobs.length === 0) {
@@ -227,7 +236,7 @@ export class HistoryTreeDataProvider
 				return [emptyItem];
 			}
 
-			const treeItems = jobs.map((job: any) => {
+			const treeItems = jobs.map((job: AutomaJob) => {
 				const treeItem = new vscode.TreeItem(
 					job.name || "Unknown",
 					vscode.TreeItemCollapsibleState.None,

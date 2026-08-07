@@ -4,6 +4,24 @@ import * as path from "node:path";
 import * as vscode from "vscode";
 import { BaseCustomEditorProvider } from "./BaseCustomEditorProvider";
 
+interface AutomaJobLog {
+	id: string;
+	name?: string;
+	status: string;
+	created_at: string;
+	workflow_id?: string;
+	duration?: number;
+	results?: Record<string, unknown>;
+	[key: string]: unknown;
+}
+
+interface ParsedLogResponse {
+	error?: string;
+	job?: AutomaJobLog;
+	logs?: Record<string, unknown>[];
+	results?: Record<string, unknown>;
+}
+
 export class LogCustomEditorProvider
 	extends BaseCustomEditorProvider
 	implements vscode.CustomReadonlyEditorProvider
@@ -33,7 +51,9 @@ export class LogCustomEditorProvider
 		return { uri, dispose: () => {} };
 	}
 
-	private static async fetchLogFromDaemon(jobId: string): Promise<any> {
+	private static async fetchLogFromDaemon(
+		jobId: string,
+	): Promise<ParsedLogResponse> {
 		const { DaemonManager } = require("../core/DaemonManager");
 		const daemon = DaemonManager.getInstance();
 
@@ -43,14 +63,14 @@ export class LogCustomEditorProvider
 				`http://localhost:${port}/api/jobs/${jobId}/details`,
 			);
 			if (!res.ok) throw new Error("Daemon not ready");
-			return await res.json();
+			return (await res.json()) as ParsedLogResponse;
 		} catch (_err) {
 			const { stdout } = await daemon.executeRawCliCommand([
 				"log",
 				jobId,
 				"--json",
 			]);
-			return JSON.parse(stdout);
+			return JSON.parse(stdout) as ParsedLogResponse;
 		}
 	}
 
@@ -81,10 +101,11 @@ export class LogCustomEditorProvider
 				return;
 			}
 
-			const job = parsed.job || {
+			const job: AutomaJobLog = parsed.job || {
 				name: "Unknown",
 				id: jobId,
 				status: "unknown",
+				created_at: new Date().toISOString(),
 			};
 			const logs = parsed.logs || [];
 			const results = parsed.results || { table: [], variables: {} };
@@ -110,10 +131,11 @@ export class LogCustomEditorProvider
 			try {
 				const content = await fs.readFile(document.uri.fsPath, "utf-8");
 				const parsed = JSON.parse(content);
-				const job = parsed.job || {
+				const job: AutomaJobLog = parsed.job || {
 					name: "Unknown Workflow",
 					id: "N/A",
 					status: "unknown",
+					created_at: new Date().toISOString(),
 				};
 				const logs = parsed.logs || [];
 				const results = parsed.results || { table: [], variables: {} };
@@ -172,7 +194,7 @@ export class LogCustomEditorProvider
 	}
 
 	private renderHtmlTemplate(
-		job: any,
+		job: AutomaJobLog,
 		logsJson: string,
 		jobJson: string,
 	): string {
@@ -218,7 +240,10 @@ export class LogCustomEditorProvider
 		return htmlContent;
 	}
 
-	private getWebviewContent(job: any, logs: any[]): string {
+	private getWebviewContent(
+		job: AutomaJobLog,
+		logs: Record<string, unknown>[],
+	): string {
 		const logsJson = JSON.stringify(logs).replace(/</g, "\\u003c");
 		const jobJson = JSON.stringify(job).replace(/</g, "\\u003c");
 
