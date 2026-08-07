@@ -37,9 +37,11 @@ export class WorkflowPreviewEditorProvider
 		_token: vscode.CancellationToken,
 	): Promise<void> {
 		let isRendered = false;
+		let hasError = false;
 		const updateWebview = async () => {
-			if (!isRendered) {
-				await this.renderWebview(document, webviewPanel);
+			if (!isRendered || hasError) {
+				const success = await this.renderWebview(document, webviewPanel);
+				hasError = !success;
 				isRendered = true;
 			} else {
 				await this.postUpdateMessage(document, webviewPanel);
@@ -143,7 +145,7 @@ export class WorkflowPreviewEditorProvider
 	private async renderWebview(
 		document: vscode.TextDocument,
 		webviewPanel: vscode.WebviewPanel,
-	) {
+	): Promise<boolean> {
 		try {
 			const content = document.getText();
 			const json = JSON.parse(content);
@@ -155,7 +157,7 @@ export class WorkflowPreviewEditorProvider
 				Array.isArray(json)
 			) {
 				webviewPanel.webview.html = `<body><h2>Not an Automa workflow</h2><p>This JSON file does not appear to be an Automa workflow.</p></body>`;
-				return;
+				return false;
 			}
 
 			const triggerParams = await this.prepareTriggerParameters(
@@ -183,9 +185,11 @@ export class WorkflowPreviewEditorProvider
 				pkgOutputs,
 				pkgVars,
 			);
+			return true;
 		} catch (error: unknown) {
 			const e = toError(error);
 			webviewPanel.webview.html = `<body><h2>Error reading workflow</h2><p>${e.message}</p></body>`;
+			return false;
 		}
 	}
 

@@ -31,9 +31,11 @@ export class BrowserProfileEditorProvider
 		_token: vscode.CancellationToken,
 	): Promise<void> {
 		let isRendered = false;
+		let hasError = false;
 		const updateWebview = () => {
-			if (!isRendered) {
-				this.renderWebview(document, webviewPanel);
+			if (!isRendered || hasError) {
+				const success = this.renderWebview(document, webviewPanel);
+				hasError = !success;
 				isRendered = true;
 			} else {
 				try {
@@ -69,7 +71,7 @@ export class BrowserProfileEditorProvider
 	private renderWebview(
 		document: vscode.TextDocument,
 		webviewPanel: vscode.WebviewPanel,
-	) {
+	): boolean {
 		try {
 			const content = document.getText();
 			const json = JSON.parse(content || "{}");
@@ -88,9 +90,11 @@ export class BrowserProfileEditorProvider
 				fileName,
 				isTable,
 			);
+			return true;
 		} catch (error: unknown) {
 			const e = toError(error);
 			webviewPanel.webview.html = `<body><h2>Error reading profile</h2><p>${e.message}</p></body>`;
+			return false;
 		}
 	}
 
