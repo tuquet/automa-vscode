@@ -161,11 +161,39 @@ export class DaemonManager {
 		}
 
 		const extractJSONFromBuffer = (buf: Buffer) => {
-			// Fast path for small outputs (< 10MB)
-			if (buf.length < 10 * 1024 * 1024) {
-				const str = buf.toString("utf-8").trim();
+			const str = buf.toString("utf-8").trim();
+
+			// Fast path for exact JSON
+			try {
+				return JSON.parse(str);
+			} catch (_e: unknown) {}
+
+			// Check for JSON block bounds
+			const firstBrace = str.indexOf("{");
+			const lastBrace = str.lastIndexOf("}");
+			const firstBracket = str.indexOf("[");
+			const lastBracket = str.lastIndexOf("]");
+
+			const candidates: string[] = [];
+
+			if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+				candidates.push(str.substring(firstBrace, lastBrace + 1));
+			}
+
+			if (
+				firstBracket !== -1 &&
+				lastBracket !== -1 &&
+				lastBracket > firstBracket
+			) {
+				candidates.push(str.substring(firstBracket, lastBracket + 1));
+			}
+
+			// Sort by length descending, larger block is usually the payload
+			candidates.sort((a, b) => b.length - a.length);
+
+			for (const candidate of candidates) {
 				try {
-					return JSON.parse(str);
+					return JSON.parse(candidate);
 				} catch (_e: unknown) {}
 			}
 
