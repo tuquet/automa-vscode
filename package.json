@@ -240,12 +240,12 @@
 			"view/item/context": [
 				{
 					"command": "automa.killRunner",
-					"when": "view == automa.activeRunners",
+					"when": "viewItem == automaRunner",
 					"group": "inline"
 				},
 				{
 					"command": "automa.showLiveLog",
-					"when": "view == automa.activeRunners",
+					"when": "viewItem == automaRunner",
 					"group": "inline"
 				},
 				{
