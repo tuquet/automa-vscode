@@ -242,6 +242,11 @@
 					"command": "automa.runFleet",
 					"when": "viewItem == automaFileItem-automa.fleets",
 					"group": "inline"
+				},
+				{
+					"command": "automa.deleteVaultItem",
+					"when": "view == automa.globalVault && (viewItem == Variable || viewItem == Credential || viewItem == Table)",
+					"group": "inline"
 				}
 			]
 		},
@@ -510,6 +515,11 @@
 				"command": "automa.refreshVault",
 				"title": "Refresh",
 				"icon": "$(refresh)"
+			},
+			{
+				"command": "automa.deleteVaultItem",
+				"title": "Delete",
+				"icon": "$(trash)"
 			}
 		],
 		"customEditors": [

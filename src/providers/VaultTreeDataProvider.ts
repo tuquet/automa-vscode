@@ -209,6 +209,7 @@ export class VaultTreeDataProvider
 										type,
 										iconName,
 										value,
+										file,
 									),
 								);
 							}
@@ -226,6 +227,7 @@ export class VaultTreeDataProvider
 										type,
 										iconName,
 										value,
+										file,
 									),
 								);
 							}
@@ -284,6 +286,7 @@ export class VaultItem extends vscode.TreeItem {
 			| "Error",
 		iconName: string,
 		public readonly value?: string,
+		public readonly resourceUri?: vscode.Uri,
 	) {
 		super(label, collapsibleState);
 		this.iconPath = new vscode.ThemeIcon(iconName);
@@ -291,6 +294,13 @@ export class VaultItem extends vscode.TreeItem {
 		if (value !== undefined) {
 			this.description = value;
 			this.tooltip = `${label}: ${value}`;
+		}
+		if (resourceUri) {
+			this.command = {
+				command: "vscode.open",
+				title: "Open File",
+				arguments: [resourceUri],
+			};
 		}
 	}
 }
