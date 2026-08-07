@@ -72,7 +72,7 @@ export function showLogPreviewCommand(context: vscode.ExtensionContext) {
 			const {
 				LogCustomEditorProvider,
 			} = require("../providers/LogCustomEditorProvider");
-			LogCustomEditorProvider.showLogForJobId(context, jobId);
+			await LogCustomEditorProvider.showLogForJobId(context, jobId);
 		} else if (uri) {
 			await vscode.commands.executeCommand(
 				"vscode.openWith",

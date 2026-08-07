@@ -64,25 +64,27 @@ export class HistoryTreeDataProvider
 						placeHolder: "e.g. tsk_dev002",
 					});
 					if (taskId) {
-						this.setFilter(taskId);
+						await this.setFilter(taskId);
 					}
 				},
 			),
 		);
 		this.context.subscriptions.push(
-			vscode.commands.registerCommand("automa.clearHistoryFilter", () => {
-				this.clearFilter();
+			vscode.commands.registerCommand("automa.clearHistoryFilter", async () => {
+				await this.clearFilter();
 			}),
 		);
 		this.context.subscriptions.push(
 			vscode.commands.registerCommand(
 				"automa.deleteHistoryItem",
-				(item: vscode.TreeItem) => this.handleDeleteHistoryItem(item),
+				async (item: vscode.TreeItem) =>
+					await this.handleDeleteHistoryItem(item),
 			),
 		);
 		this.context.subscriptions.push(
-			vscode.commands.registerCommand("automa.clearHistory", () =>
-				this.handleClearHistory(),
+			vscode.commands.registerCommand(
+				"automa.clearHistory",
+				async () => await this.handleClearHistory(),
 			),
 		);
 	}
