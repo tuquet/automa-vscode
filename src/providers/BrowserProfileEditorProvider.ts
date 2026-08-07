@@ -5,7 +5,22 @@ import * as vscode from "vscode";
 export class BrowserProfileEditorProvider
 	implements vscode.CustomTextEditorProvider
 {
-	public static readonly viewType = "automa.bprofileEditor";
+	public static readonly viewType = "automa.browserProfileEditor";
+
+	public static register(context: vscode.ExtensionContext) {
+		context.subscriptions.push(
+			vscode.window.registerCustomEditorProvider(
+				BrowserProfileEditorProvider.viewType,
+				new BrowserProfileEditorProvider(context),
+				{
+					webviewOptions: {
+						retainContextWhenHidden: true,
+					},
+					supportsMultipleEditorsPerDocument: false,
+				},
+			),
+		);
+	}
 
 	constructor(private readonly context: vscode.ExtensionContext) {}
 

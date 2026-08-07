@@ -10,6 +10,21 @@ export class WorkflowPreviewEditorProvider
 {
 	public static readonly viewType = "automa.workflowPreview";
 
+	public static register(context: vscode.ExtensionContext) {
+		context.subscriptions.push(
+			vscode.window.registerCustomEditorProvider(
+				WorkflowPreviewEditorProvider.viewType,
+				new WorkflowPreviewEditorProvider(context),
+				{
+					webviewOptions: {
+						retainContextWhenHidden: true,
+					},
+					supportsMultipleEditorsPerDocument: false,
+				},
+			),
+		);
+	}
+
 	public async resolveCustomTextEditor(
 		document: vscode.TextDocument,
 		webviewPanel: vscode.WebviewPanel,

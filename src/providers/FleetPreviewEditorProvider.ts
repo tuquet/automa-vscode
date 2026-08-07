@@ -10,6 +10,21 @@ export class FleetPreviewEditorProvider
 {
 	public static readonly viewType = "automa.fleetPreview";
 
+	public static register(context: vscode.ExtensionContext) {
+		context.subscriptions.push(
+			vscode.window.registerCustomEditorProvider(
+				FleetPreviewEditorProvider.viewType,
+				new FleetPreviewEditorProvider(context),
+				{
+					webviewOptions: {
+						retainContextWhenHidden: true,
+					},
+					supportsMultipleEditorsPerDocument: false,
+				},
+			),
+		);
+	}
+
 	public async resolveCustomTextEditor(
 		document: vscode.TextDocument,
 		webviewPanel: vscode.WebviewPanel,

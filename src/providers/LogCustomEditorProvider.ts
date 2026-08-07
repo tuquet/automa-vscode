@@ -10,6 +10,21 @@ export class LogCustomEditorProvider
 {
 	public static readonly viewType = "automa.logEditor";
 
+	public static register(context: vscode.ExtensionContext) {
+		context.subscriptions.push(
+			vscode.window.registerCustomEditorProvider(
+				LogCustomEditorProvider.viewType,
+				new LogCustomEditorProvider(context),
+				{
+					webviewOptions: {
+						retainContextWhenHidden: true,
+					},
+					supportsMultipleEditorsPerDocument: false,
+				},
+			),
+		);
+	}
+
 	public async openCustomDocument(
 		uri: vscode.Uri,
 		_openContext: vscode.CustomDocumentOpenContext,

@@ -22,6 +22,21 @@ export class HistoryTreeDataProvider
 		this.refresh();
 	}
 
+	public register(context: vscode.ExtensionContext) {
+		const treeView = vscode.window.createTreeView("automa.executionHistory", {
+			treeDataProvider: this,
+		});
+		context.subscriptions.push(treeView);
+
+		treeView.onDidChangeVisibility((e) => {
+			if (e.visible) {
+				this.refresh();
+			}
+		});
+
+		this.registerCommands();
+	}
+
 	public registerCommands() {
 		this.context.subscriptions.push(
 			vscode.commands.registerCommand("automa.refreshHistory", () => {

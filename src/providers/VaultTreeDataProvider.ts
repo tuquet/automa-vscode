@@ -64,6 +64,19 @@ export class VaultTreeDataProvider
 		}
 	}
 
+	public register(context: vscode.ExtensionContext) {
+		const treeView = vscode.window.createTreeView("automa.globalVault", {
+			treeDataProvider: this,
+		});
+		context.subscriptions.push(treeView);
+
+		context.subscriptions.push(
+			vscode.commands.registerCommand("automa.refreshVault", () => {
+				this.refresh();
+			}),
+		);
+	}
+
 	refresh(): void {
 		this._onDidChangeTreeData.fire(undefined);
 	}

@@ -39,6 +39,34 @@ export class RunnersTreeDataProvider
 		this.treeView = view;
 	}
 
+	public register(context: vscode.ExtensionContext) {
+		context.subscriptions.push(this.statusBarItem);
+
+		const treeView = vscode.window.createTreeView("automa.activeRunners", {
+			treeDataProvider: this,
+		});
+		this.setTreeView(treeView);
+
+		treeView.onDidChangeVisibility((e) => {
+			if (e.visible) {
+				this.refresh();
+			}
+		});
+
+		context.subscriptions.push(treeView);
+		context.subscriptions.push(
+			vscode.commands.registerCommand("automa.focusActiveRunners", () => {
+				vscode.commands.executeCommand("automa.activeRunners.focus");
+			}),
+		);
+		context.subscriptions.push(
+			vscode.commands.registerCommand("automa.refreshRunners", () => {
+				this.refresh();
+			}),
+		);
+		this.refresh();
+	}
+
 	refresh(): void {
 		if (this.treeView) {
 			const runners = vscode.tasks.taskExecutions.filter((execution) =>
