@@ -168,50 +168,15 @@ export class DaemonManager {
 				return JSON.parse(str);
 			} catch (_e: unknown) {}
 
-			const results: unknown[] = [];
-			let i = 0;
-			while (i < str.length) {
-				if (str[i] === "{" || str[i] === "[") {
-					const isObject = str[i] === "{";
-					let depth = 0;
-					let inString = false;
-					let inEscape = false;
-					let j = i;
-					for (; j < str.length; j++) {
-						const char = str[j];
-						if (inString) {
-							if (inEscape) {
-								inEscape = false;
-							} else if (char === "\\") {
-								inEscape = true;
-							} else if (char === '"') {
-								inString = false;
-							}
-						} else {
-							if (char === '"') {
-								inString = true;
-							} else if (char === (isObject ? "{" : "[")) {
-								depth++;
-							} else if (char === (isObject ? "}" : "]")) {
-								depth--;
-								if (depth === 0) {
-									const candidate = str.substring(i, j + 1);
-									try {
-										results.push(JSON.parse(candidate));
-									} catch (_e: unknown) {}
-									break;
-								}
-							}
-						}
-					}
-					i = depth === 0 ? j + 1 : i + 1;
-				} else {
-					i++;
+			// Optimized path: check lines from bottom up (CLI usually prints JSON as the last line)
+			const lines = str.split("\n");
+			for (let i = lines.length - 1; i >= 0; i--) {
+				const line = lines[i].trim();
+				if (line.startsWith("{") || line.startsWith("[")) {
+					try {
+						return JSON.parse(line);
+					} catch (_e: unknown) {}
 				}
-			}
-
-			if (results.length > 0) {
-				return results[results.length - 1];
 			}
 
 			throw new Error("No valid JSON found in output");
