@@ -91,37 +91,66 @@ export class DaemonManager {
 	public async executeCliCommand(args: string[]): Promise<any> {
 		const { cmd, args: resolvedArgs } = this.resolveCommandAndArgs(args);
 
-		const argsStr = resolvedArgs.includes("--json")
-			? resolvedArgs.map((a) => `"${a}"`).join(" ")
-			: [...resolvedArgs, "--json"].map((a) => `"${a}"`).join(" ");
+		const finalArgs = resolvedArgs.includes("--json")
+			? resolvedArgs
+			: [...resolvedArgs, "--json"];
 
+		const argsStr = finalArgs
+			.map((a) => `"${a.replace(/"/g, '\\"')}"`)
+			.join(" ");
 		const execCmd = `${cmd} ${argsStr}`;
 
 		const { stdout, stderr } = await execAsync(execCmd, {
-			maxBuffer: 1024 * 1024 * 10,
+			maxBuffer: 1024 * 1024 * 50,
 		}).catch((e) => e);
-		const output = stdout || stderr || "";
+		const output = `${stdout || ""}\n${stderr || ""}`.trim();
 
 		const extractJSON = (str: string) => {
-			const candidates = [];
-			const firstBrace = str.indexOf("{");
-			if (firstBrace !== -1) {
-				candidates.push(str.substring(firstBrace, str.lastIndexOf("}") + 1));
-			}
-			const firstBracket = str.indexOf("[");
-			if (firstBracket !== -1) {
-				candidates.push(str.substring(firstBracket, str.lastIndexOf("]") + 1));
-			}
-			candidates.sort((a, b) => b.length - a.length);
+			try {
+				return JSON.parse(str);
+			} catch (_e) {}
 
-			for (const cand of candidates) {
-				if (!cand) continue;
+			// Try the last line
+			const lines = str.split("\n");
+			try {
+				return JSON.parse(lines[lines.length - 1].trim());
+			} catch (_e) {}
+
+			// Try extracting from first { to last }
+			const firstBrace = str.indexOf("{");
+			const lastBrace = str.lastIndexOf("}");
+			if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
 				try {
-					return JSON.parse(cand);
-				} catch (_e) {
-					// continue
+					return JSON.parse(str.substring(firstBrace, lastBrace + 1));
+				} catch (_e) {}
+			}
+
+			// Try extracting from first [ to last ]
+			const firstBracket = str.indexOf("[");
+			const lastBracket = str.lastIndexOf("]");
+			if (
+				firstBracket !== -1 &&
+				lastBracket !== -1 &&
+				lastBracket > firstBracket
+			) {
+				try {
+					return JSON.parse(str.substring(firstBracket, lastBracket + 1));
+				} catch (_e) {}
+			}
+
+			// Try finding `{` or `[` starting from the end
+			for (let i = str.length - 1; i >= 0; i--) {
+				if (str[i] === "{" || str[i] === "[") {
+					const endChar = str[i] === "{" ? "}" : "]";
+					const end = str.lastIndexOf(endChar);
+					if (end > i) {
+						try {
+							return JSON.parse(str.substring(i, end + 1));
+						} catch (_e) {}
+					}
 				}
 			}
+
 			throw new Error("No valid JSON found in output");
 		};
 
@@ -143,7 +172,7 @@ export class DaemonManager {
 		const { cmd, args: finalArgs } = this.resolveCommandAndArgs(args);
 		const commandStr = `${cmd} ${finalArgs.map((a) => `"${a.replace(/"/g, '\\"')}"`).join(" ")}`;
 		const { stdout, stderr } = await execAsync(commandStr, {
-			maxBuffer: 1024 * 1024 * 10,
+			maxBuffer: 1024 * 1024 * 50,
 		});
 		return { stdout, stderr };
 	}
