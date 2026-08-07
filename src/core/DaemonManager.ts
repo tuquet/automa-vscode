@@ -168,14 +168,34 @@ export class DaemonManager {
 				return JSON.parse(str);
 			} catch (_e: unknown) {}
 
-			// Optimized path: check lines from bottom up (CLI usually prints JSON as the last line)
-			const lines = str.split("\n");
-			for (let i = lines.length - 1; i >= 0; i--) {
-				const line = lines[i].trim();
-				if (line.startsWith("{") || line.startsWith("[")) {
-					try {
-						return JSON.parse(line);
-					} catch (_e: unknown) {}
+			// Optimized path: try to find the start of the JSON object/array
+			const startObject = str.indexOf("{");
+			const startArray = str.indexOf("[");
+			let startIdx = -1;
+
+			if (startObject !== -1 && startArray !== -1) {
+				startIdx = Math.min(startObject, startArray);
+			} else if (startObject !== -1) {
+				startIdx = startObject;
+			} else if (startArray !== -1) {
+				startIdx = startArray;
+			}
+
+			if (startIdx !== -1) {
+				try {
+					// Try parsing from the first '{' or '[' to the end
+					return JSON.parse(str.substring(startIdx));
+				} catch (_e: unknown) {
+					// Try line by line fallback just in case there are multiple JSONs or trailing texts
+					const lines = str.split("\n");
+					for (let i = lines.length - 1; i >= 0; i--) {
+						const line = lines[i].trim();
+						if (line.startsWith("{") || line.startsWith("[")) {
+							try {
+								return JSON.parse(line);
+							} catch (_e2: unknown) {}
+						}
+					}
 				}
 			}
 

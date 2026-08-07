@@ -135,8 +135,23 @@ export const TaskRunner = {
 		const command = options.command || defaultCommand;
 
 		const _config = vscode.workspace.getConfiguration("automa");
+		const browserPathOverride =
+			_config.get<string>("browserPathOverride") || "";
+		const extensionPaths = _config.get<string>("extensionPaths") || "";
 
-		const env = { ...process.env };
+		const env: { [key: string]: string } = {};
+		for (const key in process.env) {
+			if (process.env[key] !== undefined) {
+				env[key] = process.env[key] as string;
+			}
+		}
+
+		if (browserPathOverride) {
+			env.AUTOMA_BROWSER_PATH = browserPathOverride;
+		}
+		if (extensionPaths) {
+			env.EXTENSION_PATHS = extensionPaths;
+		}
 
 		// Create an output channel to show logs
 		const outputChannel = vscode.window.createOutputChannel(options.name);
@@ -155,18 +170,20 @@ export const TaskRunner = {
 		rl.on("line", (line: string) => {
 			outputChannel.appendLine(line);
 			const trimmed = line.trim();
-			if (trimmed.includes('"type":"telemetry"')) {
-				const start = trimmed.indexOf("{");
-				const end = trimmed.lastIndexOf("}");
-				if (start !== -1 && end !== -1 && end > start) {
-					try {
+			const match = trimmed.match(/("type":"telemetry".+)/);
+			if (match) {
+				try {
+					// Look for a valid JSON boundary. Automa outputs it as a complete object.
+					const start = trimmed.indexOf("{");
+					const end = trimmed.lastIndexOf("}");
+					if (start !== -1 && end !== -1 && end > start) {
 						const telemetry = castRecord(
 							JSON.parse(trimmed.substring(start, end + 1)),
 						);
 						TaskRunner.telemetryEmitter.emit("telemetry", telemetry);
-					} catch (_e: unknown) {
-						// ignore parse error
 					}
+				} catch (_e: unknown) {
+					// ignore parse error
 				}
 			}
 		});
