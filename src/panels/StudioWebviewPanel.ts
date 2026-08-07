@@ -1,7 +1,12 @@
 import * as fs from "node:fs";
 import * as vscode from "vscode";
 import { Logger } from "../core/Logger";
-import { getErrorMessage, isString, toError } from "../utils/typeGuards";
+import {
+	castRecord,
+	getErrorMessage,
+	isString,
+	toError,
+} from "../utils/typeGuards";
 
 export class StudioWebviewPanel {
 	public static currentPanel: StudioWebviewPanel | undefined;
@@ -111,9 +116,8 @@ export class StudioWebviewPanel {
 
 					if (isString(message.data)) {
 						url = message.data;
-					} else if ((message.data as Record<string, unknown>)?.resource) {
-						const res = (message.data as Record<string, unknown>)
-							.resource as Record<string, unknown>;
+					} else if (castRecord(message.data)?.resource) {
+						const res = castRecord(castRecord(message.data).resource);
 						url = (res.url as string) || (res as unknown as string);
 						options = res;
 					}
@@ -127,8 +131,7 @@ export class StudioWebviewPanel {
 						return await res.text();
 					}
 
-					const type =
-						(message.data as Record<string, unknown>)?.type || "json";
+					const type = castRecord(message.data)?.type || "json";
 					if (type === "json") return await res.json();
 					if (type === "text") return await res.text();
 
@@ -146,16 +149,12 @@ export class StudioWebviewPanel {
 					const daemon = DaemonManager.getInstance();
 
 					const workflowData =
-						(message.data as Record<string, unknown>)?.workflowData ||
-						message.data;
-					if (!(workflowData as Record<string, unknown>)?.id)
+						castRecord(message.data)?.workflowData || message.data;
+					if (!castRecord(workflowData)?.id)
 						return { success: false, error: "Missing workflow ID" };
 
 					const reqOptions =
-						((message.data as Record<string, unknown>)?.options as Record<
-							string,
-							unknown
-						>) || {};
+						castRecord(castRecord(message.data)?.options) || {};
 					try {
 						const port = daemon.getPort();
 						const executeUrl = `http://localhost:${port}/api/jobs/run`;
@@ -496,7 +495,7 @@ export class StudioWebviewPanel {
 		}
 
 		for (const rawItem of itemsList) {
-			const item = rawItem as Record<string, unknown>;
+			const item = castRecord(rawItem);
 			if (!item?.id) continue;
 			const itemId = item.id as string;
 			let targetUri = idToUriMap.get(itemId);

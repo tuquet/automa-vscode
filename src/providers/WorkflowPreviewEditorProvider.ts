@@ -2,7 +2,14 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as vscode from "vscode";
 import { runWorkflowCommand } from "../commands/runWorkflow";
-import { getProp, hasObjectProp, isRecord, toError } from "../utils/typeGuards";
+import {
+	castRecord,
+	castRecordArray,
+	getProp,
+	hasObjectProp,
+	isRecord,
+	toError,
+} from "../utils/typeGuards";
 import { BaseCustomEditorProvider } from "./BaseCustomEditorProvider";
 
 export class WorkflowPreviewEditorProvider
@@ -281,23 +288,17 @@ export class WorkflowPreviewEditorProvider
 					hasObjectProp(json, "data") &&
 					Array.isArray(getProp<unknown>(json.data, "nodes"))
 				) {
-					nodesList = getProp<unknown>(json.data, "nodes") as Record<
-						string,
-						unknown
-					>[];
+					nodesList = castRecordArray(getProp<unknown>(json.data, "nodes"));
 				} else if (hasObjectProp(json, "drawflow")) {
 					if (Array.isArray(getProp<unknown>(json.drawflow, "nodes"))) {
-						nodesList = (json.drawflow as Record<string, unknown>)
-							.nodes as Record<string, unknown>[];
+						nodesList = castRecordArray(castRecord(json.drawflow).nodes);
 					} else {
 						Object.keys(json.drawflow).forEach((tab) => {
-							const tabData = (json.drawflow as Record<string, unknown>)[
-								tab
-							] as Record<string, unknown>;
-							const actualTabData = tabData?.data as Record<string, unknown>;
+							const tabData = castRecord(castRecord(json.drawflow)[tab]);
+							const actualTabData = castRecord(tabData?.data);
 							if (actualTabData) {
 								Object.entries(actualTabData).forEach(([_key, node]) => {
-									nodesList.push(node as Record<string, unknown>);
+									nodesList.push(castRecord(node));
 								});
 							}
 						});
@@ -314,12 +315,10 @@ export class WorkflowPreviewEditorProvider
 					hasObjectProp(triggerNode, "data") &&
 					Array.isArray(getProp<unknown>(triggerNode.data, "parameters"))
 				) {
-					const triggerParamsData = updateData.triggerParams as Record<
-						string,
-						unknown
-					>;
-					for (const param of (triggerNode.data as Record<string, unknown>)
-						.parameters as Record<string, unknown>[]) {
+					const triggerParamsData = castRecord(updateData.triggerParams);
+					for (const param of castRecordArray(
+						castRecord(triggerNode.data).parameters,
+					)) {
 						if (
 							triggerParamsData &&
 							triggerParamsData[param.name as string] !== undefined

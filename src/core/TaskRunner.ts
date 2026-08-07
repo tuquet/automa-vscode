@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import { EventEmitter } from "node:events";
 import * as vscode from "vscode";
+import { castRecord } from "../utils/typeGuards";
 import { DaemonManager } from "./DaemonManager";
 
 export interface TaskOptions {
@@ -159,9 +160,9 @@ export const TaskRunner = {
 				const end = trimmed.lastIndexOf("}");
 				if (start !== -1 && end !== -1 && end > start) {
 					try {
-						const telemetry = JSON.parse(
-							trimmed.substring(start, end + 1),
-						) as Record<string, unknown>;
+						const telemetry = castRecord(
+							JSON.parse(trimmed.substring(start, end + 1)),
+						);
 						TaskRunner.telemetryEmitter.emit("telemetry", telemetry);
 					} catch (_e: unknown) {
 						// ignore parse error

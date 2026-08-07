@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { DaemonManager } from "../core/DaemonManager";
-import { extractFsPath, toError } from "../utils/typeGuards";
+import { castRecord, extractFsPath, toError } from "../utils/typeGuards";
 
 let diagnosticCollection: vscode.DiagnosticCollection;
 
@@ -149,7 +149,7 @@ export async function lintCheckCommand(
 						});
 						if (!res.ok) throw new Error("Daemon not ready");
 
-						const data = (await res.json()) as Record<string, unknown>;
+						const data = castRecord(await res.json());
 						const errStrs = ((data.errors as string[]) || []).map(
 							(e: string) => `- [Error] ${e}`,
 						);

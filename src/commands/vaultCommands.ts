@@ -2,7 +2,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as vscode from "vscode";
 import { DaemonManager } from "../core/DaemonManager";
-import { isRecord, toError } from "../utils/typeGuards";
+import { castRecord, isRecord, toError } from "../utils/typeGuards";
 
 export interface ITable {
 	id: string | number;
@@ -327,7 +327,7 @@ export async function deleteVaultItemCommand(
 		} else if (isRecord(data)) {
 			const keyToDelete = targetItem.itemId || targetItem.label;
 			if (keyToDelete in data) {
-				delete (data as Record<string, unknown>)[keyToDelete];
+				delete castRecord(data)[keyToDelete];
 				modified = true;
 			}
 		}

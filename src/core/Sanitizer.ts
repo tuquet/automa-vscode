@@ -1,5 +1,10 @@
 import * as crypto from "node:crypto";
-import { hasNodesAndEdges, isBoolean, isRecord } from "../utils/typeGuards";
+import {
+	castRecord,
+	hasNodesAndEdges,
+	isBoolean,
+	isRecord,
+} from "../utils/typeGuards";
 
 function generateShortId(): string {
 	const chars =
@@ -46,7 +51,7 @@ export const WorkflowSanitizer = {
 				isRecord(json.drawflow.Home.data)
 			) {
 				Object.entries(json.drawflow.Home.data).forEach(([key, node]) => {
-					const n = node as Record<string, unknown>;
+					const n = castRecord(node);
 					if (!n.id) n.id = key;
 					nodes.push(n);
 				});
@@ -91,7 +96,7 @@ export const WorkflowSanitizer = {
 				}
 
 				if (node.data) {
-					const nodeData = node.data as Record<string, unknown>;
+					const nodeData = castRecord(node.data);
 					if (!isBoolean(nodeData.disableBlock)) {
 						nodeData.disableBlock = false;
 						isModified = true;

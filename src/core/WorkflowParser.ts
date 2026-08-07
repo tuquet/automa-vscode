@@ -1,4 +1,9 @@
-import { hasObjectProp, isRecord } from "../utils/typeGuards";
+import {
+	castRecord,
+	castRecordArray,
+	hasObjectProp,
+	isRecord,
+} from "../utils/typeGuards";
 export const WorkflowParser = {
 	extractImplicitVariables(content: string): Set<string> {
 		const implicitVars = new Set<string>();
@@ -26,18 +31,18 @@ export const WorkflowParser = {
 		const triggerParams: Record<string, unknown>[] = [];
 		let nodesList: Record<string, unknown>[] = [];
 
-		const json = (jsonObj || {}) as Record<string, unknown>;
+		const json = castRecord(jsonObj || {});
 
 		if (hasObjectProp(json, "data") && Array.isArray(json.data.nodes)) {
-			nodesList = json.data.nodes as Record<string, unknown>[];
+			nodesList = castRecordArray(json.data.nodes);
 		} else if (hasObjectProp(json, "drawflow")) {
 			if (Array.isArray(json.drawflow.nodes)) {
-				nodesList = json.drawflow.nodes as Record<string, unknown>[];
+				nodesList = castRecordArray(json.drawflow.nodes);
 			} else {
 				Object.values(json.drawflow).forEach((tabData) => {
 					if (isRecord(tabData) && isRecord(tabData.data)) {
 						Object.values(tabData.data).forEach((node) => {
-							nodesList.push(node as Record<string, unknown>);
+							nodesList.push(castRecord(node));
 						});
 					}
 				});
@@ -53,10 +58,7 @@ export const WorkflowParser = {
 					hasObjectProp(node, "data") &&
 					Array.isArray(node.data.parameters)
 				) {
-					for (const param of node.data.parameters as Record<
-						string,
-						unknown
-					>[]) {
+					for (const param of castRecordArray(node.data.parameters)) {
 						if (
 							param.name &&
 							!triggerParams.some((p) => p.name === param.name)
