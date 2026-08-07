@@ -22,10 +22,10 @@ export class StudioWebviewPanel {
 
 		// Handle messages from the webview (EnvironmentAdapter)
 		this._panel.webview.onDidReceiveMessage(
-			(message) => {
+			(message: Record<string, unknown>) => {
 				switch (message.type) {
 					case "runtime-message":
-						this.handleRuntimeMessage(message.data)
+						this.handleRuntimeMessage(message.data as Record<string, unknown>)
 							.then((result) => {
 								this._panel.webview.postMessage({
 									type: "runtime-message-response",

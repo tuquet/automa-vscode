@@ -38,7 +38,7 @@ export class WelcomePanel {
 		this._panel.webview.html = this._getHtmlForWebview(this._panel.webview);
 
 		this._panel.webview.onDidReceiveMessage(
-			async (message) => {
+			async (message: Record<string, unknown>) => {
 				try {
 					switch (message.command) {
 						case "installBrowser":

@@ -52,21 +52,30 @@ export class WorkflowPreviewEditorProvider
 
 		// Message Listener
 		const messageDisposable = webviewPanel.webview.onDidReceiveMessage(
-			async (message) => {
+			async (message: Record<string, unknown>) => {
 				try {
 					if (message.command === "runWorkflow") {
-						await runWorkflowCommand(document.uri, message.parameters, {
-							keepBrowserOpen: message.keepBrowserOpen,
-						});
+						await runWorkflowCommand(
+							document.uri,
+							message.parameters as Record<string, unknown>,
+							{
+								keepBrowserOpen: message.keepBrowserOpen as boolean,
+							},
+						);
 					} else if (message.command === "saveWorkflow") {
-						await this.handleSaveWorkflow(document, message.data);
+						await this.handleSaveWorkflow(
+							document,
+							message.data as Record<string, unknown>,
+						);
 					} else if (message.command === "openInStudio") {
 						await vscode.commands.executeCommand(
 							"automa.openInStudio",
 							document.uri,
 						);
 					} else if (message.command === "error" || message.type === "error") {
-						vscode.window.showErrorMessage(message.text || "Webview Error");
+						vscode.window.showErrorMessage(
+							(message.text as string) || "Webview Error",
+						);
 					}
 				} catch (error: unknown) {
 					const e = toError(error);

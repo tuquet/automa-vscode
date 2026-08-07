@@ -76,44 +76,48 @@ export class FleetPreviewEditorProvider
 		};
 
 		// Listen to messages from webview
-		webviewPanel.webview.onDidReceiveMessage(async (e) => {
-			try {
-				switch (e.type) {
-					case "ready": {
-						const workflows = await this.getWorkflowDictionary();
-						const profiles = await this.getProfileDictionary();
-						webviewPanel.webview.postMessage({
-							type: "update",
-							text: document.getText(),
-							workflows: workflows,
-							profiles: profiles,
-						});
-						break;
+		webviewPanel.webview.onDidReceiveMessage(
+			async (e: Record<string, unknown>) => {
+				try {
+					switch (e.type) {
+						case "ready": {
+							const workflows = await this.getWorkflowDictionary();
+							const profiles = await this.getProfileDictionary();
+							webviewPanel.webview.postMessage({
+								type: "update",
+								text: document.getText(),
+								workflows: workflows,
+								profiles: profiles,
+							});
+							break;
+						}
+						case "run-fleet":
+							await vscode.commands.executeCommand(
+								"automa.runFleet",
+								document.uri,
+							);
+							break;
+						case "stop-fleet":
+							await vscode.commands.executeCommand(
+								"automa.stopFleet",
+								document.uri,
+							);
+							break;
+						case "save-fleet":
+							await this.saveDocument(document, e.data as string);
+							break;
 					}
-					case "run-fleet":
-						await vscode.commands.executeCommand(
-							"automa.runFleet",
-							document.uri,
+					if (e.command === "error" || e.type === "error") {
+						vscode.window.showErrorMessage(
+							(e.text as string) || "Webview Error",
 						);
-						break;
-					case "stop-fleet":
-						await vscode.commands.executeCommand(
-							"automa.stopFleet",
-							document.uri,
-						);
-						break;
-					case "save-fleet":
-						await this.saveDocument(document, e.data);
-						break;
+					}
+				} catch (error: unknown) {
+					const err = getErrorMessage(error);
+					vscode.window.showErrorMessage(`Fleet preview action failed: ${err}`);
 				}
-				if (e.command === "error" || e.type === "error") {
-					vscode.window.showErrorMessage(e.text || "Webview Error");
-				}
-			} catch (error: unknown) {
-				const err = getErrorMessage(error);
-				vscode.window.showErrorMessage(`Fleet preview action failed: ${err}`);
-			}
-		});
+			},
+		);
 
 		this.setupWebviewPanel(document, webviewPanel, updateWebview);
 
