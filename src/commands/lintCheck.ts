@@ -131,10 +131,9 @@ export async function lintCheckCommand(nodeOrUri?: any, nodesOrUris?: any[]) {
 							`Lint finished: ${errorCount} error(s), ${warnCount} warning(s) in ${filePath.split(/\\|\//).pop()}`,
 						);
 					}
-				} catch (error: any) {
-					vscode.window.showErrorMessage(
-						`Failed to run linter: ${error.message}`,
-					);
+				} catch (error: unknown) {
+					const e = error instanceof Error ? error : new Error(String(error));
+					vscode.window.showErrorMessage(`Failed to run linter: ${e.message}`);
 				}
 			}
 		},

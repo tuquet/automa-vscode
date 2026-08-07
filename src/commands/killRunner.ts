@@ -11,7 +11,8 @@ export async function killRunner(execution: vscode.TaskExecution) {
 		vscode.window.showInformationMessage(
 			`Stopped runner: ${execution.task.name}`,
 		);
-	} catch (error: any) {
-		vscode.window.showErrorMessage(`Failed to stop runner: ${error.message}`);
+	} catch (error: unknown) {
+		const e = error instanceof Error ? error : new Error(String(error));
+		vscode.window.showErrorMessage(`Failed to stop runner: ${e.message}`);
 	}
 }

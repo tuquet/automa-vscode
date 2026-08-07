@@ -126,8 +126,9 @@ export class BrowserProfileEditorProvider
 			htmlContent = htmlContent.replace("{{ICON}}", icon);
 
 			return htmlContent;
-		} catch (error: any) {
-			return `<body><h2>Error loading HTML template</h2><pre>${error.message}</pre></body>`;
+		} catch (error: unknown) {
+			const e = error instanceof Error ? error : new Error(String(error));
+			return `<body><h2>Error loading HTML template</h2><pre>${e.message}</pre></body>`;
 		}
 	}
 }

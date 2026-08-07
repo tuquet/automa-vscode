@@ -63,14 +63,21 @@ export class WorkflowPreviewEditorProvider
 		const isModified = WorkflowSanitizer.sanitize(json);
 
 		if (isModified) {
-			const edit = new vscode.WorkspaceEdit();
-			edit.replace(
-				document.uri,
-				new vscode.Range(0, 0, document.lineCount, 0),
-				JSON.stringify(json, null, 4),
-			);
-			// Apply silently in the background
-			await vscode.workspace.applyEdit(edit);
+			this.isInternalSave = true;
+			try {
+				const edit = new vscode.WorkspaceEdit();
+				edit.replace(
+					document.uri,
+					new vscode.Range(0, 0, document.lineCount, 0),
+					JSON.stringify(json, null, 4),
+				);
+				// Apply silently in the background
+				await vscode.workspace.applyEdit(edit);
+			} finally {
+				setTimeout(() => {
+					this.isInternalSave = false;
+				}, 150);
+			}
 		}
 	}
 
@@ -325,8 +332,9 @@ export class WorkflowPreviewEditorProvider
 			);
 
 			return htmlContent;
-		} catch (error: any) {
-			return `<body><h2>Error loading HTML template</h2><pre>${error.message}</pre></body>`;
+		} catch (error: unknown) {
+			const e = error instanceof Error ? error : new Error(String(error));
+			return `<body><h2>Error loading HTML template</h2><pre>${e.message}</pre></body>`;
 		}
 	}
 

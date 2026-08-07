@@ -63,7 +63,7 @@ export class FleetPreviewEditorProvider
 		TaskRunner.telemetryEmitter.on("telemetry", telemetryListener);
 
 		// Listen to messages from webview
-		webviewPanel.webview.onDidReceiveMessage((e) => {
+		webviewPanel.webview.onDidReceiveMessage(async (e) => {
 			switch (e.type) {
 				case "ready":
 					updateWebview();
@@ -75,7 +75,7 @@ export class FleetPreviewEditorProvider
 					vscode.commands.executeCommand("automa.stopFleet", document.uri);
 					break;
 				case "save-fleet":
-					this.saveDocument(document, e.data);
+					await this.saveDocument(document, e.data);
 					break;
 			}
 		});

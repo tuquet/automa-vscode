@@ -92,8 +92,9 @@ export class LogCustomEditorProvider
 
 			const provider = new LogCustomEditorProvider(context);
 			panel.webview.html = provider.getWebviewContent(job, logs);
-		} catch (error: any) {
-			panel.webview.html = `<body><h2>Failed to load log</h2><pre>${error.message}</pre></body>`;
+		} catch (error: unknown) {
+			const e = error instanceof Error ? error : new Error(String(error));
+			panel.webview.html = `<body><h2>Failed to load log</h2><pre>${e.message}</pre></body>`;
 		}
 	}
 
@@ -119,15 +120,16 @@ export class LogCustomEditorProvider
 
 				job.results = results;
 				webviewPanel.webview.html = this.getWebviewContent(job, logs);
-			} catch (error: any) {
+			} catch (error: unknown) {
 				if (isInitial) {
+					const e = error instanceof Error ? error : new Error(String(error));
 					webviewPanel.webview.html = `
 						<!DOCTYPE html>
 						<html>
 							<head><style>body{color:red; font-family:sans-serif; padding: 20px;}</style></head>
 							<body>
 								<h2>Failed to load Automa Log</h2>
-								<pre>${error.message}</pre>
+								<pre>${e.message}</pre>
 							</body>
 						</html>
 					`;
@@ -222,8 +224,9 @@ export class LogCustomEditorProvider
 
 		try {
 			return this.renderHtmlTemplate(job, logsJson, jobJson);
-		} catch (error: any) {
-			return `<body><h2>Error loading HTML template</h2><pre>${error.message}</pre></body>`;
+		} catch (error: unknown) {
+			const e = error instanceof Error ? error : new Error(String(error));
+			return `<body><h2>Error loading HTML template</h2><pre>${e.message}</pre></body>`;
 		}
 	}
 }
