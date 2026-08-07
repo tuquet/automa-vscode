@@ -11,7 +11,7 @@ export function showWorkflowSourceCommand() {
 					false,
 					vscode.ConfigurationTarget.Global,
 				);
-			vscode.commands.executeCommand("vscode.openWith", uri, "default");
+			await vscode.commands.executeCommand("vscode.openWith", uri, "default");
 		}
 	};
 }
@@ -26,7 +26,7 @@ export function showWorkflowPreviewCommand() {
 					true,
 					vscode.ConfigurationTarget.Global,
 				);
-			vscode.commands.executeCommand(
+			await vscode.commands.executeCommand(
 				"vscode.openWith",
 				uri,
 				"automa.workflowPreview",
@@ -38,7 +38,7 @@ export function showWorkflowPreviewCommand() {
 export function showFleetSourceCommand() {
 	return async (uri: vscode.Uri) => {
 		if (uri) {
-			vscode.commands.executeCommand("vscode.openWith", uri, "default");
+			await vscode.commands.executeCommand("vscode.openWith", uri, "default");
 		}
 	};
 }
@@ -46,7 +46,7 @@ export function showFleetSourceCommand() {
 export function showFleetPreviewCommand() {
 	return async (uri: vscode.Uri) => {
 		if (uri) {
-			vscode.commands.executeCommand(
+			await vscode.commands.executeCommand(
 				"vscode.openWith",
 				uri,
 				"automa.fleetPreview",
@@ -56,17 +56,17 @@ export function showFleetPreviewCommand() {
 }
 
 export function showLogSourceCommand() {
-	return (uri: vscode.Uri) => {
+	return async (uri: vscode.Uri) => {
 		if (uri) {
-			vscode.commands.executeCommand("vscode.openWith", uri, "default");
+			await vscode.commands.executeCommand("vscode.openWith", uri, "default");
 		} else {
-			vscode.commands.executeCommand("workbench.action.reopenTextEditor");
+			await vscode.commands.executeCommand("workbench.action.reopenTextEditor");
 		}
 	};
 }
 
 export function showLogPreviewCommand(context: vscode.ExtensionContext) {
-	return (uri: vscode.Uri) => {
+	return async (uri: vscode.Uri) => {
 		if (uri && uri.scheme === "automa-log") {
 			const jobId = uri.authority || uri.path.replace(/^\//, "");
 			const {
@@ -74,7 +74,7 @@ export function showLogPreviewCommand(context: vscode.ExtensionContext) {
 			} = require("../providers/LogCustomEditorProvider");
 			LogCustomEditorProvider.showLogForJobId(context, jobId);
 		} else if (uri) {
-			vscode.commands.executeCommand(
+			await vscode.commands.executeCommand(
 				"vscode.openWith",
 				uri,
 				"automa.logEditor",
