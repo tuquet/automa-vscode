@@ -13,6 +13,69 @@ export interface ITable {
 	modifiedAt?: number;
 }
 
+// --- Helper Functions for Vault Storage (SRP) ---
+function getWorkspaceRoot(): string | undefined {
+	if (
+		!vscode.workspace.workspaceFolders ||
+		vscode.workspace.workspaceFolders.length === 0
+	) {
+		vscode.window.showErrorMessage("No workspace open");
+		return undefined;
+	}
+	return vscode.workspace.workspaceFolders[0].uri.fsPath;
+}
+
+function getGlobalsFilePath(filename: string): string | undefined {
+	const workspaceRoot = getWorkspaceRoot();
+	if (!workspaceRoot) return undefined;
+
+	const globalsDir = path.join(workspaceRoot, "globals");
+	if (!fs.existsSync(globalsDir)) {
+		fs.mkdirSync(globalsDir, { recursive: true });
+	}
+
+	return path.join(globalsDir, filename);
+}
+
+function loadVariables(varsPath: string): any[] {
+	if (!fs.existsSync(varsPath)) return [];
+	try {
+		const content = fs.readFileSync(varsPath, "utf8");
+		const data = JSON.parse(content);
+		if (Array.isArray(data)) {
+			return data;
+		}
+		if (typeof data === "object" && data !== null) {
+			return Object.entries(data).map(([k, v]) => ({
+				name: k,
+				value: v,
+			}));
+		}
+	} catch (_e) {
+		vscode.window.showErrorMessage("Failed to read variables.json");
+	}
+	return [];
+}
+
+function loadTables(tablesPath: string): ITable[] {
+	if (!fs.existsSync(tablesPath)) return [];
+	try {
+		const content = fs.readFileSync(tablesPath, "utf8");
+		const data = JSON.parse(content);
+		if (Array.isArray(data)) {
+			return data;
+		}
+	} catch (_e) {
+		vscode.window.showErrorMessage("Failed to read tables.json");
+	}
+	return [];
+}
+
+function writeJsonFile(filePath: string, data: any): void {
+	fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf8");
+}
+// ------------------------------------------------
+
 export async function addVariableCommand() {
 	const key = await vscode.window.showInputBox({
 		prompt: "Enter Variable Name",
@@ -24,42 +87,10 @@ export async function addVariableCommand() {
 	});
 	if (value === undefined) return;
 
-	if (
-		!vscode.workspace.workspaceFolders ||
-		vscode.workspace.workspaceFolders.length === 0
-	) {
-		vscode.window.showErrorMessage("No workspace open");
-		return;
-	}
+	const varsPath = getGlobalsFilePath("variables.json");
+	if (!varsPath) return;
 
-	const workspaceRoot = vscode.workspace.workspaceFolders[0].uri.fsPath;
-	const globalsDir = path.join(workspaceRoot, "globals");
-	if (!fs.existsSync(globalsDir)) {
-		fs.mkdirSync(globalsDir, { recursive: true });
-	}
-
-	const varsPath = path.join(globalsDir, "variables.json");
-	let variables: any[] = [];
-	if (fs.existsSync(varsPath)) {
-		try {
-			const content = fs.readFileSync(varsPath, "utf8");
-			const data = JSON.parse(content);
-			if (Array.isArray(data)) {
-				variables = data;
-			} else if (typeof data === "object" && data !== null) {
-				// If it's an object, convert to array for consistent internal handling, or keep as object
-				// Usually Automa uses array of {name, value} or object.
-				// Let's assume array of {name, value} is standard for global vault variables
-				variables = Object.entries(data).map(([k, v]) => ({
-					name: k,
-					value: v,
-				}));
-			}
-		} catch (_e) {
-			vscode.window.showErrorMessage("Failed to read variables.json");
-			return;
-		}
-	}
+	const variables = loadVariables(varsPath);
 
 	const existingIndex = variables.findIndex(
 		(v) => v.name === key || v.key === key,
@@ -70,7 +101,7 @@ export async function addVariableCommand() {
 		variables.push({ name: key, value: value });
 	}
 
-	fs.writeFileSync(varsPath, JSON.stringify(variables, null, 2), "utf8");
+	writeJsonFile(varsPath, variables);
 	vscode.window.showInformationMessage(`Variable ${key} added successfully.`);
 }
 
@@ -100,7 +131,6 @@ export async function addCredentialCommand() {
 			);
 			return;
 		}
-		// Save it to settings so we don't have to prompt again
 		await config.update(
 			"encryptionPassphrase",
 			passphrase,
@@ -108,15 +138,8 @@ export async function addCredentialCommand() {
 		);
 	}
 
-	if (
-		!vscode.workspace.workspaceFolders ||
-		vscode.workspace.workspaceFolders.length === 0
-	) {
-		vscode.window.showErrorMessage("No workspace open");
-		return;
-	}
-
-	const vaultPath = vscode.workspace.workspaceFolders[0].uri.fsPath;
+	const vaultPath = getWorkspaceRoot();
+	if (!vaultPath) return;
 
 	vscode.window.withProgress(
 		{
@@ -154,34 +177,10 @@ export async function addTableCommand() {
 	});
 	if (!name) return;
 
-	if (
-		!vscode.workspace.workspaceFolders ||
-		vscode.workspace.workspaceFolders.length === 0
-	) {
-		vscode.window.showErrorMessage("No workspace open");
-		return;
-	}
+	const tablesPath = getGlobalsFilePath("tables.json");
+	if (!tablesPath) return;
 
-	const workspaceRoot = vscode.workspace.workspaceFolders[0].uri.fsPath;
-	const globalsDir = path.join(workspaceRoot, "globals");
-	if (!fs.existsSync(globalsDir)) {
-		fs.mkdirSync(globalsDir, { recursive: true });
-	}
-
-	const tablesPath = path.join(globalsDir, "tables.json");
-	let tables: ITable[] = [];
-	if (fs.existsSync(tablesPath)) {
-		try {
-			const content = fs.readFileSync(tablesPath, "utf8");
-			const data = JSON.parse(content);
-			if (Array.isArray(data)) {
-				tables = data;
-			}
-		} catch (_e) {
-			vscode.window.showErrorMessage("Failed to read tables.json");
-			return;
-		}
-	}
+	const tables = loadTables(tablesPath);
 
 	const newTableId = `table_${Date.now().toString(36)}`;
 	tables.push({
@@ -194,7 +193,7 @@ export async function addTableCommand() {
 		modifiedAt: Date.now(),
 	});
 
-	fs.writeFileSync(tablesPath, JSON.stringify(tables, null, 2), "utf8");
+	writeJsonFile(tablesPath, tables);
 	vscode.window.showInformationMessage(`Table ${name} added successfully.`);
 }
 
@@ -217,12 +216,8 @@ export async function encryptSecretCommand() {
 		password: true,
 	});
 
-	const workspaceFolders = vscode.workspace.workspaceFolders;
-	if (!workspaceFolders || workspaceFolders.length === 0) {
-		vscode.window.showErrorMessage("No workspace open.");
-		return;
-	}
-	const vaultPath = workspaceFolders[0].uri.fsPath;
+	const vaultPath = getWorkspaceRoot();
+	if (!vaultPath) return;
 
 	vscode.window.withProgress(
 		{
