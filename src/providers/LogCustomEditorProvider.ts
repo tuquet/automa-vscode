@@ -153,10 +153,16 @@ export class LogCustomEditorProvider
 
 	private formatDuration(durationMs?: number): string {
 		if (!durationMs) return "N/A";
-		return durationMs < 1000 ? `${durationMs}ms` : `${(durationMs / 1000).toFixed(2)}s`;
+		return durationMs < 1000
+			? `${durationMs}ms`
+			: `${(durationMs / 1000).toFixed(2)}s`;
 	}
 
-	private renderHtmlTemplate(job: any, logsJson: string, jobJson: string): string {
+	private renderHtmlTemplate(
+		job: any,
+		logsJson: string,
+		jobJson: string,
+	): string {
 		const htmlPath = path.join(
 			this.context.extensionPath,
 			"src",
@@ -168,12 +174,27 @@ export class LogCustomEditorProvider
 		const jobName = job.name || "Unknown Job";
 		htmlContent = htmlContent.replace("{{JOB_NAME}}", jobName);
 		htmlContent = htmlContent.replace("{{JOB_NAME}}", jobName); // for title
-		htmlContent = htmlContent.replace("{{JOB_STATUS_COLOR}}", this.getStatusColor(job.status));
-		htmlContent = htmlContent.replace("{{JOB_STATUS}}", job.status || "Unknown");
-		htmlContent = htmlContent.replace("{{JOB_CREATED_AT}}", this.formatDate(job.created_at));
+		htmlContent = htmlContent.replace(
+			"{{JOB_STATUS_COLOR}}",
+			this.getStatusColor(job.status),
+		);
+		htmlContent = htmlContent.replace(
+			"{{JOB_STATUS}}",
+			job.status || "Unknown",
+		);
+		htmlContent = htmlContent.replace(
+			"{{JOB_CREATED_AT}}",
+			this.formatDate(job.created_at),
+		);
 		htmlContent = htmlContent.replace("{{JOB_ID}}", job.id || "N/A");
-		htmlContent = htmlContent.replace("{{WORKFLOW_ID}}", job.workflow_id || job.id || "N/A");
-		htmlContent = htmlContent.replace("{{JOB_DURATION}}", this.formatDuration(job.duration));
+		htmlContent = htmlContent.replace(
+			"{{WORKFLOW_ID}}",
+			job.workflow_id || job.id || "N/A",
+		);
+		htmlContent = htmlContent.replace(
+			"{{JOB_DURATION}}",
+			this.formatDuration(job.duration),
+		);
 
 		const injectLogs = `const logsData = ${logsJson};`;
 		const injectJob = `const jobData = ${jobJson};`;

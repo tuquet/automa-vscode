@@ -138,37 +138,7 @@ export async function addCredentialCommand() {
 		);
 	}
 
-	const vaultPath = getWorkspaceRoot();
-	if (!vaultPath) return;
-
-	vscode.window.withProgress(
-		{
-			location: vscode.ProgressLocation.Notification,
-			title: `Encrypting credential '${name}'...`,
-			cancellable: false,
-		},
-		async () => {
-			try {
-				await DaemonManager.getInstance().executeRawCliCommand([
-					"encrypt-secret",
-					secret,
-					"--name",
-					name,
-					"--passphrase",
-					passphrase,
-					"-v",
-					vaultPath,
-				]);
-				vscode.window.showInformationMessage(
-					`Credential ${name} encrypted and added successfully.`,
-				);
-			} catch (e: any) {
-				vscode.window.showErrorMessage(
-					`Failed to add credential: ${e.message}`,
-				);
-			}
-		},
-	);
+	await executeEncryption(name, secret, passphrase);
 }
 
 export async function addTableCommand() {
@@ -216,22 +186,30 @@ export async function encryptSecretCommand() {
 		password: true,
 	});
 
+	await executeEncryption(secretName, plaintext, passphrase);
+}
+
+async function executeEncryption(
+	name: string,
+	secret: string,
+	passphrase?: string,
+) {
 	const vaultPath = getWorkspaceRoot();
 	if (!vaultPath) return;
 
 	vscode.window.withProgress(
 		{
 			location: vscode.ProgressLocation.Notification,
-			title: `Encrypting secret '${secretName}'...`,
+			title: `Encrypting credential '${name}'...`,
 			cancellable: false,
 		},
 		async () => {
 			try {
 				const args = [
 					"encrypt-secret",
-					plaintext,
+					secret,
 					"--name",
-					secretName,
+					name,
 					"-v",
 					vaultPath,
 				];
@@ -240,11 +218,13 @@ export async function encryptSecretCommand() {
 				}
 				await DaemonManager.getInstance().executeRawCliCommand(args);
 				vscode.window.showInformationMessage(
-					`Secret '${secretName}' encrypted and saved!`,
+					`Credential ${name} encrypted and added successfully.`,
 				);
-			} catch (err: any) {
-				vscode.window.showErrorMessage(`Encryption failed: ${err.message}`);
-				throw err;
+			} catch (e: any) {
+				vscode.window.showErrorMessage(
+					`Failed to add credential: ${e.message}`,
+				);
+				throw e;
 			}
 		},
 	);
