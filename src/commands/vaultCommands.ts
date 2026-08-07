@@ -215,35 +215,111 @@ async function executeEncryption(
 }
 
 export async function deleteVaultItemCommand(
-	item: import("../providers/VaultTreeDataProvider").VaultItem,
+	item?: import("../providers/VaultTreeDataProvider").VaultItem,
 ) {
-	if (!item?.resourceUri || !item.label) return;
+	let targetItem = item;
+
+	if (!targetItem?.resourceUri || !targetItem.label) {
+		const items: (vscode.QuickPickItem & {
+			payload: import("../providers/VaultTreeDataProvider").VaultItem;
+		})[] = [];
+		const workspaceRoot = getWorkspaceRoot();
+		if (!workspaceRoot) return;
+
+		const patterns = [
+			{ pattern: "**/*.variable.json", type: "Variable" as const },
+			{ pattern: "**/*.credential.json", type: "Credential" as const },
+			{ pattern: "**/*.table.json", type: "Table" as const },
+		];
+
+		for (const p of patterns) {
+			const files = await vscode.workspace.findFiles(
+				p.pattern,
+				"**/node_modules/**",
+			);
+			for (const file of files) {
+				const { data, success } = readVaultFileSafely(file.fsPath);
+				if (!success) continue;
+				if (Array.isArray(data)) {
+					for (const entry of data) {
+						const label = String(
+							entry.name || entry.id || entry.key || "Unnamed",
+						);
+						const itemId = String(entry.id || entry.key || entry.name);
+						items.push({
+							label: `$(symbol-field) ${label}`,
+							description: p.type,
+							detail: file.fsPath,
+							payload: {
+								label,
+								type: p.type,
+								resourceUri: file,
+								itemId,
+								collapsibleState: vscode.TreeItemCollapsibleState.None,
+							},
+						});
+					}
+				} else if (isRecord(data) && p.type !== "Table") {
+					for (const [key] of Object.entries(data)) {
+						items.push({
+							label: `$(symbol-field) ${key}`,
+							description: p.type,
+							detail: file.fsPath,
+							payload: {
+								label: key,
+								type: p.type,
+								resourceUri: file,
+								itemId: key,
+								collapsibleState: vscode.TreeItemCollapsibleState.None,
+							},
+						});
+					}
+				}
+			}
+		}
+
+		if (items.length === 0) {
+			vscode.window.showInformationMessage("No vault items found to delete.");
+			return;
+		}
+
+		const selected = await vscode.window.showQuickPick(items, {
+			placeHolder: "Select a Vault Item to delete",
+			matchOnDescription: true,
+			matchOnDetail: true,
+		});
+
+		if (!selected) return;
+		targetItem = selected.payload;
+	}
+
+	if (!targetItem?.resourceUri || !targetItem.label) return;
 
 	const confirm = await vscode.window.showWarningMessage(
-		`Are you sure you want to delete ${item.type.toLowerCase()} '${item.label}'?`,
+		`Are you sure you want to delete ${targetItem.type.toLowerCase()} '${targetItem.label}'?`,
 		"Yes",
 		"No",
 	);
 	if (confirm !== "Yes") return;
 
 	try {
-		const content = fs.readFileSync(item.resourceUri.fsPath, "utf8");
+		const content = fs.readFileSync(targetItem.resourceUri.fsPath, "utf8");
 		let data = JSON.parse(content);
 		let modified = false;
 
 		if (Array.isArray(data)) {
 			const initialLength = data.length;
 			data = data.filter((entry: Record<string, unknown>) => {
-				if (item.itemId) {
+				if (targetItem?.itemId) {
 					const entryId = entry.id || entry.key || entry.name;
-					return entryId !== item.itemId;
+					return entryId !== targetItem?.itemId;
 				}
 				const name = entry.name || entry.id || entry.key;
-				return name !== item.label;
+				return name !== targetItem?.label;
 			});
 			modified = data.length !== initialLength;
 		} else if (isRecord(data)) {
-			const keyToDelete = item.itemId || item.label;
+			const keyToDelete = targetItem.itemId || targetItem.label;
 			if (keyToDelete in data) {
 				delete (data as Record<string, unknown>)[keyToDelete];
 				modified = true;
@@ -251,15 +327,15 @@ export async function deleteVaultItemCommand(
 		}
 
 		if (modified) {
-			writeJsonFile(item.resourceUri.fsPath, data);
+			writeJsonFile(targetItem.resourceUri.fsPath, data);
 			vscode.window.showInformationMessage(
-				`${item.type} '${item.label}' deleted.`,
+				`${targetItem.type} '${targetItem.label}' deleted.`,
 			);
 		}
 	} catch (error: unknown) {
 		const e = toError(error);
 		vscode.window.showErrorMessage(
-			`Failed to delete ${item.type.toLowerCase()}: ${e.message}`,
+			`Failed to delete ${targetItem.type.toLowerCase()}: ${e.message}`,
 		);
 	}
 }
