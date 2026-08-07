@@ -55,8 +55,8 @@ export class RunnersTreeDataProvider
 
 		context.subscriptions.push(treeView);
 		context.subscriptions.push(
-			vscode.commands.registerCommand("automa.focusActiveRunners", () => {
-				vscode.commands.executeCommand("automa.activeRunners.focus");
+			vscode.commands.registerCommand("automa.focusActiveRunners", async () => {
+				await vscode.commands.executeCommand("automa.activeRunners.focus");
 			}),
 		);
 		context.subscriptions.push(

@@ -69,10 +69,13 @@ export class FleetPreviewEditorProvider
 					updateWebview();
 					break;
 				case "run-fleet":
-					vscode.commands.executeCommand("automa.runFleet", document.uri);
+					await vscode.commands.executeCommand("automa.runFleet", document.uri);
 					break;
 				case "stop-fleet":
-					vscode.commands.executeCommand("automa.stopFleet", document.uri);
+					await vscode.commands.executeCommand(
+						"automa.stopFleet",
+						document.uri,
+					);
 					break;
 				case "save-fleet":
 					await this.saveDocument(document, e.data);

@@ -38,10 +38,10 @@ export class WelcomePanel {
 		this._panel.webview.html = this._getHtmlForWebview(this._panel.webview);
 
 		this._panel.webview.onDidReceiveMessage(
-			(message) => {
+			async (message) => {
 				switch (message.command) {
 					case "installBrowser":
-						vscode.commands.executeCommand("automa.installBrowser");
+						await vscode.commands.executeCommand("automa.installBrowser");
 						return;
 				}
 			},
