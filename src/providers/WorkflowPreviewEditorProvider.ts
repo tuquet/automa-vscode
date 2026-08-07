@@ -65,6 +65,8 @@ export class WorkflowPreviewEditorProvider
 							"automa.openInStudio",
 							document.uri,
 						);
+					} else if (message.command === "error" || message.type === "error") {
+						vscode.window.showErrorMessage(message.text || "Webview Error");
 					}
 				} catch (error: unknown) {
 					const e = toError(error);
