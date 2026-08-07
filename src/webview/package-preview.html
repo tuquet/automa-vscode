@@ -207,15 +207,15 @@
                     vscode.setState({ ...state, currentTab: newTab });
                 });
 
-                const inputs = ref(pInputs || []);
-                const outputs = ref(pOutputs || []);
+                const inputs = ref(typeof pInputs !== 'undefined' ? pInputs : []);
+                const outputs = ref(typeof pOutputs !== 'undefined' ? pOutputs : []);
+                const pVarsList = ref(typeof pVars !== 'undefined' ? pVars : []);
+                const tParamsList = ref(typeof tParams !== 'undefined' ? tParams : []);
                 
                 const variables = computed(() => {
                     const vars = [];
-                    const pVarsList = pVars || [];
-                    const tParamsList = tParams || [];
                     
-                    pVarsList.forEach(v => {
+                    pVarsList.value.forEach(v => {
                         vars.push({
                             name: v.name,
                             type: 'Explicit Variable',
@@ -223,8 +223,8 @@
                         });
                     });
                     
-                    tParamsList.forEach(v => {
-                        if (!pVarsList.some(pv => pv.name === v.name)) {
+                    tParamsList.value.forEach(v => {
+                        if (!pVarsList.value.some(pv => pv.name === v.name)) {
                             vars.push({
                                 name: v.name,
                                 type: v.description || 'Implicit',
@@ -252,6 +252,35 @@
 
                 const workflow = reactive(workflowData);
 
+                const normalizeJsonStr = (str) => {
+                    if (!str || typeof str !== 'string') return str || '';
+                    try {
+                        return JSON.stringify(JSON.parse(str), null, 2);
+                    } catch(e) {
+                        return str;
+                    }
+                };
+
+                Vue.onMounted(() => {
+                    window.addEventListener('message', event => {
+                        const message = event.data;
+                        if (message.type === 'update' && message.json) {
+                            workflow.name = message.json.name || '';
+                            workflow.description = message.json.description || '';
+                            workflow.icon = message.json.icon || 'riGlobalLine';
+                            workflow.settings = normalizeJsonStr(JSON.stringify(message.json.settings));
+                            
+                            inputs.value = Array.isArray(message.json.inputs) ? message.json.inputs : [];
+                            outputs.value = Array.isArray(message.json.outputs) ? message.json.outputs : [];
+                            pVarsList.value = Array.isArray(message.json.variable) ? message.json.variable : [];
+                            
+                            if (message.triggerParams) {
+                                tParamsList.value = message.triggerParams;
+                            }
+                        }
+                    });
+                });
+
                 watch(workflow, (newVal) => {
                     const state = vscode.getState() || {};
                     vscode.setState({ ...state, workflow: JSON.parse(JSON.stringify(newVal)), lastDocState: currentDocState });
@@ -267,15 +296,6 @@
 
                 const camelToKebab = (str) => {
                     return str.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
-                };
-
-                const normalizeJsonStr = (str) => {
-                    if (!str || typeof str !== 'string') return str || '';
-                    try {
-                        return JSON.stringify(JSON.parse(str), null, 2);
-                    } catch(e) {
-                        return str;
-                    }
                 };
 
                 const iconClass = computed(() => {

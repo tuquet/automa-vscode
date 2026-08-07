@@ -333,12 +333,12 @@
                     { id: 'properties', label: 'Properties' }
                 ];
 
-                const triggerParams = tParams || [];
-                const explicitParams = computed(() => triggerParams.filter(p => !p.isImplicit));
-                const implicitParams = computed(() => triggerParams.filter(p => p.isImplicit));
+                const triggerParams = ref(tParams || []);
+                const explicitParams = computed(() => triggerParams.value.filter(p => !p.isImplicit));
+                const implicitParams = computed(() => triggerParams.value.filter(p => p.isImplicit));
 
                 const paramValues = reactive({});
-                triggerParams.forEach(p => {
+                triggerParams.value.forEach(p => {
                     paramValues[p.name] = previousState.paramValues?.[p.name] !== undefined 
                         ? previousState.paramValues[p.name] 
                         : (p.defaultValue || '');
@@ -376,6 +376,44 @@
                 }
 
                 const workflow = reactive(workflowData);
+                
+                const normalizeJsonStr = (str) => {
+                    if (!str || typeof str !== 'string') return str || '';
+                    try {
+                        return JSON.stringify(JSON.parse(str), null, 2);
+                    } catch(e) {
+                        return str;
+                    }
+                };
+
+                onMounted(() => {
+                    window.addEventListener('message', event => {
+                        const message = event.data;
+                        if (message.type === 'update' && message.json) {
+                            // Update workflow reactive object
+                            workflow.name = message.json.name || '';
+                            workflow.description = message.json.description || '';
+                            workflow.version = message.json.version || '';
+                            workflow.extVersion = message.json.extVersion || '';
+                            workflow.icon = message.json.icon || 'riGlobalLine';
+                            workflow.globalData = typeof message.json.globalData === 'string' ? message.json.globalData : normalizeJsonStr(JSON.stringify(message.json.globalData));
+                            workflow.table = normalizeJsonStr(JSON.stringify(message.json.table));
+                            workflow.settings = normalizeJsonStr(JSON.stringify(message.json.settings));
+                            workflow.includedWorkflows = normalizeJsonStr(JSON.stringify(message.json.includedWorkflows));
+                            
+                            // Update triggerParams if available
+                            if (message.triggerParams) {
+                                triggerParams.value = message.triggerParams;
+                                // Merge paramValues
+                                triggerParams.value.forEach(p => {
+                                    if (paramValues[p.name] === undefined) {
+                                        paramValues[p.name] = p.defaultValue || '';
+                                    }
+                                });
+                            }
+                        }
+                    });
+                });
 
                 watch(workflow, (newVal) => {
                     const state = vscode.getState() || {};
@@ -392,15 +430,6 @@
 
                 const camelToKebab = (str) => {
                     return str.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
-                };
-
-                const normalizeJsonStr = (str) => {
-                    if (!str || typeof str !== 'string') return str || '';
-                    try {
-                        return JSON.stringify(JSON.parse(str), null, 2);
-                    } catch(e) {
-                        return str;
-                    }
                 };
 
                 const iconClass = computed(() => {
@@ -431,7 +460,7 @@
                     
                     // Allow saving current explicit parameter values as defaultValue in workflow
                     const explicitParamsData = {};
-                    triggerParams.forEach(p => {
+                    triggerParams.value.forEach(p => {
                         if (!p.isImplicit) {
                             explicitParamsData[p.name] = paramValues[p.name];
                         }
@@ -473,7 +502,7 @@
                     const params = {};
 
                     
-                    triggerParams.forEach(p => {
+                    triggerParams.value.forEach(p => {
                         params[p.name] = paramValues[p.name];
                     });
 

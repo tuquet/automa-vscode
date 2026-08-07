@@ -30,8 +30,22 @@ export class BrowserProfileEditorProvider
 		webviewPanel: vscode.WebviewPanel,
 		_token: vscode.CancellationToken,
 	): Promise<void> {
+		let isRendered = false;
 		const updateWebview = () => {
-			this.renderWebview(document, webviewPanel);
+			if (!isRendered) {
+				this.renderWebview(document, webviewPanel);
+				isRendered = true;
+			} else {
+				try {
+					const content = document.getText();
+					webviewPanel.webview.postMessage({
+						type: "update",
+						text: content,
+					});
+				} catch (_e: unknown) {
+					// Ignore parse errors on external edits until fixed
+				}
+			}
 		};
 
 		const messageDisposable = webviewPanel.webview.onDidReceiveMessage(

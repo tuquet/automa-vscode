@@ -36,7 +36,15 @@ export class WorkflowPreviewEditorProvider
 		webviewPanel: vscode.WebviewPanel,
 		_token: vscode.CancellationToken,
 	): Promise<void> {
-		const updateWebview = () => this.renderWebview(document, webviewPanel);
+		let isRendered = false;
+		const updateWebview = async () => {
+			if (!isRendered) {
+				await this.renderWebview(document, webviewPanel);
+				isRendered = true;
+			} else {
+				await this.postUpdateMessage(document, webviewPanel);
+			}
+		};
 
 		// Message Listener
 		const messageDisposable = webviewPanel.webview.onDidReceiveMessage(
@@ -178,6 +186,37 @@ export class WorkflowPreviewEditorProvider
 		} catch (error: unknown) {
 			const e = toError(error);
 			webviewPanel.webview.html = `<body><h2>Error reading workflow</h2><p>${e.message}</p></body>`;
+		}
+	}
+
+	private async postUpdateMessage(
+		document: vscode.TextDocument,
+		webviewPanel: vscode.WebviewPanel,
+	) {
+		try {
+			const content = document.getText();
+			const json = JSON.parse(content);
+
+			const triggerParams = await this.prepareTriggerParameters(
+				document,
+				json,
+				content,
+			);
+
+			const isPackage =
+				json.settings?.asBlock === true ||
+				Array.isArray(json.inputs) ||
+				Array.isArray(json.outputs);
+
+			webviewPanel.webview.postMessage({
+				type: "update",
+				json: json,
+				triggerParams: triggerParams,
+				isPackage: isPackage,
+				text: content,
+			});
+		} catch (_error: unknown) {
+			// Ignore parse errors on external edits until fixed
 		}
 	}
 

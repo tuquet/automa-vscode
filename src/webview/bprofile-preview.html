@@ -277,6 +277,19 @@
             created() {
                 this.syncToForm();
             },
+            mounted() {
+                window.addEventListener('message', event => {
+                    const message = event.data;
+                    if (message.type === 'update') {
+                        const state = vscode.getState() || {};
+                        if (state.lastDocumentData === message.text) {
+                            return; // unchanged
+                        }
+                        this.profileDataStr = message.text;
+                        this.initialDataStr = message.text;
+                    }
+                });
+            },
             computed: {
                 isModified() {
                     return this.profileDataStr !== this.initialDataStr;
