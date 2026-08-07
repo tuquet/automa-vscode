@@ -30,105 +30,7 @@ export class WorkflowPreviewEditorProvider
 		webviewPanel: vscode.WebviewPanel,
 		_token: vscode.CancellationToken,
 	): Promise<void> {
-		const updateWebview = async () => {
-			try {
-				const content = document.getText();
-				const json = JSON.parse(content);
-
-				const { WorkflowSanitizer } = await import("../core/Sanitizer");
-				const isModified = WorkflowSanitizer.sanitize(json);
-
-				if (isModified) {
-					const edit = new vscode.WorkspaceEdit();
-					edit.replace(
-						document.uri,
-						new vscode.Range(0, 0, document.lineCount, 0),
-						JSON.stringify(json, null, 4),
-					);
-					// Apply silently in the background
-					vscode.workspace.applyEdit(edit).then((success) => {
-						if (success) {
-							// We don't auto-save to disk, just leave it as an unsaved editor change
-							// Or we can save. Let's just apply to the document buffer.
-						}
-					});
-				}
-
-				const { WorkflowParser } = await import("../core/WorkflowParser");
-				const implicitVars = WorkflowParser.extractImplicitVariables(content);
-				const triggerParams = WorkflowParser.extractTriggerParameters(
-					json,
-					implicitVars,
-				);
-
-				if (
-					!(json.drawflow?.nodes && json.drawflow.edges) &&
-					Array.isArray(json)
-				) {
-					webviewPanel.webview.html = `<body><h2>Not an Automa workflow</h2><p>This JSON file does not appear to be an Automa workflow.</p></body>`;
-					return;
-				}
-
-				// Get workspace settings to pre-fill global variables
-				const config = vscode.workspace.getConfiguration(
-					"automa",
-					document.uri,
-				);
-				const globalVariables = config.get<any>(
-					"vault.run.globalVariables",
-					{},
-				);
-
-				for (const varName of implicitVars) {
-					let defaultVal = "";
-					if (
-						globalVariables &&
-						typeof globalVariables === "object" &&
-						globalVariables[varName] !== undefined
-					) {
-						defaultVal = globalVariables[varName];
-					}
-					triggerParams.push({
-						name: varName,
-						description: varName.startsWith("$$")
-							? "(Auto-detected Global Var)"
-							: "(Auto-detected Implicit Var)",
-						defaultValue: defaultVal,
-						value: defaultVal,
-						required: false,
-						isImplicit: true,
-					});
-				}
-
-				let updatedAt = 0;
-				try {
-					if (document.uri.scheme === "file") {
-						updatedAt = fs.statSync(document.uri.fsPath).mtimeMs;
-					}
-				} catch (_err) {}
-
-				const isPackage =
-					json.settings?.asBlock === true ||
-					Array.isArray(json.inputs) ||
-					Array.isArray(json.outputs);
-				const pkgInputs = Array.isArray(json.inputs) ? json.inputs : [];
-				const pkgOutputs = Array.isArray(json.outputs) ? json.outputs : [];
-				const pkgVars = Array.isArray(json.variable) ? json.variable : [];
-
-				webviewPanel.title = `Preview: ${json.name || "Workflow"}`;
-				webviewPanel.webview.html = this.getHtmlContent(
-					json,
-					triggerParams,
-					updatedAt,
-					isPackage,
-					pkgInputs,
-					pkgOutputs,
-					pkgVars,
-				);
-			} catch (e: any) {
-				webviewPanel.webview.html = `<body><h2>Error reading workflow</h2><p>${e.message}</p></body>`;
-			}
-		};
+		const updateWebview = () => this.renderWebview(document, webviewPanel);
 
 		// Message Listener
 		const messageDisposable = webviewPanel.webview.onDidReceiveMessage(
@@ -151,6 +53,109 @@ export class WorkflowPreviewEditorProvider
 
 		// Initial render
 		updateWebview();
+	}
+
+	private async renderWebview(
+		document: vscode.TextDocument,
+		webviewPanel: vscode.WebviewPanel,
+	) {
+		try {
+			const content = document.getText();
+			const json = JSON.parse(content);
+
+			const { WorkflowSanitizer } = await import("../core/Sanitizer");
+			const isModified = WorkflowSanitizer.sanitize(json);
+
+			if (isModified) {
+				const edit = new vscode.WorkspaceEdit();
+				edit.replace(
+					document.uri,
+					new vscode.Range(0, 0, document.lineCount, 0),
+					JSON.stringify(json, null, 4),
+				);
+				// Apply silently in the background
+				vscode.workspace.applyEdit(edit).then((success) => {
+					if (success) {
+						// We don't auto-save to disk, just leave it as an unsaved editor change
+						// Or we can save. Let's just apply to the document buffer.
+					}
+				});
+			}
+
+			const { WorkflowParser } = await import("../core/WorkflowParser");
+			const implicitVars = WorkflowParser.extractImplicitVariables(content);
+			const triggerParams = WorkflowParser.extractTriggerParameters(
+				json,
+				implicitVars,
+			);
+
+			if (
+				!(json.drawflow?.nodes && json.drawflow.edges) &&
+				Array.isArray(json)
+			) {
+				webviewPanel.webview.html = `<body><h2>Not an Automa workflow</h2><p>This JSON file does not appear to be an Automa workflow.</p></body>`;
+				return;
+			}
+
+			// Get workspace settings to pre-fill global variables
+			const config = vscode.workspace.getConfiguration(
+				"automa",
+				document.uri,
+			);
+			const globalVariables = config.get<any>(
+				"vault.run.globalVariables",
+				{},
+			);
+
+			for (const varName of implicitVars) {
+				let defaultVal = "";
+				if (
+					globalVariables &&
+					typeof globalVariables === "object" &&
+					globalVariables[varName] !== undefined
+				) {
+					defaultVal = globalVariables[varName];
+				}
+				triggerParams.push({
+					name: varName,
+					description: varName.startsWith("$$")
+						? "(Auto-detected Global Var)"
+						: "(Auto-detected Implicit Var)",
+					defaultValue: defaultVal,
+					value: defaultVal,
+					required: false,
+					isImplicit: true,
+				});
+			}
+
+			let updatedAt = 0;
+			try {
+				if (document.uri.scheme === "file") {
+					updatedAt = fs.statSync(document.uri.fsPath).mtimeMs;
+				}
+			} catch (_err) {}
+
+			const isPackage =
+				json.settings?.asBlock === true ||
+				Array.isArray(json.inputs) ||
+				Array.isArray(json.outputs);
+			const pkgInputs = Array.isArray(json.inputs) ? json.inputs : [];
+			const pkgOutputs = Array.isArray(json.outputs) ? json.outputs : [];
+			const pkgVars = Array.isArray(json.variable) ? json.variable : [];
+
+			webviewPanel.title = `Preview: ${json.name || "Workflow"}`;
+			webviewPanel.webview.html = this.getHtmlContent(
+				json,
+				triggerParams,
+				updatedAt,
+				isPackage,
+				pkgInputs,
+				pkgOutputs,
+				pkgVars,
+			);
+		} catch (e: any) {
+			webviewPanel.webview.html = `<body><h2>Error reading workflow</h2><p>${e.message}</p></body>`;
+		}
 	}
 
 	private async handleSaveWorkflow(
