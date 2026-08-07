@@ -259,8 +259,10 @@
                 const state = vscode.getState() || {};
                 
                 let loadedDataStr = initialData;
+                let loadedJsonError = null;
                 if (state.lastDocumentData === initialData) {
                     if (state.profileDataStr !== undefined) loadedDataStr = state.profileDataStr;
+                    if (state.jsonError !== undefined) loadedJsonError = state.jsonError;
                 }
                 
                 return {
@@ -269,7 +271,7 @@
                     profileName: initialName,
                     profileDataStr: loadedDataStr,
                     initialDataStr: initialData,
-                    jsonError: null,
+                    jsonError: loadedJsonError,
                     formData: null,
                     isInternalSync: false
                 }
@@ -302,15 +304,19 @@
                 },
                 profileDataStr(newVal) {
                     const state = vscode.getState() || {};
-                    vscode.setState({ ...state, profileDataStr: newVal, lastDocumentData: initialData });
-
-                    if (this.isInternalSync) return;
+                    
+                    if (this.isInternalSync) {
+                        vscode.setState({ ...state, profileDataStr: newVal, lastDocumentData: initialData, jsonError: null });
+                        return;
+                    }
                     try {
                         JSON.parse(newVal);
                         this.jsonError = null;
+                        vscode.setState({ ...state, profileDataStr: newVal, jsonError: null, lastDocumentData: initialData });
                         this.syncToForm();
                     } catch (e) {
                         this.jsonError = e.message;
+                        vscode.setState({ ...state, profileDataStr: newVal, jsonError: e.message, lastDocumentData: initialData });
                     }
                 }
             },
