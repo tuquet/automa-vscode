@@ -3,9 +3,7 @@ import * as vscode from "vscode";
 import { TaskRunner } from "../core/TaskRunner";
 import { extractFsPath } from "../utils/typeGuards";
 
-export async function runFleetCommand(
-	nodeOrUri?: vscode.Uri | { fsPath: string },
-) {
+export async function runFleetCommand(nodeOrUri?: unknown) {
 	let targetPath = "";
 	let displayName = "";
 

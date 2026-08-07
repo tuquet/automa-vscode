@@ -390,221 +390,282 @@
 			{
 				"command": "automa.showWorkflowSource",
 				"title": "Show Workflow Source",
+				"category": "Automa",
 				"icon": "$(code)"
 			},
 			{
 				"command": "automa.showWorkflowPreview",
 				"title": "Preview Workflow",
+				"category": "Automa",
 				"icon": "$(preview)"
 			},
 			{
 				"command": "automa.showFleetSource",
 				"title": "Show Fleet Source",
+				"category": "Automa",
 				"icon": "$(code)"
 			},
 			{
 				"command": "automa.showFleetPreview",
 				"title": "Preview Fleet",
+				"category": "Automa",
 				"icon": "$(preview)"
 			},
 			{
 				"command": "automa.runWorkflow",
-				"title": "Automa: Run Workflow",
+				"title": "Run Workflow",
+				"category": "Automa",
 				"icon": "$(play)"
 			},
 			{
 				"command": "automa.runWorkflowWithParams",
-				"title": "Automa: Run Workflow with Parameters",
+				"title": "Run Workflow with Parameters",
+				"category": "Automa",
 				"icon": "$(play-circle)"
 			},
 			{
 				"command": "automa.runFleet",
-				"title": "Automa: Run Fleet",
+				"title": "Run Fleet",
+				"category": "Automa",
 				"icon": "$(play)"
 			},
 			{
 				"command": "automa.stopFleet",
-				"title": "Automa: Stop Fleet",
+				"title": "Stop Fleet",
+				"category": "Automa",
 				"icon": "$(stop)"
 			},
 			{
 				"command": "automa.fixWorkflowId",
-				"title": "Automa: Auto-Fix Workflow ID",
+				"title": "Auto-Fix Workflow ID",
+				"category": "Automa",
 				"icon": "$(wrench)"
 			},
 			{
 				"command": "automa.lintCheck",
-				"title": "Automa: Lint Check Workflow",
+				"title": "Lint Check Workflow",
+				"category": "Automa",
 				"icon": "$(checklist)"
 			},
 			{
 				"command": "automa.showLogSource",
 				"title": "Show Source",
+				"category": "Automa",
 				"icon": "$(code)"
 			},
 			{
 				"command": "automa.showLogPreview",
 				"title": "Open Preview",
+				"category": "Automa",
 				"icon": "$(preview)"
 			},
 			{
 				"command": "automa.history.loadMore",
 				"title": "Load More...",
+				"category": "Automa",
 				"icon": "$(sync)"
 			},
 			{
 				"command": "automa.openInStudio",
 				"title": "Open in Studio",
+				"category": "Automa",
 				"icon": "$(link-external)"
 			},
 			{
 				"command": "automa.focusActiveRunners",
-				"title": "Focus Active Runners"
+				"title": "Focus Active Runners",
+				"category": "Automa"
 			},
 			{
 				"command": "automa.createWorkflow",
 				"title": "Create Workflow",
+				"category": "Automa",
 				"icon": "$(add)"
 			},
 			{
 				"command": "automa.createPackage",
 				"title": "Create Package",
+				"category": "Automa",
 				"icon": "$(add)"
 			},
 			{
 				"command": "automa.createProfile",
 				"title": "Create Profile",
+				"category": "Automa",
 				"icon": "$(add)"
 			},
 			{
 				"command": "automa.refreshRunners",
 				"title": "Refresh Runners",
+				"category": "Automa",
 				"icon": "$(refresh)"
 			},
 			{
 				"command": "automa.refreshHistory",
 				"title": "Refresh History",
+				"category": "Automa",
 				"icon": "$(refresh)"
 			},
 			{
 				"command": "automa.refreshProfiles",
 				"title": "Refresh Profiles",
+				"category": "Automa",
 				"icon": "$(refresh)"
 			},
 			{
 				"command": "automa.refreshWorkflows",
 				"title": "Refresh Workflows",
+				"category": "Automa",
 				"icon": "$(refresh)"
 			},
 			{
 				"command": "automa.refreshPackages",
 				"title": "Refresh Packages",
+				"category": "Automa",
 				"icon": "$(refresh)"
 			},
 			{
 				"command": "automa.refreshFleets",
 				"title": "Refresh Fleets",
+				"category": "Automa",
 				"icon": "$(refresh)"
 			},
 			{
 				"command": "automa.deleteHistoryItem",
 				"title": "Delete",
+				"category": "Automa",
 				"icon": "$(trash)"
 			},
 			{
 				"command": "automa.clearHistory",
 				"title": "Clear History",
+				"category": "Automa",
 				"icon": "$(trash)"
 			},
 			{
 				"command": "automa.filterHistoryByTaskId",
 				"title": "Filter by Task ID",
+				"category": "Automa",
 				"icon": "$(filter)"
 			},
 			{
 				"command": "automa.clearHistoryFilter",
 				"title": "Clear Filter",
+				"category": "Automa",
 				"icon": "$(clear-all)"
 			},
 			{
 				"command": "automa.killRunner",
 				"title": "Kill Runner",
+				"category": "Automa",
 				"icon": "$(close)"
 			},
 			{
 				"command": "automa.vault.encryptSecret",
-				"title": "Automa: Encrypt Secret",
+				"title": "Encrypt Secret",
 				"category": "Automa Vault"
 			},
 			{
 				"command": "automa.showLiveLog",
 				"title": "Live Log",
+				"category": "Automa",
 				"icon": "$(output)"
 			},
 			{
 				"command": "automa.searchProfiles",
 				"title": "Search",
+				"category": "Automa",
 				"icon": "$(search)"
 			},
 			{
 				"command": "automa.searchWorkflows",
 				"title": "Search",
+				"category": "Automa",
 				"icon": "$(search)"
 			},
 			{
 				"command": "automa.searchPackages",
 				"title": "Search",
+				"category": "Automa",
 				"icon": "$(search)"
 			},
 			{
 				"command": "automa.searchFleets",
 				"title": "Search",
+				"category": "Automa",
 				"icon": "$(search)"
 			},
 			{
 				"command": "automa.clearSearchProfiles",
 				"title": "Clear Search",
+				"category": "Automa",
 				"icon": "$(clear-all)"
 			},
 			{
 				"command": "automa.clearSearchWorkflows",
 				"title": "Clear Search",
+				"category": "Automa",
 				"icon": "$(clear-all)"
 			},
 			{
 				"command": "automa.clearSearchPackages",
 				"title": "Clear Search",
+				"category": "Automa",
 				"icon": "$(clear-all)"
 			},
 			{
 				"command": "automa.clearSearchFleets",
 				"title": "Clear Search",
+				"category": "Automa",
 				"icon": "$(clear-all)"
 			},
 			{
 				"command": "automa.addVariable",
 				"title": "Add Variable",
+				"category": "Automa Vault",
 				"icon": "$(add)"
 			},
 			{
 				"command": "automa.addCredential",
 				"title": "Add Credential",
+				"category": "Automa Vault",
 				"icon": "$(key)"
 			},
 			{
 				"command": "automa.addTable",
 				"title": "Add Table",
+				"category": "Automa Vault",
 				"icon": "$(list-flat)"
 			},
 			{
 				"command": "automa.refreshVault",
 				"title": "Refresh",
+				"category": "Automa Vault",
 				"icon": "$(refresh)"
 			},
 			{
 				"command": "automa.deleteVaultItem",
 				"title": "Delete",
+				"category": "Automa Vault",
 				"icon": "$(trash)"
+			},
+			{
+				"command": "automa.welcome",
+				"title": "Show Welcome Guide",
+				"category": "Automa",
+				"icon": "$(heart)"
+			},
+			{
+				"command": "automa.installBrowser",
+				"title": "Install Built-in Browser",
+				"category": "Automa",
+				"icon": "$(browser)"
+			},
+			{
+				"command": "automa.toggleDaemon",
+				"title": "Toggle Background Daemon",
+				"category": "Automa",
+				"icon": "$(server-environment)"
 			}
 		],
 		"customEditors": [
