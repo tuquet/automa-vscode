@@ -220,42 +220,66 @@ export class DaemonManager {
 				}
 			}
 
-			// Fallback: try to find the outer boundaries of a JSON object/array
-			const startObject = str.indexOf("{");
-			const lastObject = str.lastIndexOf("}");
-			const startArray = str.indexOf("[");
-			const lastArray = str.lastIndexOf("]");
+			// Fallback: extract valid JSON blocks using bracket matching (AST-like)
+			const findValidJson = (
+				text: string,
+				startChar: string,
+				endChar: string,
+			): unknown => {
+				let startIndex = text.indexOf(startChar);
+				let lastValidJson: unknown;
+				while (startIndex !== -1) {
+					let depth = 0;
+					let inString = false;
+					let isEscape = false;
+					let endIndex = -1;
 
-			let objStr = "";
-			if (startObject !== -1 && lastObject !== -1 && lastObject > startObject) {
-				objStr = str.substring(startObject, lastObject + 1);
-			}
+					for (let i = startIndex; i < text.length; i++) {
+						const char = text[i];
+						if (isEscape) {
+							isEscape = false;
+							continue;
+						}
+						if (char === "\\") {
+							isEscape = true;
+							continue;
+						}
+						if (char === '"') {
+							inString = !inString;
+							continue;
+						}
+						if (!inString) {
+							if (char === startChar) {
+								depth++;
+							} else if (char === endChar) {
+								depth--;
+								if (depth === 0) {
+									endIndex = i;
+									break;
+								}
+							}
+						}
+					}
 
-			let arrStr = "";
-			if (startArray !== -1 && lastArray !== -1 && lastArray > startArray) {
-				arrStr = str.substring(startArray, lastArray + 1);
-			}
+					if (endIndex !== -1) {
+						const possibleJson = text.substring(startIndex, endIndex + 1);
+						try {
+							lastValidJson = JSON.parse(possibleJson);
+						} catch (_e: unknown) {
+							// Invalid JSON
+						}
+					}
 
-			if (
-				objStr &&
-				startObject <= (startArray === -1 ? Infinity : startArray)
-			) {
-				try {
-					return JSON.parse(objStr);
-				} catch (_e: unknown) {}
-			}
-			if (arrStr) {
-				try {
-					return JSON.parse(arrStr);
-				} catch (_e: unknown) {
-					// Ignored
+					startIndex = text.indexOf(startChar, startIndex + 1);
 				}
-			}
-			if (objStr) {
-				try {
-					return JSON.parse(objStr);
-				} catch (_e: unknown) {}
-			}
+				return lastValidJson;
+			};
+
+			const objResult = findValidJson(str, "{", "}");
+			if (objResult !== undefined) return objResult;
+
+			const arrResult = findValidJson(str, "[", "]");
+			if (arrResult !== undefined) return arrResult;
 
 			throw new Error("No valid JSON found in output");
 		};
@@ -415,8 +439,16 @@ export class DaemonManager {
 
 			this.spawnDaemonProcess(cmd, args, config);
 
-			// Wait a bit for server to start
-			await new Promise((resolve) => setTimeout(resolve, 2000));
+			// Wait for server to start (poll health check to remove bottleneck)
+			let isHealthy = false;
+			for (let i = 0; i < 20; i++) {
+				isHealthy = await this.checkAutomaHealth(this.port);
+				if (isHealthy) break;
+				await new Promise((resolve) => setTimeout(resolve, 200));
+			}
+			if (!isHealthy) {
+				Logger.warn(`Automa daemon on port ${this.port} may not be ready yet.`);
+			}
 			Logger.info("Automa background daemon started.");
 			this.hasLoggedReuse = false;
 			this.statusBarItem.text = `$(radio-tower) Automa: :${this.port}`;
