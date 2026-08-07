@@ -256,10 +256,16 @@
         const app = createApp({
             data() {
                 const state = vscode.getState() || {};
+                
+                let loadedDataStr = initialData;
+                if (state.lastDocumentData === initialData) {
+                    if (state.profileDataStr !== undefined) loadedDataStr = state.profileDataStr;
+                }
+                
                 return {
                     viewMode: state.viewMode || 'form',
                     profileName: initialName,
-                    profileDataStr: initialData,
+                    profileDataStr: loadedDataStr,
                     initialDataStr: initialData,
                     jsonError: null,
                     formData: null,
@@ -280,6 +286,9 @@
                     vscode.setState({ ...state, viewMode: newMode });
                 },
                 profileDataStr(newVal) {
+                    const state = vscode.getState() || {};
+                    vscode.setState({ ...state, profileDataStr: newVal, lastDocumentData: initialData });
+
                     if (this.isInternalSync) return;
                     try {
                         JSON.parse(newVal);
