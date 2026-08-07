@@ -1,15 +1,21 @@
-import * as fs from "node:fs";
-import * as path from "node:path";
 import * as vscode from "vscode";
 import { TaskRunner } from "../core/TaskRunner";
+import { toError } from "../utils/typeGuards";
 
-export async function createWorkflowCommand() {
-	const args = ["studio"];
+function getWorkspaceRoot(): string | undefined {
 	if (
 		vscode.workspace.workspaceFolders &&
 		vscode.workspace.workspaceFolders.length > 0
 	) {
-		const workspaceRoot = vscode.workspace.workspaceFolders[0].uri.fsPath;
+		return vscode.workspace.workspaceFolders[0].uri.fsPath;
+	}
+	return undefined;
+}
+
+export async function createWorkflowCommand() {
+	const args = ["studio"];
+	const workspaceRoot = getWorkspaceRoot();
+	if (workspaceRoot) {
 		args.push("--vault-path", workspaceRoot);
 	}
 
@@ -27,11 +33,8 @@ export async function createWorkflowCommand() {
 
 export async function createPackageCommand() {
 	const args = ["studio", "--route", "/packages"];
-	if (
-		vscode.workspace.workspaceFolders &&
-		vscode.workspace.workspaceFolders.length > 0
-	) {
-		const workspaceRoot = vscode.workspace.workspaceFolders[0].uri.fsPath;
+	const workspaceRoot = getWorkspaceRoot();
+	if (workspaceRoot) {
 		args.push("--vault-path", workspaceRoot);
 	}
 
@@ -61,43 +64,66 @@ export async function createProfileCommand() {
 
 	if (!profileName) return;
 
-	if (
-		!vscode.workspace.workspaceFolders ||
-		vscode.workspace.workspaceFolders.length === 0
-	) {
+	const workspaceRoot = getWorkspaceRoot();
+	if (!workspaceRoot) {
 		vscode.window.showErrorMessage("No workspace folder is open.");
 		return;
 	}
 
-	const workspaceRoot = vscode.workspace.workspaceFolders[0].uri.fsPath;
-	const profilesDir = path.join(workspaceRoot, "profiles");
-
-	if (!fs.existsSync(profilesDir)) {
-		fs.mkdirSync(profilesDir, { recursive: true });
-	}
-
-	const profilePath = path.join(profilesDir, `${profileName}.profile.json`);
-
-	if (fs.existsSync(profilePath)) {
-		vscode.window.showErrorMessage(`Profile '${profileName}' already exists.`);
-		return;
-	}
-
-	const profileData = {
-		name: profileName,
-		userDataDir: `./profiles/${profileName}-data`,
-		extensions: [],
-	};
-
-	fs.writeFileSync(profilePath, JSON.stringify(profileData, null, 2), "utf8");
-
-	const docUri = vscode.Uri.file(profilePath);
-	await vscode.commands.executeCommand(
-		"vscode.openWith",
-		docUri,
-		"automa.bprofileEditor",
+	const profilesDirUri = vscode.Uri.joinPath(
+		vscode.Uri.file(workspaceRoot),
+		"profiles",
 	);
-	vscode.window.showInformationMessage(
-		`Profile '${profileName}' created successfully.`,
-	);
+
+	try {
+		// Attempt to read directory stats, create if it doesn't exist
+		try {
+			await vscode.workspace.fs.stat(profilesDirUri);
+		} catch {
+			await vscode.workspace.fs.createDirectory(profilesDirUri);
+		}
+
+		const profileUri = vscode.Uri.joinPath(
+			profilesDirUri,
+			`${profileName}.profile.json`,
+		);
+
+		let exists = true;
+		try {
+			await vscode.workspace.fs.stat(profileUri);
+		} catch {
+			exists = false;
+		}
+
+		if (exists) {
+			vscode.window.showErrorMessage(
+				`Profile '${profileName}' already exists.`,
+			);
+			return;
+		}
+
+		const profileData = {
+			name: profileName,
+			userDataDir: `./profiles/${profileName}-data`,
+			extensions: [],
+		};
+
+		const contentBuffer = new TextEncoder().encode(
+			JSON.stringify(profileData, null, 2),
+		);
+		await vscode.workspace.fs.writeFile(profileUri, contentBuffer);
+
+		await vscode.commands.executeCommand(
+			"vscode.openWith",
+			profileUri,
+			"automa.bprofileEditor",
+		);
+		vscode.window.showInformationMessage(
+			`Profile '${profileName}' created successfully.`,
+		);
+	} catch (error: unknown) {
+		vscode.window.showErrorMessage(
+			`Failed to create profile: ${toError(error).message}`,
+		);
+	}
 }
