@@ -276,7 +276,7 @@ export class StudioWebviewPanel {
 								validParsed = data.data;
 							}
 						}
-					} catch (e) {
+					} catch (_e) {
 						// Ignore fetch error, just use un-sanitized data
 					}
 				}
@@ -360,9 +360,19 @@ export class StudioWebviewPanel {
 						const safeName = (wf.name || wf.id)
 							.replace(/[^a-z0-9]/gi, "_")
 							.toLowerCase();
-						targetUri = vscode.Uri.joinPath(
+
+						const workflowsDir = vscode.Uri.joinPath(
 							workspaceRoot,
 							"workflows",
+						);
+						try {
+							await vscode.workspace.fs.createDirectory(workflowsDir);
+						} catch (dirErr) {
+							// Ignore if exists
+						}
+
+						targetUri = vscode.Uri.joinPath(
+							workflowsDir,
 							`${safeName}.workflow.json`,
 						);
 					}
@@ -452,7 +462,7 @@ export class StudioWebviewPanel {
 				const arr = Array.isArray(data) ? data : [];
 				uriToItemsMap.set(file.toString(), arr);
 				for (const item of arr) {
-					if (item && item.id) idToUriMap.set(item.id, file);
+					if (item?.id) idToUriMap.set(item.id, file);
 				}
 			} catch (e: unknown) {
 				const msg = e instanceof Error ? e.message : String(e);
@@ -462,16 +472,18 @@ export class StudioWebviewPanel {
 		}
 
 		for (const rawItem of itemsList) {
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			const item = rawItem as any;
-			if (!item || !item.id) continue;
-			let targetUri = idToUriMap.get(item.id);
+			const item = rawItem as Record<string, unknown>;
+			if (!item?.id) continue;
+			const itemId = item.id as string;
+			let targetUri = idToUriMap.get(itemId);
 			if (!targetUri) {
-				targetUri = vscode.Uri.joinPath(
-					workspaceRoot,
-					folderName,
-					defaultFileName,
-				);
+				const folderDir = vscode.Uri.joinPath(workspaceRoot, folderName);
+				try {
+					await vscode.workspace.fs.createDirectory(folderDir);
+				} catch (dirErr) {
+					// Ignore if exists
+				}
+				targetUri = vscode.Uri.joinPath(folderDir, defaultFileName);
 			}
 
 			let itemsInFile = uriToItemsMap.get(targetUri.toString());
