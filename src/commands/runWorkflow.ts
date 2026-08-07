@@ -16,7 +16,10 @@ async function resolveTarget(
 		displayName = path.basename(nodeOrUri.fsPath);
 	} else if (nodeOrUri && typeof nodeOrUri === "object") {
 		const node = nodeOrUri as Record<string, unknown>;
-		if ("fsPath" in node && typeof node.fsPath === "string") {
+		if (node.resourceUri instanceof vscode.Uri) {
+			targetPath = node.resourceUri.fsPath;
+			displayName = path.basename(targetPath);
+		} else if ("fsPath" in node && typeof node.fsPath === "string") {
 			targetPath = node.fsPath;
 			displayName = path.basename(node.fsPath);
 		} else if ("fullPath" in node && typeof node.fullPath === "string") {

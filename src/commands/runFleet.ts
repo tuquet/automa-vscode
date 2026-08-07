@@ -8,7 +8,18 @@ export async function runFleetCommand(
 	let targetPath = "";
 	let displayName = "";
 
-	if (nodeOrUri?.fsPath) {
+	if (nodeOrUri instanceof vscode.Uri) {
+		targetPath = nodeOrUri.fsPath;
+		displayName = path.basename(nodeOrUri.fsPath);
+	} else if (
+		nodeOrUri &&
+		typeof nodeOrUri === "object" &&
+		"resourceUri" in nodeOrUri &&
+		nodeOrUri.resourceUri instanceof vscode.Uri
+	) {
+		targetPath = nodeOrUri.resourceUri.fsPath;
+		displayName = path.basename(targetPath);
+	} else if (nodeOrUri?.fsPath) {
 		targetPath = nodeOrUri.fsPath;
 		displayName = path.basename(nodeOrUri.fsPath);
 	} else {

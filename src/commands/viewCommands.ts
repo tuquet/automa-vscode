@@ -2,7 +2,9 @@ import * as vscode from "vscode";
 import { LiveLogEditorProvider } from "../providers/LiveLogEditorProvider";
 
 export function showWorkflowSourceCommand() {
-	return async (uri: vscode.Uri) => {
+	return async (nodeOrUri: any) => {
+		const uri =
+			nodeOrUri instanceof vscode.Uri ? nodeOrUri : nodeOrUri?.resourceUri;
 		if (uri) {
 			await vscode.workspace
 				.getConfiguration("automa")
@@ -17,7 +19,9 @@ export function showWorkflowSourceCommand() {
 }
 
 export function showWorkflowPreviewCommand() {
-	return async (uri: vscode.Uri) => {
+	return async (nodeOrUri: any) => {
+		const uri =
+			nodeOrUri instanceof vscode.Uri ? nodeOrUri : nodeOrUri?.resourceUri;
 		if (uri) {
 			await vscode.workspace
 				.getConfiguration("automa")
@@ -36,7 +40,9 @@ export function showWorkflowPreviewCommand() {
 }
 
 export function showFleetSourceCommand() {
-	return async (uri: vscode.Uri) => {
+	return async (nodeOrUri: any) => {
+		const uri =
+			nodeOrUri instanceof vscode.Uri ? nodeOrUri : nodeOrUri?.resourceUri;
 		if (uri) {
 			await vscode.commands.executeCommand("vscode.openWith", uri, "default");
 		}
@@ -44,7 +50,9 @@ export function showFleetSourceCommand() {
 }
 
 export function showFleetPreviewCommand() {
-	return async (uri: vscode.Uri) => {
+	return async (nodeOrUri: any) => {
+		const uri =
+			nodeOrUri instanceof vscode.Uri ? nodeOrUri : nodeOrUri?.resourceUri;
 		if (uri) {
 			await vscode.commands.executeCommand(
 				"vscode.openWith",
@@ -56,7 +64,9 @@ export function showFleetPreviewCommand() {
 }
 
 export function showLogSourceCommand() {
-	return async (uri: vscode.Uri) => {
+	return async (nodeOrUri: any) => {
+		const uri =
+			nodeOrUri instanceof vscode.Uri ? nodeOrUri : nodeOrUri?.resourceUri;
 		if (uri) {
 			await vscode.commands.executeCommand("vscode.openWith", uri, "default");
 		} else {
@@ -66,7 +76,9 @@ export function showLogSourceCommand() {
 }
 
 export function showLogPreviewCommand(context: vscode.ExtensionContext) {
-	return async (uri: vscode.Uri) => {
+	return async (nodeOrUri: any) => {
+		const uri =
+			nodeOrUri instanceof vscode.Uri ? nodeOrUri : nodeOrUri?.resourceUri;
 		if (uri && uri.scheme === "automa-log") {
 			const jobId = uri.authority || uri.path.replace(/^\//, "");
 			const {
