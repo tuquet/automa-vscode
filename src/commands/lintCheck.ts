@@ -10,13 +10,27 @@ export function activateLintDiagnostics(context: vscode.ExtensionContext) {
 }
 
 function resolveUrisToProcess(
-	nodeOrUri?: any,
-	nodesOrUris?: any[],
+	nodeOrUri?: unknown,
+	nodesOrUris?: unknown[],
 ): vscode.Uri[] {
-	if (nodesOrUris && nodesOrUris.length > 0) {
-		return nodesOrUris;
+	if (Array.isArray(nodesOrUris) && nodesOrUris.length > 0) {
+		return nodesOrUris
+			.map((n) =>
+				n instanceof vscode.Uri
+					? n
+					: typeof n === "object" && n !== null && "resourceUri" in n
+						? ((n as Record<string, unknown>).resourceUri as vscode.Uri)
+						: null,
+			)
+			.filter((uri): uri is vscode.Uri => uri !== null);
 	} else if (nodeOrUri instanceof vscode.Uri) {
 		return [nodeOrUri];
+	} else if (
+		nodeOrUri &&
+		typeof nodeOrUri === "object" &&
+		"resourceUri" in nodeOrUri
+	) {
+		return [(nodeOrUri as Record<string, unknown>).resourceUri as vscode.Uri];
 	} else {
 		const activeEditor = vscode.window.activeTextEditor;
 		if (activeEditor) {
@@ -83,7 +97,10 @@ function parseDiagnosticsFromOutput(
 	return diagnostics;
 }
 
-export async function lintCheckCommand(nodeOrUri?: any, nodesOrUris?: any[]) {
+export async function lintCheckCommand(
+	nodeOrUri?: unknown,
+	nodesOrUris?: unknown[],
+) {
 	const urisToProcess = resolveUrisToProcess(nodeOrUri, nodesOrUris);
 
 	if (urisToProcess.length === 0) {
@@ -120,11 +137,11 @@ export async function lintCheckCommand(nodeOrUri?: any, nodesOrUris?: any[]) {
 						});
 						if (!res.ok) throw new Error("Daemon not ready");
 
-						const data = (await res.json()) as any;
-						const errStrs = (data.errors || []).map(
+						const data = (await res.json()) as Record<string, unknown>;
+						const errStrs = ((data.errors as string[]) || []).map(
 							(e: string) => `- [Error] ${e}`,
 						);
-						const warnStrs = (data.warnings || []).map(
+						const warnStrs = ((data.warnings as string[]) || []).map(
 							(w: string) => `- [Warning] ${w}`,
 						);
 						output = [...errStrs, ...warnStrs].join("\n");
