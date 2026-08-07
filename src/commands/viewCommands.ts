@@ -83,13 +83,6 @@ export function showLogPreviewCommand(context: vscode.ExtensionContext) {
 	};
 }
 
-export function openInStudioCommand(context: vscode.ExtensionContext) {
-	return (uri: vscode.Uri) => {
-		const { StudioWebviewPanel } = require("../panels/StudioWebviewPanel");
-		StudioWebviewPanel.createOrShow(context.extensionUri, uri);
-	};
-}
-
 export function showLiveLogCommand(context: vscode.ExtensionContext) {
 	return (execution: vscode.TaskExecution) => {
 		if (execution) {
