@@ -152,20 +152,6 @@ export class ProviderManager {
 		);
 		fleetsProvider.register(this.context, "Fleets");
 
-		// 6. Global File System Watcher
-		const vaultWatcher = vscode.workspace.createFileSystemWatcher(
-			"**/*.{json,yaml,yml}",
-		);
-		this.context.subscriptions.push(vaultWatcher);
-		const refreshAll = () => {
-			workflowsProvider.setSearchQuery("");
-			fleetsProvider.setSearchQuery("");
-			packagesProvider.setSearchQuery("");
-			profilesProvider.setSearchQuery("");
-		};
-		vaultWatcher.onDidChange(refreshAll);
-		vaultWatcher.onDidCreate(refreshAll);
-		vaultWatcher.onDidDelete(refreshAll);
 
 		// 6. Global Vault Panel
 		const vaultProvider = new VaultTreeDataProvider();
