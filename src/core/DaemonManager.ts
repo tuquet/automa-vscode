@@ -161,23 +161,35 @@ export class DaemonManager {
 				return JSON.parse(str);
 			} catch (_e) {}
 
-			// To handle trailing/preceding logs gracefully without regex bugs:
-			// We find all possible start and end brackets, and try to parse the substring.
-			const starts = [];
-			const ends = [];
-			for (let i = 0; i < str.length; i++) {
-				if (str[i] === "{" || str[i] === "[") starts.push(i);
-				if (str[i] === "}" || str[i] === "]") ends.push(i);
+			// Find the first and last occurrence of { } or [ ]
+			const firstBrace = str.indexOf("{");
+			const lastBrace = str.lastIndexOf("}");
+			const firstBracket = str.indexOf("[");
+			const lastBracket = str.lastIndexOf("]");
+
+			let start = -1;
+			let end = -1;
+
+			if (firstBrace !== -1 && lastBrace !== -1 && firstBrace < lastBrace) {
+				start = firstBrace;
+				end = lastBrace;
 			}
 
-			// Optimization: only test reasonable pairs (starts before ends)
-			for (let i = 0; i < starts.length; i++) {
-				for (let j = ends.length - 1; j >= 0; j--) {
-					if (ends[j] < starts[i]) break;
-					try {
-						return JSON.parse(str.substring(starts[i], ends[j] + 1));
-					} catch (_e) {}
+			if (
+				firstBracket !== -1 &&
+				lastBracket !== -1 &&
+				firstBracket < lastBracket
+			) {
+				if (start === -1 || firstBracket < start) {
+					start = firstBracket;
+					end = lastBracket;
 				}
+			}
+
+			if (start !== -1 && end !== -1) {
+				try {
+					return JSON.parse(str.substring(start, end + 1));
+				} catch (_e) {}
 			}
 
 			throw new Error("No valid JSON found in output");
