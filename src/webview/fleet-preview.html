@@ -297,9 +297,9 @@
                     isRunning: false,
                     isModified: false,
                     collapsedMembers: state.collapsedMembers || [],
-                    globalVariablesStr: '{}',
+                    globalVariablesStr: state.globalVariablesStr || '{}',
                     isInternalVarUpdate: false,
-                    jsonError: null
+                    jsonError: state.jsonError || null
                 }
             },
             computed: {
@@ -339,16 +339,21 @@
                     vscode.setState({ ...state, isModified: newVal });
                 },
                 globalVariablesStr(newVal) {
+                    const state = vscode.getState() || {};
+                    vscode.setState({ ...state, globalVariablesStr: newVal });
+                    
                     if (this.isInternalVarUpdate) return;
                     try {
                         const parsed = JSON.parse(newVal);
                         this.jsonError = null;
+                        vscode.setState({ ...state, globalVariablesStr: newVal, jsonError: null });
                         if (this.fleetData) {
                             this.fleetData.global_variables = parsed;
                             this.markModified();
                         }
                     } catch (e) {
                         this.jsonError = e.message;
+                        vscode.setState({ ...state, globalVariablesStr: newVal, jsonError: e.message });
                     }
                 }
             },
@@ -494,8 +499,13 @@
                                 }
                                 
                                 this.isInternalVarUpdate = true;
-                                this.globalVariablesStr = JSON.stringify(this.fleetData.global_variables || {}, null, 2);
-                                this.jsonError = null;
+                                if (state.lastDocumentData === message.text && state.globalVariablesStr !== undefined) {
+                                    this.globalVariablesStr = state.globalVariablesStr;
+                                    this.jsonError = state.jsonError || null;
+                                } else {
+                                    this.globalVariablesStr = JSON.stringify(this.fleetData.global_variables || {}, null, 2);
+                                    this.jsonError = null;
+                                }
                                 setTimeout(() => { this.isInternalVarUpdate = false; }, 50);
                                 
                             } catch(e) {
