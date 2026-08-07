@@ -329,10 +329,9 @@ export class WorkflowPreviewEditorProvider
 				}
 			}
 
-			// Apply edits to document
 			await this.saveDocument(document, JSON.stringify(json, null, 4));
 
-			vscode.window.showInformationMessage("Workflow saved successfully!");
+			vscode.window.setStatusBarMessage("Workflow saved successfully!", 3000);
 		} catch (error: unknown) {
 			const e = toError(error);
 			vscode.window.showErrorMessage(`Failed to save workflow: ${e.message}`);

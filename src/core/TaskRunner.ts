@@ -43,7 +43,7 @@ export const TaskRunner = {
 
 	run(options: TaskOptions): Promise<void> {
 		if (options.startMessage) {
-			vscode.window.showInformationMessage(options.startMessage);
+			vscode.window.setStatusBarMessage(options.startMessage, 5000);
 		}
 
 		let statusBarItem: vscode.StatusBarItem | undefined;
@@ -100,7 +100,7 @@ export const TaskRunner = {
 
 					if (e.exitCode === 0) {
 						if (options.successMessage) {
-							vscode.window.showInformationMessage(options.successMessage);
+							vscode.window.setStatusBarMessage(options.successMessage, 5000);
 						}
 					} else {
 						if (options.errorMessage) {
@@ -117,7 +117,7 @@ export const TaskRunner = {
 
 	runWithTelemetry(options: TaskOptions): Promise<void> {
 		if (options.startMessage) {
-			vscode.window.showInformationMessage(options.startMessage);
+			vscode.window.setStatusBarMessage(options.startMessage, 5000);
 		}
 
 		let statusBarItem: vscode.StatusBarItem | undefined;
@@ -201,7 +201,7 @@ export const TaskRunner = {
 
 				if (code === 0) {
 					if (options.successMessage) {
-						vscode.window.showInformationMessage(options.successMessage);
+						vscode.window.setStatusBarMessage(options.successMessage, 5000);
 					}
 				} else {
 					if (options.errorMessage) {

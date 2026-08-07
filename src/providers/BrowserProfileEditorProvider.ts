@@ -110,8 +110,9 @@ export class BrowserProfileEditorProvider
 		try {
 			await this.saveDocument(document, newJsonStr);
 
-			vscode.window.showInformationMessage(
+			vscode.window.setStatusBarMessage(
 				"Browser Profile saved successfully!",
+				3000,
 			);
 		} catch (error: unknown) {
 			const e = toError(error);
