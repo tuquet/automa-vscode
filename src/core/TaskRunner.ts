@@ -154,12 +154,16 @@ export class TaskRunner {
 		rl.on("line", (line: string) => {
 			outputChannel.appendLine(line);
 			const trimmed = line.trim();
-			if (trimmed.startsWith("{") && trimmed.includes('"type":"telemetry"')) {
-				try {
-					const telemetry = JSON.parse(trimmed);
-					TaskRunner.telemetryEmitter.emit("telemetry", telemetry);
-				} catch (_e) {
-					// ignore parse error
+			if (trimmed.includes('"type":"telemetry"')) {
+				const start = trimmed.indexOf("{");
+				const end = trimmed.lastIndexOf("}");
+				if (start !== -1 && end !== -1 && end > start) {
+					try {
+						const telemetry = JSON.parse(trimmed.substring(start, end + 1));
+						TaskRunner.telemetryEmitter.emit("telemetry", telemetry);
+					} catch (_e) {
+						// ignore parse error
+					}
 				}
 			}
 		});
