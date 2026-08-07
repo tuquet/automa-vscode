@@ -121,17 +121,17 @@ export class BrowserProfileEditorProvider
 					: "";
 
 			htmlContent = htmlContent.replace(
-				"{{PROFILE_DATA}}",
+				/\{\{PROFILE_DATA\}\}/g,
 				safeString(JSON.stringify(json, null, 2)),
 			);
 			htmlContent = htmlContent.replace(
-				"{{PROFILE_NAME}}",
+				/\{\{PROFILE_NAME\}\}/g,
 				safeString(json.name || fileName),
 			);
-			htmlContent = htmlContent.replace("{{LABEL}}", label);
-			htmlContent = htmlContent.replace("{{ICON}}", icon);
+			htmlContent = htmlContent.replace(/\{\{LABEL\}\}/g, label);
+			htmlContent = htmlContent.replace(/\{\{ICON\}\}/g, icon);
 			htmlContent = htmlContent.replace(
-				"{{IS_TABLE}}",
+				/\{\{IS_TABLE\}\}/g,
 				isTable ? "true" : "false",
 			);
 
