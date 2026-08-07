@@ -1,12 +1,10 @@
 import * as vscode from "vscode";
 import { LiveLogEditorProvider } from "../providers/LiveLogEditorProvider";
+import { extractUri } from "../utils/typeGuards";
 
 export function showWorkflowSourceCommand() {
 	return async (nodeOrUri: unknown) => {
-		let uri =
-			nodeOrUri instanceof vscode.Uri
-				? nodeOrUri
-				: (nodeOrUri as { resourceUri?: vscode.Uri })?.resourceUri;
+		let uri = extractUri(nodeOrUri);
 		if (!uri) uri = vscode.window.activeTextEditor?.document.uri;
 
 		if (!uri) {
@@ -33,10 +31,7 @@ export function showWorkflowSourceCommand() {
 
 export function showWorkflowPreviewCommand() {
 	return async (nodeOrUri: unknown) => {
-		let uri =
-			nodeOrUri instanceof vscode.Uri
-				? nodeOrUri
-				: (nodeOrUri as { resourceUri?: vscode.Uri })?.resourceUri;
+		let uri = extractUri(nodeOrUri);
 		if (!uri) uri = vscode.window.activeTextEditor?.document.uri;
 
 		if (!uri) {
@@ -67,10 +62,7 @@ export function showWorkflowPreviewCommand() {
 
 export function showFleetSourceCommand() {
 	return async (nodeOrUri: unknown) => {
-		let uri =
-			nodeOrUri instanceof vscode.Uri
-				? nodeOrUri
-				: (nodeOrUri as { resourceUri?: vscode.Uri })?.resourceUri;
+		let uri = extractUri(nodeOrUri);
 		if (!uri) uri = vscode.window.activeTextEditor?.document.uri;
 
 		if (!uri) {
@@ -90,10 +82,7 @@ export function showFleetSourceCommand() {
 
 export function showFleetPreviewCommand() {
 	return async (nodeOrUri: unknown) => {
-		let uri =
-			nodeOrUri instanceof vscode.Uri
-				? nodeOrUri
-				: (nodeOrUri as { resourceUri?: vscode.Uri })?.resourceUri;
+		let uri = extractUri(nodeOrUri);
 		if (!uri) uri = vscode.window.activeTextEditor?.document.uri;
 
 		if (!uri) {
@@ -117,10 +106,7 @@ export function showFleetPreviewCommand() {
 
 export function showLogSourceCommand() {
 	return async (nodeOrUri: unknown) => {
-		let uri =
-			nodeOrUri instanceof vscode.Uri
-				? nodeOrUri
-				: (nodeOrUri as { resourceUri?: vscode.Uri })?.resourceUri;
+		let uri = extractUri(nodeOrUri);
 		if (!uri) uri = vscode.window.activeTextEditor?.document.uri;
 
 		if (uri) {
@@ -148,10 +134,7 @@ export function showLogSourceCommand() {
 
 export function showLogPreviewCommand(context: vscode.ExtensionContext) {
 	return async (nodeOrUri: unknown) => {
-		let uri =
-			nodeOrUri instanceof vscode.Uri
-				? nodeOrUri
-				: (nodeOrUri as { resourceUri?: vscode.Uri })?.resourceUri;
+		let uri = extractUri(nodeOrUri);
 		if (!uri) uri = vscode.window.activeTextEditor?.document.uri;
 
 		if (uri && uri.scheme === "automa-log") {

@@ -44,23 +44,28 @@ export function hasObjectProp<K extends string>(
  * Extracts the file system path from various VS Code node/uri representations.
  * Replaces bloaty inline type checking across commands.
  */
-export function extractFsPath(nodeOrUri: unknown): string | null {
+export function extractUri(nodeOrUri: unknown): vscode.Uri | null {
 	if (nodeOrUri instanceof vscode.Uri) {
-		return nodeOrUri.fsPath;
+		return nodeOrUri;
 	}
 	if (
 		hasProp(nodeOrUri, "resourceUri") &&
 		nodeOrUri.resourceUri instanceof vscode.Uri
 	) {
-		return nodeOrUri.resourceUri.fsPath;
+		return nodeOrUri.resourceUri;
 	}
 	if (hasStringProp(nodeOrUri, "fsPath")) {
-		return nodeOrUri.fsPath;
+		return vscode.Uri.file(nodeOrUri.fsPath);
 	}
 	if (hasStringProp(nodeOrUri, "fullPath")) {
-		return nodeOrUri.fullPath;
+		return vscode.Uri.file(nodeOrUri.fullPath);
 	}
 	return null;
+}
+
+export function extractFsPath(nodeOrUri: unknown): string | null {
+	const uri = extractUri(nodeOrUri);
+	return uri ? uri.fsPath : null;
 }
 
 export function getErrorMessage(error: unknown): string {
