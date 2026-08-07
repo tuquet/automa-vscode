@@ -278,20 +278,14 @@ export class WorkflowPreviewEditorProvider
 			if (updateData.triggerParams && (json.drawflow || json.data)) {
 				let nodesList: Record<string, unknown>[] = [];
 				if (
-					json.data &&
 					hasObjectProp(json, "data") &&
-					json.data !== null &&
 					Array.isArray(getProp<unknown>(json.data, "nodes"))
 				) {
 					nodesList = getProp<unknown>(json.data, "nodes") as Record<
 						string,
 						unknown
 					>[];
-				} else if (
-					json.drawflow &&
-					hasObjectProp(json, "drawflow") &&
-					json.drawflow !== null
-				) {
+				} else if (hasObjectProp(json, "drawflow")) {
 					if (Array.isArray(getProp<unknown>(json.drawflow, "nodes"))) {
 						nodesList = (json.drawflow as Record<string, unknown>)
 							.nodes as Record<string, unknown>[];
@@ -317,7 +311,6 @@ export class WorkflowPreviewEditorProvider
 						n.type === "BlockTrigger",
 				);
 				if (
-					triggerNode?.data &&
 					hasObjectProp(triggerNode, "data") &&
 					Array.isArray(getProp<unknown>(triggerNode.data, "parameters"))
 				) {
