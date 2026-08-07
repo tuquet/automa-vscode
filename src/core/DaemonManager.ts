@@ -165,7 +165,7 @@ export class DaemonManager {
 			const tryParse = (s: string) => {
 				try {
 					return JSON.parse(s);
-				} catch (e) {
+				} catch (_e) {
 					return null;
 				}
 			};

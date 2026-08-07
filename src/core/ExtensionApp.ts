@@ -58,8 +58,10 @@ export class ExtensionApp {
 			"automa.hasShownWelcome",
 		);
 		if (!hasShownWelcome) {
-			vscode.commands.executeCommand("automa.welcome");
-			this.context.globalState.update("automa.hasShownWelcome", true);
+			vscode.commands.executeCommand("automa.welcome").then(
+				() => this.context.globalState.update("automa.hasShownWelcome", true),
+				(err) => Logger.error(`Failed to show welcome: ${err}`),
+			);
 		}
 	}
 
@@ -109,11 +111,15 @@ export class ExtensionApp {
 		}
 
 		if (updated) {
-			workbenchConfig.update(
-				"editorAssociations",
-				editorAssociations,
-				vscode.ConfigurationTarget.Global,
-			);
+			workbenchConfig
+				.update(
+					"editorAssociations",
+					editorAssociations,
+					vscode.ConfigurationTarget.Global,
+				)
+				.then(undefined, (err) => {
+					Logger.error(`Failed to update editor associations: ${err}`);
+				});
 		}
 	}
 }

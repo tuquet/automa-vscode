@@ -54,7 +54,7 @@ function loadVariables(
 			}));
 		}
 	} catch (_e) {
-		vscode.window.showErrorMessage("Failed to read variables.json");
+		vscode.window.showErrorMessage(`Failed to read ${path.basename(varsPath)}`);
 	}
 	return [];
 }
@@ -68,7 +68,9 @@ function loadTables(tablesPath: string): ITable[] {
 			return data;
 		}
 	} catch (_e) {
-		vscode.window.showErrorMessage("Failed to read tables.json");
+		vscode.window.showErrorMessage(
+			`Failed to read ${path.basename(tablesPath)}`,
+		);
 	}
 	return [];
 }
