@@ -161,35 +161,40 @@ export class DaemonManager {
 				return JSON.parse(str);
 			} catch (_e) {}
 
-			// Find the first and last occurrence of { } or [ ]
-			const firstBrace = str.indexOf("{");
-			const lastBrace = str.lastIndexOf("}");
-			const firstBracket = str.indexOf("[");
-			const lastBracket = str.lastIndexOf("]");
+			// To handle logs prefixed or suffixed, find the last valid JSON object or array.
+			const tryParse = (s: string) => {
+				try {
+					return JSON.parse(s);
+				} catch (e) {
+					return null;
+				}
+			};
 
-			let start = -1;
-			let end = -1;
+			// We find the last '}' or ']' and walk backwards to find the matching '{' or '['
+			const lastIdx = Math.max(str.lastIndexOf("}"), str.lastIndexOf("]"));
+			if (lastIdx !== -1) {
+				const isArray = str[lastIdx] === "]";
+				const openChar = isArray ? "[" : "{";
+				const closeChar = isArray ? "]" : "}";
+				let depth = 0;
+				for (let i = lastIdx; i >= 0; i--) {
+					if (str[i] === closeChar) depth++;
+					else if (str[i] === openChar) depth--;
 
-			if (firstBrace !== -1 && lastBrace !== -1 && firstBrace < lastBrace) {
-				start = firstBrace;
-				end = lastBrace;
-			}
-
-			if (
-				firstBracket !== -1 &&
-				lastBracket !== -1 &&
-				firstBracket < lastBracket
-			) {
-				if (start === -1 || firstBracket < start) {
-					start = firstBracket;
-					end = lastBracket;
+					if (depth === 0) {
+						const possibleJson = str.substring(i, lastIdx + 1);
+						const parsed = tryParse(possibleJson);
+						if (parsed !== null) return parsed;
+					}
 				}
 			}
 
-			if (start !== -1 && end !== -1) {
-				try {
-					return JSON.parse(str.substring(start, end + 1));
-				} catch (_e) {}
+			// Fallback if the above doesn't work (e.g. nested structures not matched perfectly)
+			// Match lines from the end
+			const lines = str.trim().split("\n");
+			for (let i = lines.length - 1; i >= 0; i--) {
+				const parsed = tryParse(lines[i]);
+				if (parsed !== null) return parsed;
 			}
 
 			throw new Error("No valid JSON found in output");
