@@ -70,59 +70,32 @@ export class DaemonManager {
 		cmd: string;
 		args: string[];
 	} {
-		const config = vscode.workspace.getConfiguration("automa");
-		const userCliPath = config.get<string>("cliPath");
+		const cliPath = this.resolveCliPath();
 		const isWin = process.platform === "win32";
 
-		if (userCliPath && fs.existsSync(userCliPath)) {
-			return { cmd: "node", args: [userCliPath, ...baseArgs] };
+		if (cliPath === "npx tuquet-automa-cli") {
+			return {
+				cmd: isWin ? "npx.cmd" : "npx",
+				args: ["-y", "tuquet-automa-cli@latest", ...baseArgs],
+			};
 		}
 
-		if (
-			vscode.workspace.workspaceFolders &&
-			vscode.workspace.workspaceFolders.length > 0
-		) {
-			const workspaceRoot = vscode.workspace.workspaceFolders[0].uri.fsPath;
-			const localCliPathSibling = path.join(
-				workspaceRoot,
-				"..",
-				"automa-cli",
-				"dist",
-				"cli.js",
-			);
-			const localCliPathChild = path.join(
-				workspaceRoot,
-				"automa-cli",
-				"dist",
-				"cli.js",
-			);
-			if (fs.existsSync(localCliPathSibling)) {
-				return { cmd: "node", args: [localCliPathSibling, ...baseArgs] };
-			} else if (fs.existsSync(localCliPathChild)) {
-				return { cmd: "node", args: [localCliPathChild, ...baseArgs] };
-			}
-		}
-
-		return {
-			cmd: isWin ? "npx.cmd" : "npx",
-			args: ["-y", "tuquet-automa-cli@latest", ...baseArgs],
-		};
+		const cmd = cliPath.endsWith(".ts")
+			? isWin
+				? "npx.cmd tsx"
+				: "npx tsx"
+			: "node";
+		return { cmd, args: [cliPath, ...baseArgs] };
 	}
 
 	public async executeCliCommand(args: string[]): Promise<any> {
-		const cliPath = this.resolveCliPath();
+		const { cmd, args: resolvedArgs } = this.resolveCommandAndArgs(args);
 
-		const argsStr = args.includes("--json")
-			? args.join(" ")
-			: [...args, "--json"].join(" ");
+		const argsStr = resolvedArgs.includes("--json")
+			? resolvedArgs.map((a) => `"${a}"`).join(" ")
+			: [...resolvedArgs, "--json"].map((a) => `"${a}"`).join(" ");
 
-		let execCmd = "";
-		if (cliPath.startsWith("npx ")) {
-			execCmd = `${cliPath} ${argsStr}`;
-		} else {
-			const cmd = cliPath.endsWith(".ts") ? "npx tsx" : "node";
-			execCmd = `${cmd} "${cliPath}" ${argsStr}`;
-		}
+		const execCmd = `${cmd} ${argsStr}`;
 
 		const { stdout, stderr } = await execAsync(execCmd).catch((e) => e);
 		const output = stdout || stderr || "";
@@ -239,72 +212,17 @@ export class DaemonManager {
 			this.port = await this.findAvailablePort(basePort);
 
 			// 2. Smart CLI Resolve
-			const cliPath = this.resolveCliPath();
-			let cmd = "npx";
-			let args = [
-				"-y",
-				"tuquet-automa-cli@latest",
+			const { cmd, args } = this.resolveCommandAndArgs([
 				"serve",
 				"--port",
 				this.port.toString(),
-			];
-
-			if (cliPath !== "npx tuquet-automa-cli") {
-				cmd = "node";
-				args = [cliPath, "serve", "--port", this.port.toString()];
-				Logger.info(`[Smart Resolve] Found CLI at ${cliPath}`);
-			}
+			]);
 
 			Logger.info(
 				`Starting Automa background daemon on port ${this.port} via ${cmd} ${args.join(" ")}...`,
 			);
 
-			const browserPathOverride =
-				config.get<string>("browserPathOverride") || "";
-			const env = { ...process.env };
-			if (browserPathOverride) {
-				env.AUTOMA_BROWSER_PATH = browserPathOverride;
-			}
-
-			this.daemonProcess = spawn(cmd, args, {
-				shell: true,
-				detached: false,
-				stdio: "pipe",
-				env,
-			});
-
-			if (this.daemonProcess.stdout) {
-				this.daemonProcess.stdout.on("data", (data) => {
-					const msg = data.toString().trim();
-					if (msg) {
-						// Stream CLI stdout to VS Code OutputChannel
-						Logger.info(`[CLI Daemon] ${msg}`);
-					}
-				});
-			}
-
-			if (this.daemonProcess.stderr) {
-				this.daemonProcess.stderr.on("data", (data) => {
-					const msg = data.toString().trim();
-					if (msg) {
-						// Stream CLI stderr to VS Code OutputChannel
-						Logger.error(`[CLI Daemon] ${msg}`);
-					}
-				});
-			}
-
-			this.daemonProcess.on("error", (err) => {
-				Logger.error(`Failed to start Automa daemon: ${err.message}`);
-				this.daemonProcess = null;
-				this.updateStatusStopped();
-			});
-
-			this.daemonProcess.on("exit", (code) => {
-				Logger.warn(`Automa daemon exited with code ${code}`);
-				this.daemonProcess = null;
-				this.hasLoggedReuse = false;
-				this.updateStatusStopped();
-			});
+			this.spawnDaemonProcess(cmd, args, config);
 
 			// Wait a bit for server to start
 			await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -317,6 +235,62 @@ export class DaemonManager {
 			Logger.error(`Failed to launch daemon: ${e.message}`);
 			this.updateStatusStopped();
 		}
+	}
+
+	private spawnDaemonProcess(
+		cmd: string,
+		args: string[],
+		config: vscode.WorkspaceConfiguration,
+	) {
+		const browserPathOverride = config.get<string>("browserPathOverride") || "";
+		const env = { ...process.env };
+		if (browserPathOverride) {
+			env.AUTOMA_BROWSER_PATH = browserPathOverride;
+		}
+
+		this.daemonProcess = spawn(cmd, args, {
+			shell: true,
+			detached: false,
+			stdio: "pipe",
+			env,
+		});
+
+		this.attachProcessListeners();
+	}
+
+	private attachProcessListeners() {
+		if (!this.daemonProcess) return;
+
+		if (this.daemonProcess.stdout) {
+			this.daemonProcess.stdout.on("data", (data) => {
+				const msg = data.toString().trim();
+				if (msg) {
+					Logger.info(`[CLI Daemon] ${msg}`);
+				}
+			});
+		}
+
+		if (this.daemonProcess.stderr) {
+			this.daemonProcess.stderr.on("data", (data) => {
+				const msg = data.toString().trim();
+				if (msg) {
+					Logger.error(`[CLI Daemon] ${msg}`);
+				}
+			});
+		}
+
+		this.daemonProcess.on("error", (err) => {
+			Logger.error(`Failed to start Automa daemon: ${err.message}`);
+			this.daemonProcess = null;
+			this.updateStatusStopped();
+		});
+
+		this.daemonProcess.on("exit", (code) => {
+			Logger.warn(`Automa daemon exited with code ${code}`);
+			this.daemonProcess = null;
+			this.hasLoggedReuse = false;
+			this.updateStatusStopped();
+		});
 	}
 
 	private updateStatusStopped() {
