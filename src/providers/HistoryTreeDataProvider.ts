@@ -90,7 +90,31 @@ export class HistoryTreeDataProvider
 		);
 	}
 
-	private async handleDeleteHistoryItem(item: vscode.TreeItem) {
+	private async handleDeleteHistoryItem(item?: vscode.TreeItem) {
+		if (!item?.id) {
+			const items = await this.getChildren();
+			const validItems = items.filter(
+				(i) => i.contextValue === "automaHistoryLog" && i.id,
+			);
+			if (validItems.length === 0) {
+				vscode.window.showInformationMessage(
+					"No history logs available to delete.",
+				);
+				return;
+			}
+			const selected = await vscode.window.showQuickPick(
+				validItems.map((i) => ({
+					label: (i.label as string) || "Unknown",
+					description: i.description as string,
+					detail: i.tooltip as string,
+					item: i,
+				})),
+				{ placeHolder: "Select a history log to delete" },
+			);
+			if (!selected) return;
+			item = selected.item;
+		}
+
 		if (!item?.id) return;
 		const confirm = await vscode.window.showWarningMessage(
 			`Are you sure you want to delete this log?`,

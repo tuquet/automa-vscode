@@ -108,7 +108,25 @@ export function showLogPreviewCommand(context: vscode.ExtensionContext) {
 }
 
 export function showLiveLogCommand(context: vscode.ExtensionContext) {
-	return (execution: vscode.TaskExecution) => {
+	return async (execution?: vscode.TaskExecution) => {
+		if (!execution) {
+			const runners = vscode.tasks.taskExecutions.filter((e) =>
+				e.task.source?.startsWith("Automa"),
+			);
+			if (runners.length === 0) {
+				vscode.window.showInformationMessage(
+					"No active runners to show live log for.",
+				);
+				return;
+			}
+			const selected = await vscode.window.showQuickPick(
+				runners.map((r) => ({ label: r.task.name, execution: r })),
+				{ placeHolder: "Select a running task to view live log" },
+			);
+			if (!selected) return;
+			execution = selected.execution;
+		}
+
 		if (execution) {
 			const taskId = execution.task.definition.id || execution.task.name;
 			LiveLogEditorProvider.showLiveLog(context, taskId, execution.task.name);
