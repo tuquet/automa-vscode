@@ -16,7 +16,7 @@ vi.mock("vscode", () => {
 		},
 		workspace: {
 			getConfiguration: vi.fn(() => ({
-				get: vi.fn((_key: string, defaultValue?: any) => defaultValue),
+				get: vi.fn((_key: string, defaultValue?: unknown) => defaultValue),
 			})),
 			workspaceFolders: [],
 		},

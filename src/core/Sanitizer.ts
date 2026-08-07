@@ -12,7 +12,7 @@ function generateShortId(): string {
 }
 
 export class WorkflowSanitizer {
-	static sanitize(json: any): boolean {
+	static sanitize(json: Record<string, unknown>): boolean {
 		let isModified = false;
 
 		// 1. Ensure Root properties
@@ -28,8 +28,8 @@ export class WorkflowSanitizer {
 		const isPackage = !json.drawflow && json.data;
 		const idMap = new Map<string, string>();
 
-		let nodes: any[] = [];
-		let edges: any[] = [];
+		let nodes: Record<string, unknown>[] = [];
+		let edges: Record<string, unknown>[] = [];
 
 		if (isPackage && json.data) {
 			if (Array.isArray(json.data.nodes)) nodes = json.data.nodes;
@@ -44,7 +44,7 @@ export class WorkflowSanitizer {
 				json.drawflow.Home.data
 			) {
 				Object.entries(json.drawflow.Home.data).forEach(
-					([key, node]: [string, any]) => {
+					([key, node]: [string, Record<string, unknown>]) => {
 						if (!node.id) node.id = key;
 						nodes.push(node);
 					},
@@ -70,9 +70,12 @@ export class WorkflowSanitizer {
 			"BlockWebhook",
 		];
 
-		const sanitizeNodesAndEdges = (nList: any[], eList: any[]) => {
+		const sanitizeNodesAndEdges = (
+			nList: Record<string, unknown>[],
+			eList: Record<string, unknown>[],
+		) => {
 			// Sanitize Nodes
-			nList.forEach((node: any) => {
+			nList.forEach((node: Record<string, unknown>) => {
 				const originalId = node.id;
 				if (!node.id || !idRegex.test(node.id)) {
 					const newId = generateShortId();
@@ -105,14 +108,15 @@ export class WorkflowSanitizer {
 			});
 
 			// Sanitize Edges
-			eList.forEach((edge: any) => {
+			eList.forEach((edge: Record<string, unknown>) => {
 				if (!edge.id || !idRegex.test(edge.id)) {
 					edge.id = generateShortId();
 					isModified = true;
 				}
 
-				if (edge.source && idMap.has(edge.source)) {
-					const newSource = idMap.get(edge.source)!;
+				if (edge.source && idMap.has(edge.source as string)) {
+					const newSource =
+						idMap.get(edge.source as string) || (edge.source as string);
 					if (edge.sourceHandle) {
 						edge.sourceHandle = edge.sourceHandle.replace(
 							edge.source,
@@ -123,8 +127,9 @@ export class WorkflowSanitizer {
 					isModified = true;
 				}
 
-				if (edge.target && idMap.has(edge.target)) {
-					const newTarget = idMap.get(edge.target)!;
+				if (edge.target && idMap.has(edge.target as string)) {
+					const newTarget =
+						idMap.get(edge.target as string) || (edge.target as string);
 					if (edge.targetHandle) {
 						edge.targetHandle = edge.targetHandle.replace(
 							edge.target,

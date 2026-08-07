@@ -84,7 +84,9 @@ export class StudioWebviewPanel {
 		StudioWebviewPanel.currentPanel._update();
 	}
 
-	private async handleRuntimeMessage(message: any): Promise<any> {
+	private async handleRuntimeMessage(
+		message: Record<string, unknown>,
+	): Promise<unknown> {
 		if (!message?.name) return null;
 
 		try {
@@ -92,7 +94,7 @@ export class StudioWebviewPanel {
 				case "background--fetch":
 				case "background--fetch:text": {
 					let url = "";
-					let options: any = {};
+					let options: Record<string, unknown> = {};
 
 					if (typeof message.data === "string") {
 						url = message.data;
@@ -199,8 +201,10 @@ export class StudioWebviewPanel {
 		}
 	}
 
-	private async handleStorageGet(_keys: any): Promise<any> {
-		const result: any = {};
+	private async handleStorageGet(
+		_keys: unknown,
+	): Promise<Record<string, unknown>> {
+		const result: Record<string, unknown> = {};
 		const EXCLUDE_PATTERN =
 			"**/{node_modules,.git,dist,out,.gemini,tmp,build}/**";
 
@@ -263,7 +267,7 @@ export class StudioWebviewPanel {
 		return result;
 	}
 
-	private async handleStorageSet(items: any) {
+	private async handleStorageSet(items: Record<string, unknown>) {
 		if (
 			!vscode.workspace.workspaceFolders ||
 			vscode.workspace.workspaceFolders.length === 0

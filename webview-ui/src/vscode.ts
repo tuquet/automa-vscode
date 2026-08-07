@@ -3,7 +3,7 @@
  * message passing and state management between the webview and extension.
  */
 class VSCodeAPIWrapper {
-	private readonly vsCodeApi: any;
+	private readonly vsCodeApi: unknown;
 
 	constructor() {
 		// @ts-expect-error
@@ -13,9 +13,11 @@ class VSCodeAPIWrapper {
 		}
 	}
 
-	public postMessage(message: any) {
+	public postMessage(message: unknown) {
 		if (this.vsCodeApi) {
-			this.vsCodeApi.postMessage(message);
+			(this.vsCodeApi as { postMessage: (msg: unknown) => void }).postMessage(
+				message,
+			);
 		} else {
 			console.log("postMessage:", message);
 		}
