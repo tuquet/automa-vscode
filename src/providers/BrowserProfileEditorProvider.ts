@@ -38,6 +38,9 @@ export class BrowserProfileEditorProvider
 				if (message.type === "save-profile") {
 					await this.handleSaveProfile(document, message.data);
 				}
+				if (message.command === "error" || message.type === "error") {
+					vscode.window.showErrorMessage(message.text || "Webview Error");
+				}
 			},
 		);
 
