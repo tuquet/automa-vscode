@@ -1,5 +1,5 @@
 import * as crypto from "node:crypto";
-import { isBoolean } from "../utils/typeGuards";
+import { hasNodesAndEdges, isBoolean, isRecord } from "../utils/typeGuards";
 
 function generateShortId(): string {
 	const chars =
@@ -32,46 +32,25 @@ export const WorkflowSanitizer = {
 		let nodes: Record<string, unknown>[] = [];
 		let edges: Record<string, unknown>[] = [];
 
-		if (isPackage && json.data) {
-			if (Array.isArray((json.data as Record<string, unknown>).nodes))
-				nodes = (json.data as Record<string, unknown>).nodes as Record<
-					string,
-					unknown
-				>[];
-			if (Array.isArray((json.data as Record<string, unknown>).edges))
-				edges = (json.data as Record<string, unknown>).edges as Record<
-					string,
-					unknown
-				>[];
-		} else if (!isPackage && json.drawflow) {
-			if (Array.isArray((json.drawflow as Record<string, unknown>).nodes))
-				nodes = (json.drawflow as Record<string, unknown>).nodes as Record<
-					string,
-					unknown
-				>[];
-			if (Array.isArray((json.drawflow as Record<string, unknown>).edges))
-				edges = (json.drawflow as Record<string, unknown>).edges as Record<
-					string,
-					unknown
-				>[];
-			const drawflow = json.drawflow as Record<string, unknown>;
+		if (isPackage && isRecord(json.data)) {
+			if (Array.isArray(json.data.nodes)) nodes = json.data.nodes;
+			if (Array.isArray(json.data.edges)) edges = json.data.edges;
+		} else if (!isPackage && isRecord(json.drawflow)) {
+			if (Array.isArray(json.drawflow.nodes)) nodes = json.drawflow.nodes;
+			if (Array.isArray(json.drawflow.edges)) edges = json.drawflow.edges;
+
 			// Fallback for object-based nodes
 			if (
-				!Array.isArray(drawflow.nodes) &&
-				drawflow.Home &&
-				(drawflow.Home as Record<string, unknown>).data
+				!Array.isArray(json.drawflow.nodes) &&
+				isRecord(json.drawflow.Home) &&
+				isRecord(json.drawflow.Home.data)
 			) {
-				Object.entries(
-					(drawflow.Home as Record<string, unknown>).data as Record<
-						string,
-						unknown
-					>,
-				).forEach(([key, node]) => {
+				Object.entries(json.drawflow.Home.data).forEach(([key, node]) => {
 					const n = node as Record<string, unknown>;
 					if (!n.id) n.id = key;
 					nodes.push(n);
 				});
-				drawflow.nodes = nodes; // normalize to array
+				json.drawflow.nodes = nodes; // normalize to array
 				isModified = true;
 			}
 		}
@@ -119,18 +98,9 @@ export const WorkflowSanitizer = {
 					}
 
 					// Recursively sanitize nested nodes/edges (e.g. in BlockPackage/BlockGroup)
-					const nestedData = nodeData.data
-						? (nodeData.data as Record<string, unknown>)
-						: nodeData;
-					if (
-						nestedData &&
-						Array.isArray(nestedData.nodes) &&
-						Array.isArray(nestedData.edges)
-					) {
-						sanitizeNodesAndEdges(
-							nestedData.nodes as Record<string, unknown>[],
-							nestedData.edges as Record<string, unknown>[],
-						);
+					const nestedData = nodeData.data ? nodeData.data : nodeData;
+					if (hasNodesAndEdges(nestedData)) {
+						sanitizeNodesAndEdges(nestedData.nodes, nestedData.edges);
 					}
 				}
 			});

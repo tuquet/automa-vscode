@@ -91,3 +91,14 @@ export function toError(error: unknown): Error {
 	if (error instanceof Error) return error;
 	return new Error(String(error));
 }
+
+export function hasNodesAndEdges(
+	value: unknown,
+): value is {
+	nodes: Record<string, unknown>[];
+	edges: Record<string, unknown>[];
+} {
+	return (
+		isRecord(value) && Array.isArray(value.nodes) && Array.isArray(value.edges)
+	);
+}

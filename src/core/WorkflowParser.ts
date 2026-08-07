@@ -1,4 +1,8 @@
-import { isObjectHasData, isObjectHasDrawflow } from "../utils/typeGuards";
+import {
+	isObjectHasData,
+	isObjectHasDrawflow,
+	isRecord,
+} from "../utils/typeGuards";
 export const WorkflowParser = {
 	extractImplicitVariables(content: string): Set<string> {
 		const implicitVars = new Set<string>();
@@ -28,28 +32,17 @@ export const WorkflowParser = {
 
 		const json = (jsonObj || {}) as Record<string, unknown>;
 
-		if (
-			json.data &&
-			isObjectHasData(json) &&
-			Array.isArray((json.data as Record<string, unknown>).nodes)
-		) {
-			nodesList = (json.data as Record<string, unknown>).nodes as Record<
-				string,
-				unknown
-			>[];
-		} else if (json.drawflow && isObjectHasDrawflow(json)) {
-			const drawflow = json.drawflow as Record<string, unknown>;
-			if (Array.isArray(drawflow.nodes)) {
-				nodesList = drawflow.nodes as Record<string, unknown>[];
+		if (isObjectHasData(json) && Array.isArray(json.data.nodes)) {
+			nodesList = json.data.nodes as Record<string, unknown>[];
+		} else if (isObjectHasDrawflow(json)) {
+			if (Array.isArray(json.drawflow.nodes)) {
+				nodesList = json.drawflow.nodes as Record<string, unknown>[];
 			} else {
-				Object.keys(drawflow).forEach((tab) => {
-					const tabData = drawflow[tab] as Record<string, unknown>;
-					if (tabData?.data) {
-						Object.entries(tabData.data as Record<string, unknown>).forEach(
-							([_key, node]: [string, unknown]) => {
-								nodesList.push(node as Record<string, unknown>);
-							},
-						);
+				Object.values(json.drawflow).forEach((tabData) => {
+					if (isRecord(tabData) && isRecord(tabData.data)) {
+						Object.values(tabData.data).forEach((node) => {
+							nodesList.push(node as Record<string, unknown>);
+						});
 					}
 				});
 			}
@@ -61,12 +54,13 @@ export const WorkflowParser = {
 					(node.label === "trigger" ||
 						node.name === "trigger" ||
 						node.type === "BlockTrigger") &&
-					node.data &&
 					isObjectHasData(node) &&
-					Array.isArray((node.data as Record<string, unknown>).parameters)
+					Array.isArray(node.data.parameters)
 				) {
-					for (const param of (node.data as Record<string, unknown>)
-						.parameters as Record<string, unknown>[]) {
+					for (const param of node.data.parameters as Record<
+						string,
+						unknown
+					>[]) {
 						if (
 							param.name &&
 							!triggerParams.some((p) => p.name === param.name)
