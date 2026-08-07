@@ -367,23 +367,23 @@ export class WorkflowPreviewEditorProvider
 
 			// Additional fields common but maybe not in both, replacing won't hurt if they don't exist in template
 			htmlContent = htmlContent.replace(
-				"{{JSON_VERSION}}",
+				/\{\{JSON_VERSION\}\}/g,
 				safeString(json.version),
 			);
 			htmlContent = htmlContent.replace(
-				"{{JSON_EXT_VERSION}}",
+				/\{\{JSON_EXT_VERSION\}\}/g,
 				safeString(json.extVersion),
 			);
 			htmlContent = htmlContent.replace(
-				"{{JSON_GLOBAL_DATA}}",
+				/\{\{JSON_GLOBAL_DATA\}\}/g,
 				safeString(json.globalData),
 			);
 			htmlContent = htmlContent.replace(
-				"{{JSON_TABLE}}",
+				/\{\{JSON_TABLE\}\}/g,
 				jsonStringifySafe(json.table),
 			);
 			htmlContent = htmlContent.replace(
-				"{{JSON_INCLUDED_WORKFLOWS}}",
+				/\{\{JSON_INCLUDED_WORKFLOWS\}\}/g,
 				jsonStringifySafe(json.includedWorkflows),
 			);
 
@@ -416,7 +416,7 @@ export class WorkflowPreviewEditorProvider
 		);
 
 		htmlContent = htmlContent.replace(
-			"{{INJECT_PARAMS_DATA}}",
+			/\{\{INJECT_PARAMS_DATA\}\}/g,
 			`const tParams = ${JSON.stringify(triggerParams).replace(/</g, "\\u003c")};\nconst defaultKeepBrowserOpen = ${defaultKeepBrowserOpen};`,
 		);
 
@@ -448,7 +448,7 @@ export class WorkflowPreviewEditorProvider
 				const tParams = ${JSON.stringify(triggerParams)};
 			`;
 		htmlContent = htmlContent.replace(
-			"{{INJECT_PACKAGE_DATA}}",
+			/\{\{INJECT_PACKAGE_DATA\}\}/g,
 			injectPackageData,
 		);
 

@@ -457,7 +457,6 @@ export class StudioWebviewPanel {
 		);
 
 		const idToUriMap = new Map<string, vscode.Uri>();
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		const uriToItemsMap = new Map<string, Record<string, unknown>[]>();
 
 		for (const file of allFiles) {
