@@ -116,31 +116,41 @@ export class DaemonManager {
 
 		let output = "";
 		try {
-			output = await new Promise((resolve, reject) => {
-				const child = spawn(executable, spawnArgs, {
-					env,
-					shell:
-						process.platform === "win32" &&
-						(executable === "npx" || executable === "npx.cmd"),
-				});
+			const result: { stdout: string; stderr: string } = await new Promise(
+				(resolve, reject) => {
+					const child = spawn(executable, spawnArgs, {
+						env,
+						shell:
+							process.platform === "win32" &&
+							(executable === "npx" || executable === "npx.cmd"),
+					});
 
-				let stdoutData = "";
-				let stderrData = "";
+					let stdoutData = "";
+					let stderrData = "";
 
-				child.stdout?.on("data", (data) => {
-					stdoutData += data.toString();
-				});
+					child.stdout?.on("data", (data) => {
+						stdoutData += data.toString();
+					});
 
-				child.stderr?.on("data", (data) => {
-					stderrData += data.toString();
-				});
+					child.stderr?.on("data", (data) => {
+						stderrData += data.toString();
+					});
 
-				child.on("error", reject);
+					child.on("error", reject);
 
-				child.on("close", (code) => {
-					resolve(`${stdoutData}\n${stderrData}`.trim());
-				});
-			});
+					child.on("close", (code) => {
+						resolve({
+							stdout: stdoutData.trim(),
+							stderr: stderrData.trim(),
+						});
+					});
+				},
+			);
+
+			if (result.stderr) {
+				Logger.debug(`[CLI] stderr: ${result.stderr}`);
+			}
+			output = result.stdout || result.stderr;
 		} catch (error: unknown) {
 			const e = error instanceof Error ? error : new Error(String(error));
 			output = e.message || String(e);
