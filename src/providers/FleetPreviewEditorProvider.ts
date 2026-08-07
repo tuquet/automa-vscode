@@ -95,7 +95,7 @@ export class FleetPreviewEditorProvider
 			try {
 				switch (e.type) {
 					case "ready":
-						updateWebview();
+						await updateWebview();
 						break;
 					case "run-fleet":
 						await vscode.commands.executeCommand(
@@ -130,7 +130,7 @@ export class FleetPreviewEditorProvider
 		]);
 
 		// Initial render
-		updateWebview();
+		await updateWebview();
 	}
 
 	private async buildDictionaryFromFiles(

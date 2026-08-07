@@ -78,7 +78,7 @@ export class WorkflowPreviewEditorProvider
 		]);
 
 		// Initial render
-		updateWebview();
+		await updateWebview();
 	}
 
 	private async sanitizeDocument(

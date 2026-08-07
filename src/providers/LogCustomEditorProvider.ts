@@ -160,7 +160,7 @@ export class LogCustomEditorProvider
 		this.setupWebviewPanel(document, webviewPanel, updateWebview);
 
 		// Initial render
-		updateWebview();
+		await updateWebview();
 	}
 	private formatDate(dateString: string): string {
 		if (!dateString) return "Unknown";
