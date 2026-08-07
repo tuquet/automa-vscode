@@ -7,6 +7,7 @@ import {
 import { fixWorkflowIdCommand } from "./fixWorkflowId";
 import { killRunner } from "./killRunner";
 import { lintCheckCommand } from "./lintCheck";
+import { openInStudioCommand } from "./openInStudio";
 import { runFleetCommand } from "./runFleet";
 import {
 	runWorkflowCommand,
@@ -26,7 +27,6 @@ import {
 	encryptSecretCommand,
 } from "./vaultCommands";
 import {
-	openInStudioCommand,
 	showFleetPreviewCommand,
 	showFleetSourceCommand,
 	showLiveLogCommand,
@@ -86,7 +86,7 @@ export class CommandManager {
 			),
 			vscode.commands.registerCommand(
 				"automa.openInStudio",
-				openInStudioCommand(this.context),
+				openInStudioCommand,
 			),
 			vscode.commands.registerCommand(
 				"automa.createWorkflow",
