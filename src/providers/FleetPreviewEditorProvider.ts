@@ -92,25 +92,33 @@ export class FleetPreviewEditorProvider
 
 		// Listen to messages from webview
 		webviewPanel.webview.onDidReceiveMessage(async (e) => {
-			switch (e.type) {
-				case "ready":
-					updateWebview();
-					break;
-				case "run-fleet":
-					await vscode.commands.executeCommand("automa.runFleet", document.uri);
-					break;
-				case "stop-fleet":
-					await vscode.commands.executeCommand(
-						"automa.stopFleet",
-						document.uri,
-					);
-					break;
-				case "save-fleet":
-					await this.saveDocument(document, e.data);
-					break;
-			}
-			if (e.command === "error" || e.type === "error") {
-				vscode.window.showErrorMessage(e.text || "Webview Error");
+			try {
+				switch (e.type) {
+					case "ready":
+						updateWebview();
+						break;
+					case "run-fleet":
+						await vscode.commands.executeCommand(
+							"automa.runFleet",
+							document.uri,
+						);
+						break;
+					case "stop-fleet":
+						await vscode.commands.executeCommand(
+							"automa.stopFleet",
+							document.uri,
+						);
+						break;
+					case "save-fleet":
+						await this.saveDocument(document, e.data);
+						break;
+				}
+				if (e.command === "error" || e.type === "error") {
+					vscode.window.showErrorMessage(e.text || "Webview Error");
+				}
+			} catch (error: unknown) {
+				const err = getErrorMessage(error);
+				vscode.window.showErrorMessage(`Fleet preview action failed: ${err}`);
 			}
 		});
 

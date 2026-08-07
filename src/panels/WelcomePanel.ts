@@ -39,10 +39,18 @@ export class WelcomePanel {
 
 		this._panel.webview.onDidReceiveMessage(
 			async (message) => {
-				switch (message.command) {
-					case "installBrowser":
-						await vscode.commands.executeCommand("automa.installBrowser");
-						return;
+				try {
+					switch (message.command) {
+						case "installBrowser":
+							await vscode.commands.executeCommand("automa.installBrowser");
+							return;
+					}
+				} catch (error: unknown) {
+					const { toError } = require("../utils/typeGuards");
+					const e = toError(error);
+					vscode.window.showErrorMessage(
+						`Failed to execute command: ${e.message}`,
+					);
 				}
 			},
 			null,
