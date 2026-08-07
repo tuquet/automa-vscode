@@ -201,6 +201,7 @@ export class VaultTreeDataProvider
 						if (Array.isArray(data)) {
 							for (const item of data) {
 								const name = item.name || item.id || item.key || defaultName;
+								const id = item.id || item.key || item.name;
 								const value = extractValue(item, true);
 								items.push(
 									new VaultItem(
@@ -210,6 +211,7 @@ export class VaultTreeDataProvider
 										iconName,
 										value,
 										file,
+										id,
 									),
 								);
 							}
@@ -228,6 +230,7 @@ export class VaultTreeDataProvider
 										iconName,
 										value,
 										file,
+										key,
 									),
 								);
 							}
@@ -287,6 +290,7 @@ export class VaultItem extends vscode.TreeItem {
 		iconName: string,
 		public readonly value?: string,
 		public readonly resourceUri?: vscode.Uri,
+		public readonly itemId?: string,
 	) {
 		super(label, collapsibleState);
 		this.iconPath = new vscode.ThemeIcon(iconName);

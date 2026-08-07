@@ -237,13 +237,18 @@ export async function deleteVaultItemCommand(
 		if (Array.isArray(data)) {
 			const initialLength = data.length;
 			data = data.filter((entry: Record<string, unknown>) => {
+				if (item.itemId) {
+					const entryId = entry.id || entry.key || entry.name;
+					return entryId !== item.itemId;
+				}
 				const name = entry.name || entry.id || entry.key;
 				return name !== item.label;
 			});
 			modified = data.length !== initialLength;
 		} else if (typeof data === "object" && data !== null) {
-			if (item.label in data) {
-				delete (data as Record<string, unknown>)[item.label];
+			const keyToDelete = item.itemId || item.label;
+			if (keyToDelete in data) {
+				delete (data as Record<string, unknown>)[keyToDelete];
 				modified = true;
 			}
 		}
