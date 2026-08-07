@@ -2,7 +2,9 @@ import * as path from "node:path";
 import * as vscode from "vscode";
 import { TaskRunner } from "../core/TaskRunner";
 
-export async function runFleetCommand(nodeOrUri?: any) {
+export async function runFleetCommand(
+	nodeOrUri?: vscode.Uri | { fsPath: string },
+) {
 	let targetPath = "";
 	let displayName = "";
 
@@ -46,7 +48,7 @@ export async function runFleetCommand(nodeOrUri?: any) {
 		args.push("--grid");
 	}
 
-	TaskRunner.runAutomaCli(args, {
+	await TaskRunner.runAutomaCli(args, {
 		id: `fleet-orchestrator-${Date.now()}`,
 		name: `Fleet: ${displayName}`,
 		source: "Automa",

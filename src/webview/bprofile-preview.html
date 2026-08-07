@@ -255,8 +255,9 @@
 
         const app = createApp({
             data() {
+                const state = vscode.getState() || {};
                 return {
-                    viewMode: 'form',
+                    viewMode: state.viewMode || 'form',
                     profileName: initialName,
                     profileDataStr: initialData,
                     initialDataStr: initialData,
@@ -274,6 +275,10 @@
                 }
             },
             watch: {
+                viewMode(newMode) {
+                    const state = vscode.getState() || {};
+                    vscode.setState({ ...state, viewMode: newMode });
+                },
                 profileDataStr(newVal) {
                     if (this.isInternalSync) return;
                     try {
