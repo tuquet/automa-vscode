@@ -290,7 +290,9 @@
         </div>
     </div>
 
-    <script>INJECT_LOGS_DATAINJECT_JOB_DATA
+    <script>
+        {{INJECT_LOGS_DATA}}
+        {{INJECT_JOB_DATA}}
         
         const { createApp, ref, computed, onMounted, nextTick, watch } = Vue;
 
