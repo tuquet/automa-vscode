@@ -336,8 +336,7 @@ export class WorkflowPreviewEditorProvider
 							.replace(/<\/script>/gi, "<\\/script>")
 					: "";
 
-			htmlContent = htmlContent.replace(
-				/\{\{WORKFLOW_NAME\}\}/g,
+			htmlContent = htmlContent.replace(/\{\{WORKFLOW_NAME\}\}/g, () =>
 				String(
 					json.name ||
 						(templateName.includes("package")
@@ -347,49 +346,41 @@ export class WorkflowPreviewEditorProvider
 			);
 			htmlContent = htmlContent.replace(
 				/\{\{UPDATED_AT_HTML\}\}/g,
-				updatedAtHtml,
+				() => updatedAtHtml,
 			);
 			htmlContent = htmlContent.replace(
 				/\{\{JSON_ID\}\}/g,
-				safeString(json.id) || "N/A",
+				() => safeString(json.id) || "N/A",
 			);
-			htmlContent = htmlContent.replace(
-				/\{\{JSON_NAME\}\}/g,
+			htmlContent = htmlContent.replace(/\{\{JSON_NAME\}\}/g, () =>
 				safeString(json.name),
 			);
-			htmlContent = htmlContent.replace(
-				/\{\{JSON_DESCRIPTION\}\}/g,
+			htmlContent = htmlContent.replace(/\{\{JSON_DESCRIPTION\}\}/g, () =>
 				safeString(json.description),
 			);
-			htmlContent = htmlContent.replace(
-				/\{\{JSON_SETTINGS\}\}/g,
+			htmlContent = htmlContent.replace(/\{\{JSON_SETTINGS\}\}/g, () =>
 				jsonStringifySafe(json.settings),
 			);
-			htmlContent = htmlContent.replace(
-				/\{\{JSON_ICON\}\}/g,
+			htmlContent = htmlContent.replace(/\{\{JSON_ICON\}\}/g, () =>
 				String(json.icon || "riGlobalLine"),
 			);
 
 			// Additional fields common but maybe not in both, replacing won't hurt if they don't exist in template
-			htmlContent = htmlContent.replace(
-				/\{\{JSON_VERSION\}\}/g,
+			htmlContent = htmlContent.replace(/\{\{JSON_VERSION\}\}/g, () =>
 				safeString(json.version),
 			);
-			htmlContent = htmlContent.replace(
-				/\{\{JSON_EXT_VERSION\}\}/g,
+			htmlContent = htmlContent.replace(/\{\{JSON_EXT_VERSION\}\}/g, () =>
 				safeString(json.extVersion),
 			);
-			htmlContent = htmlContent.replace(
-				/\{\{JSON_GLOBAL_DATA\}\}/g,
+			htmlContent = htmlContent.replace(/\{\{JSON_GLOBAL_DATA\}\}/g, () =>
 				safeString(json.globalData),
 			);
-			htmlContent = htmlContent.replace(
-				/\{\{JSON_TABLE\}\}/g,
+			htmlContent = htmlContent.replace(/\{\{JSON_TABLE\}\}/g, () =>
 				jsonStringifySafe(json.table),
 			);
 			htmlContent = htmlContent.replace(
 				/\{\{JSON_INCLUDED_WORKFLOWS\}\}/g,
-				jsonStringifySafe(json.includedWorkflows),
+				() => jsonStringifySafe(json.includedWorkflows),
 			);
 
 			return htmlContent;
@@ -422,7 +413,8 @@ export class WorkflowPreviewEditorProvider
 
 		htmlContent = htmlContent.replace(
 			/\{\{INJECT_PARAMS_DATA\}\}/g,
-			`const tParams = ${JSON.stringify(triggerParams).replace(/</g, "\\u003c")};\nconst defaultKeepBrowserOpen = ${defaultKeepBrowserOpen};`,
+			() =>
+				`const tParams = ${JSON.stringify(triggerParams).replace(/</g, "\\u003c")};\nconst defaultKeepBrowserOpen = ${defaultKeepBrowserOpen};`,
 		);
 
 		return htmlContent;
@@ -454,7 +446,7 @@ export class WorkflowPreviewEditorProvider
 			`;
 		htmlContent = htmlContent.replace(
 			/\{\{INJECT_PACKAGE_DATA\}\}/g,
-			injectPackageData,
+			() => injectPackageData,
 		);
 
 		return htmlContent;

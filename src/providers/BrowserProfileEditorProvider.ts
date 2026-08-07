@@ -120,18 +120,15 @@ export class BrowserProfileEditorProvider
 							.replace(/<\/script>/gi, "<\\/script>")
 					: "";
 
-			htmlContent = htmlContent.replace(
-				/\{\{PROFILE_DATA\}\}/g,
+			htmlContent = htmlContent.replace(/\{\{PROFILE_DATA\}\}/g, () =>
 				safeString(JSON.stringify(json, null, 2)),
 			);
-			htmlContent = htmlContent.replace(
-				/\{\{PROFILE_NAME\}\}/g,
+			htmlContent = htmlContent.replace(/\{\{PROFILE_NAME\}\}/g, () =>
 				safeString(json.name || fileName),
 			);
-			htmlContent = htmlContent.replace(/\{\{LABEL\}\}/g, label);
-			htmlContent = htmlContent.replace(/\{\{ICON\}\}/g, icon);
-			htmlContent = htmlContent.replace(
-				/\{\{IS_TABLE\}\}/g,
+			htmlContent = htmlContent.replace(/\{\{LABEL\}\}/g, () => label);
+			htmlContent = htmlContent.replace(/\{\{ICON\}\}/g, () => icon);
+			htmlContent = htmlContent.replace(/\{\{IS_TABLE\}\}/g, () =>
 				isTable ? "true" : "false",
 			);
 

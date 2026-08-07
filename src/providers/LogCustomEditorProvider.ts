@@ -203,34 +203,37 @@ export class LogCustomEditorProvider
 		let htmlContent = fsSync.readFileSync(htmlPath, "utf-8");
 
 		const jobName = job.name || "Unknown Job";
-		htmlContent = htmlContent.replace(/\{\{JOB_NAME\}\}/g, jobName);
-		htmlContent = htmlContent.replace(
-			/\{\{JOB_STATUS_COLOR\}\}/g,
+		htmlContent = htmlContent.replace(/\{\{JOB_NAME\}\}/g, () => jobName);
+		htmlContent = htmlContent.replace(/\{\{JOB_STATUS_COLOR\}\}/g, () =>
 			this.getStatusColor(job.status),
 		);
 		htmlContent = htmlContent.replace(
 			/\{\{JOB_STATUS\}\}/g,
-			job.status || "Unknown",
+			() => job.status || "Unknown",
 		);
-		htmlContent = htmlContent.replace(
-			/\{\{JOB_CREATED_AT\}\}/g,
+		htmlContent = htmlContent.replace(/\{\{JOB_CREATED_AT\}\}/g, () =>
 			this.formatDate(job.created_at),
 		);
-		htmlContent = htmlContent.replace(/\{\{JOB_ID\}\}/g, job.id || "N/A");
+		htmlContent = htmlContent.replace(/\{\{JOB_ID\}\}/g, () => job.id || "N/A");
 		htmlContent = htmlContent.replace(
 			/\{\{WORKFLOW_ID\}\}/g,
-			job.workflow_id || job.id || "N/A",
+			() => job.workflow_id || job.id || "N/A",
 		);
-		htmlContent = htmlContent.replace(
-			/\{\{JOB_DURATION\}\}/g,
+		htmlContent = htmlContent.replace(/\{\{JOB_DURATION\}\}/g, () =>
 			this.formatDuration(job.duration),
 		);
 
 		const injectLogs = `const logsData = ${logsJson};`;
 		const injectJob = `const jobData = ${jobJson};`;
 
-		htmlContent = htmlContent.replace(/\{\{INJECT_LOGS_DATA\}\}/g, injectLogs);
-		htmlContent = htmlContent.replace(/\{\{INJECT_JOB_DATA\}\}/g, injectJob);
+		htmlContent = htmlContent.replace(
+			/\{\{INJECT_LOGS_DATA\}\}/g,
+			() => injectLogs,
+		);
+		htmlContent = htmlContent.replace(
+			/\{\{INJECT_JOB_DATA\}\}/g,
+			() => injectJob,
+		);
 
 		return htmlContent;
 	}
