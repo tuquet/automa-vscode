@@ -1,7 +1,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as vscode from "vscode";
-import { TaskRunner } from "../core/TaskRunner";
 import { getErrorMessage } from "../utils/typeGuards";
 import { BaseCustomEditorProvider } from "./BaseCustomEditorProvider";
 
@@ -66,13 +65,9 @@ export class FleetPreviewEditorProvider
 				isRendered = true;
 			} else {
 				try {
-					const workflows = await this.getWorkflowDictionary();
-					const profiles = await this.getProfileDictionary();
 					webviewPanel.webview.postMessage({
 						type: "update",
 						text: document.getText(),
-						workflows: workflows,
-						profiles: profiles,
 					});
 				} catch (_e: unknown) {
 					// Ignore parse errors on external edits until fixed
@@ -80,23 +75,21 @@ export class FleetPreviewEditorProvider
 			}
 		};
 
-		// Listen to telemetry
-		const telemetryListener = (telemetry: unknown) => {
-			webviewPanel.webview.postMessage({
-				type: "telemetry",
-				data: telemetry,
-			});
-		};
-
-		TaskRunner.telemetryEmitter.on("telemetry", telemetryListener);
-
 		// Listen to messages from webview
 		webviewPanel.webview.onDidReceiveMessage(async (e) => {
 			try {
 				switch (e.type) {
-					case "ready":
-						await updateWebview();
+					case "ready": {
+						const workflows = await this.getWorkflowDictionary();
+						const profiles = await this.getProfileDictionary();
+						webviewPanel.webview.postMessage({
+							type: "update",
+							text: document.getText(),
+							workflows: workflows,
+							profiles: profiles,
+						});
 						break;
+					}
 					case "run-fleet":
 						await vscode.commands.executeCommand(
 							"automa.runFleet",
@@ -122,12 +115,7 @@ export class FleetPreviewEditorProvider
 			}
 		});
 
-		this.setupWebviewPanel(document, webviewPanel, updateWebview, [
-			{
-				dispose: () =>
-					TaskRunner.telemetryEmitter.off("telemetry", telemetryListener),
-			},
-		]);
+		this.setupWebviewPanel(document, webviewPanel, updateWebview);
 
 		// Initial render
 		await updateWebview();
