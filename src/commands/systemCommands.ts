@@ -37,12 +37,12 @@ export function installBrowserCommand() {
 }
 
 export function toggleDaemonCommand() {
-	return () => {
+	return async () => {
 		const daemon = DaemonManager.getInstance();
-		if (daemon.daemonProcess) {
+		if (daemon.isRunning()) {
 			daemon.stop();
 		} else {
-			daemon.start();
+			await daemon.start();
 		}
 	};
 }

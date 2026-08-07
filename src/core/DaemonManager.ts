@@ -15,6 +15,10 @@ export class DaemonManager {
 	private hasLoggedReuse = false;
 	private statusBarItem: vscode.StatusBarItem;
 
+	public isRunning(): boolean {
+		return this.daemonProcess !== null;
+	}
+
 	private constructor() {
 		this.statusBarItem = vscode.window.createStatusBarItem(
 			vscode.StatusBarAlignment.Right,
@@ -137,7 +141,8 @@ export class DaemonManager {
 					resolve(`${stdoutData}\n${stderrData}`.trim());
 				});
 			});
-		} catch (e: any) {
+		} catch (error: unknown) {
+			const e = error instanceof Error ? error : new Error(String(error));
 			output = e.message || String(e);
 		}
 
@@ -197,7 +202,7 @@ export class DaemonManager {
 			throw new Error("No valid JSON found in output");
 		};
 
-		let parsed: any;
+		let parsed: unknown;
 		try {
 			parsed = extractJSON(output);
 			return parsed;
@@ -242,7 +247,8 @@ export class DaemonManager {
 					resolve({ stdout: stdoutData || "", stderr: stderrData || "" });
 				});
 			});
-		} catch (e: any) {
+		} catch (error: unknown) {
+			const e = error instanceof Error ? error : new Error(String(error));
 			return { stdout: "", stderr: e.message || String(e) };
 		}
 	}
