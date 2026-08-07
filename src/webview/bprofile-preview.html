@@ -206,6 +206,15 @@
         const initialName = `{{PROFILE_NAME}}`;
         const isTable = {{IS_TABLE}};
 
+        const normalizeJsonStr = (str) => {
+            if (!str || typeof str !== 'string') return str || '';
+            try {
+                return JSON.stringify(JSON.parse(str));
+            } catch(e) {
+                return str;
+            }
+        };
+
         const { createApp, ref, onMounted, watch } = Vue;
 
         const JsonEditor = {
@@ -260,7 +269,7 @@
                 
                 let loadedDataStr = initialData;
                 let loadedJsonError = null;
-                if (state.lastDocumentData === initialData) {
+                if (normalizeJsonStr(state.lastDocumentData) === normalizeJsonStr(initialData)) {
                     if (state.profileDataStr !== undefined) loadedDataStr = state.profileDataStr;
                     if (state.jsonError !== undefined) loadedJsonError = state.jsonError;
                 }
@@ -284,7 +293,7 @@
                     const message = event.data;
                     if (message.type === 'update') {
                         const state = vscode.getState() || {};
-                        if (state.lastDocumentData === message.text) {
+                        if (normalizeJsonStr(state.lastDocumentData) === normalizeJsonStr(message.text)) {
                             return; // unchanged
                         }
                         this.profileDataStr = message.text;

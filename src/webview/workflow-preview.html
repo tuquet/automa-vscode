@@ -356,6 +356,15 @@
                     vscode.setState({ ...state, currentTab: newTab, keepBrowserOpen: newKeepOpen });
                 });
 
+                const normalizeJsonStr = (str) => {
+                    if (!str || typeof str !== 'string') return str || '';
+                    try {
+                        return JSON.stringify(JSON.parse(str), null, 2);
+                    } catch(e) {
+                        return str;
+                    }
+                };
+
                 const currentDocState = {
                     name: `{{JSON_NAME}}`,
                     description: `{{JSON_DESCRIPTION}}`,
@@ -363,9 +372,9 @@
                     extVersion: `{{JSON_EXT_VERSION}}`,
                     icon: `{{JSON_ICON}}` || 'riGlobalLine',
                     globalData: `{{JSON_GLOBAL_DATA}}`,
-                    table: `{{JSON_TABLE}}`,
-                    settings: `{{JSON_SETTINGS}}`,
-                    includedWorkflows: `{{JSON_INCLUDED_WORKFLOWS}}`
+                    table: normalizeJsonStr(`{{JSON_TABLE}}`),
+                    settings: normalizeJsonStr(`{{JSON_SETTINGS}}`),
+                    includedWorkflows: normalizeJsonStr(`{{JSON_INCLUDED_WORKFLOWS}}`)
                 };
 
                 let workflowData = currentDocState;
@@ -376,15 +385,6 @@
                 }
 
                 const workflow = reactive(workflowData);
-                
-                const normalizeJsonStr = (str) => {
-                    if (!str || typeof str !== 'string') return str || '';
-                    try {
-                        return JSON.stringify(JSON.parse(str), null, 2);
-                    } catch(e) {
-                        return str;
-                    }
-                };
 
                 onMounted(() => {
                     window.addEventListener('message', event => {

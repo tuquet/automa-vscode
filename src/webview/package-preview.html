@@ -236,11 +236,20 @@
                     return vars;
                 });
 
+                const normalizeJsonStr = (str) => {
+                    if (!str || typeof str !== 'string') return str || '';
+                    try {
+                        return JSON.stringify(JSON.parse(str), null, 2);
+                    } catch(e) {
+                        return str;
+                    }
+                };
+
                 const currentDocState = {
                     name: `{{JSON_NAME}}`,
                     description: `{{JSON_DESCRIPTION}}`,
                     icon: `{{JSON_ICON}}` || 'riGlobalLine',
-                    settings: `{{JSON_SETTINGS}}`
+                    settings: normalizeJsonStr(`{{JSON_SETTINGS}}`)
                 };
 
                 let workflowData = currentDocState;
@@ -251,15 +260,6 @@
                 }
 
                 const workflow = reactive(workflowData);
-
-                const normalizeJsonStr = (str) => {
-                    if (!str || typeof str !== 'string') return str || '';
-                    try {
-                        return JSON.stringify(JSON.parse(str), null, 2);
-                    } catch(e) {
-                        return str;
-                    }
-                };
 
                 Vue.onMounted(() => {
                     window.addEventListener('message', event => {
