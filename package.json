@@ -44,6 +44,11 @@
 					"group": "1_run@3"
 				},
 				{
+					"command": "automa.stopFleet",
+					"when": "resourceExtname == .json && resourceFilename =~ /.*\\.fleets\\.json$/",
+					"group": "1_run@3_1"
+				},
+				{
 					"command": "automa.openInStudio",
 					"when": "resourceExtname == .json && resourceFilename =~ /^(?!.*automa-log).*$/",
 					"group": "1_run@4"
@@ -72,6 +77,11 @@
 				},
 				{
 					"command": "automa.runFleet",
+					"when": "resourceExtname == .json && resourceFilename =~ /.*\\.fleets\\.json$/",
+					"group": "navigation"
+				},
+				{
+					"command": "automa.stopFleet",
 					"when": "resourceExtname == .json && resourceFilename =~ /.*\\.fleets\\.json$/",
 					"group": "navigation"
 				}
@@ -269,6 +279,11 @@
 					"group": "inline"
 				},
 				{
+					"command": "automa.stopFleet",
+					"when": "viewItem == automaFileItem-automa.fleets",
+					"group": "inline"
+				},
+				{
 					"command": "automa.runWorkflowWithParams",
 					"when": "viewItem == automaFileItem-automa.workflows",
 					"group": "1_run@2"
@@ -406,6 +421,11 @@
 				"command": "automa.runFleet",
 				"title": "Automa: Run Fleet",
 				"icon": "$(play)"
+			},
+			{
+				"command": "automa.stopFleet",
+				"title": "Automa: Stop Fleet",
+				"icon": "$(stop)"
 			},
 			{
 				"command": "automa.fixWorkflowId",
