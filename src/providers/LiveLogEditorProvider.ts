@@ -30,7 +30,7 @@ export class LiveLogEditorProvider {
 
 		panel.webview.html = LiveLogEditorProvider.getHtmlForWebview();
 
-		const listener = (data: any) => {
+		const listener = (data: Record<string, unknown>) => {
 			if (
 				data &&
 				(data.taskId === taskId ||
