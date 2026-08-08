@@ -62,7 +62,10 @@ export const stopFleetCommand = async (
 				canPickMany: true,
 			},
 		);
-		if (selected && selected.length > 0) {
+
+		if (!selected) return;
+
+		if (selected.length > 0) {
 			for (const item of selected) {
 				targetsToStop.push(item.execution);
 			}
