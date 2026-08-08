@@ -47,6 +47,81 @@ export class DaemonManager {
 					`http://localhost:${this.port}/api/jobs/${args[1]}/logs`,
 				);
 				if (res.ok) return await res.json();
+			} else if (cmd === "run" && args[1]) {
+				const filePath = args[1];
+				if (typeof filePath === "string" && fs.existsSync(filePath)) {
+					const workflowData = JSON.parse(fs.readFileSync(filePath, "utf-8"));
+					const options: Record<string, unknown> = {};
+					const vaultIdx = args.indexOf("--vault-path");
+					if (vaultIdx !== -1) options.vaultPath = args[vaultIdx + 1];
+					const projIdx = args.indexOf("--project");
+					if (projIdx !== -1) options.project = args[projIdx + 1];
+					const varIdx = args.indexOf("--variables");
+					if (varIdx !== -1) {
+						const vars = args[varIdx + 1];
+						try {
+							options.variables =
+								typeof vars === "string" && vars.startsWith("{")
+									? JSON.parse(vars)
+									: vars;
+						} catch (_e: unknown) {
+							options.variables = vars;
+						}
+					}
+
+					const res = await fetch(
+						`http://localhost:${this.port}/api/jobs/run`,
+						{
+							method: "POST",
+							headers: { "Content-Type": "application/json" },
+							body: JSON.stringify({ workflowData, options }),
+						},
+					);
+
+					if (res.ok) {
+						const { jobId } = (await res.json()) as { jobId: string };
+						if (jobId) {
+							// Poll status
+							for (let i = 0; i < 600; i++) {
+								await new Promise((r) => setTimeout(r, 500));
+								const statusRes = await fetch(
+									`http://localhost:${this.port}/api/jobs/${jobId}/status`,
+								);
+								if (statusRes.ok) {
+									const statusData = (await statusRes.json()) as {
+										status: string;
+									};
+									if (
+										statusData.status === "completed" ||
+										statusData.status === "failed"
+									) {
+										const detailsRes = await fetch(
+											`http://localhost:${this.port}/api/jobs/${jobId}/details`,
+										);
+										if (detailsRes.ok) {
+											const details = (await detailsRes.json()) as {
+												status: string;
+												duration: number;
+												results?: {
+													table?: unknown;
+													variables?: unknown;
+													error?: unknown;
+												};
+											};
+											return {
+												success: details.status === "completed",
+												duration: details.duration,
+												table: details.results?.table || [],
+												variables: details.results?.variables || {},
+												error: details.results?.error,
+											};
+										}
+									}
+								}
+							}
+						}
+					}
+				}
 			}
 		} catch (_e: unknown) {
 			// ignore and fallback
@@ -211,28 +286,14 @@ export class DaemonManager {
 				return JSON.parse(str);
 			} catch (_e: unknown) {}
 
-			// Split by newline and try to parse the last non-empty line
-			// This handles cases where npm warnings or console.log are printed before JSON
-			const lines = str.split("\n");
-			for (let i = lines.length - 1; i >= 0; i--) {
-				const line = lines[i].trim();
-				if (
-					(line.startsWith("{") && line.endsWith("}")) ||
-					(line.startsWith("[") && line.endsWith("]"))
-				) {
-					try {
-						return JSON.parse(line);
-					} catch (_e: unknown) {}
-				}
-			}
-
 			const findValidJson = (
 				text: string,
 				startChar: string,
 				endChar: string,
-			): unknown => {
+			): { data: unknown; index: number } | undefined => {
 				let startIndex = text.indexOf(startChar);
-				let lastValidJson: unknown;
+				let lastValidJson: { data: unknown; index: number } | undefined;
+
 				while (startIndex !== -1) {
 					let depth = 0;
 					let inString = false;
@@ -269,7 +330,8 @@ export class DaemonManager {
 					if (endIndex !== -1) {
 						const possibleJson = text.substring(startIndex, endIndex + 1);
 						try {
-							lastValidJson = JSON.parse(possibleJson);
+							const parsed = JSON.parse(possibleJson);
+							lastValidJson = { data: parsed, index: endIndex };
 						} catch (_e: unknown) {
 							// Invalid JSON
 						}
@@ -285,10 +347,15 @@ export class DaemonManager {
 			};
 
 			const objResult = findValidJson(str, "{", "}");
-			if (objResult !== undefined) return objResult;
-
 			const arrResult = findValidJson(str, "[", "]");
-			if (arrResult !== undefined) return arrResult;
+
+			if (objResult && arrResult) {
+				return objResult.index > arrResult.index
+					? objResult.data
+					: arrResult.data;
+			}
+			if (objResult) return objResult.data;
+			if (arrResult) return arrResult.data;
 
 			throw new Error("No valid JSON found in output");
 		};
