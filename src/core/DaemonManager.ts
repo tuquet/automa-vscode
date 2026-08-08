@@ -167,16 +167,23 @@ export class DaemonManager {
 			}
 
 			// Find first { or [ and last } or ]
-			const firstCurly = trimmed.indexOf('{');
-			const firstSquare = trimmed.indexOf('[');
-			const firstIdx = (firstCurly === -1) ? firstSquare : (firstSquare === -1) ? firstCurly : Math.min(firstCurly, firstSquare);
+			const firstCurly = trimmed.indexOf("{");
+			const firstSquare = trimmed.indexOf("[");
+			const firstIdx =
+				firstCurly === -1
+					? firstSquare
+					: firstSquare === -1
+						? firstCurly
+						: Math.min(firstCurly, firstSquare);
 			const isObject = firstIdx !== -1 && firstIdx === firstCurly;
-			const lastIdx = isObject ? trimmed.lastIndexOf('}') : trimmed.lastIndexOf(']');
+			const lastIdx = isObject
+				? trimmed.lastIndexOf("}")
+				: trimmed.lastIndexOf("]");
 
 			if (firstIdx !== -1 && lastIdx !== -1 && firstIdx < lastIdx) {
 				const potentialJson = trimmed.substring(firstIdx, lastIdx + 1);
 				try {
-					return JSON.parse(Buffer.from(potentialJson).toString());
+					return JSON.parse(potentialJson);
 				} catch (err: unknown) {
 					const errMsg = err instanceof Error ? err.message : String(err);
 					Logger.debug(
@@ -195,7 +202,7 @@ export class DaemonManager {
 
 				if (line.startsWith("{") || line.startsWith("[")) {
 					try {
-						return JSON.parse(Buffer.from(line).toString());
+						return JSON.parse(line);
 					} catch (err: unknown) {
 						const errMsg = err instanceof Error ? err.message : String(err);
 						Logger.debug(`[Daemon IPC] Line parse attempt failed: ${errMsg}`);

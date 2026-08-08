@@ -178,7 +178,7 @@ export class TaskRunner {
 		child.stderr.on("data", (data: Buffer) => {
 			outputChannel.append(stderrDecoder.write(data));
 		});
-		
+
 		child.stderr.on("end", () => {
 			const remainder = stderrDecoder.end();
 			if (remainder) outputChannel.append(remainder);

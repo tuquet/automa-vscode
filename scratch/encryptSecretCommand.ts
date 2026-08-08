@@ -47,8 +47,9 @@ export async function encryptSecretCommand() {
 				vscode.window.showInformationMessage(
 					`Secret '${secretName}' encrypted and saved!`,
 				);
-			} catch (err: any) {
-				vscode.window.showErrorMessage(`Encryption failed: ${err.message}`);
+			} catch (err: unknown) {
+				const errMsg = err instanceof Error ? err.message : String(err);
+				vscode.window.showErrorMessage(`Encryption failed: ${errMsg}`);
 				throw err;
 			}
 		},
