@@ -2,6 +2,8 @@
  * A utility wrapper around the acquireVsCodeApi() function, which enables
  * message passing and state management between the webview and extension.
  */
+import { toRaw } from "vue";
+
 class VSCodeAPIWrapper {
 	private readonly vsCodeApi: unknown;
 	private messageId = 0;
@@ -39,10 +41,21 @@ class VSCodeAPIWrapper {
 		});
 	}
 
+	private safeClone(data: unknown): unknown {
+		if (data === undefined) return undefined;
+		try {
+			// Using JSON parse/stringify is safest to strip proxies and non-serializable Vue state
+			return JSON.parse(JSON.stringify(toRaw(data)));
+		} catch {
+			return toRaw(data);
+		}
+	}
+
 	public postMessage(message: unknown) {
 		if (this.vsCodeApi) {
+			const safeMessage = this.safeClone(message);
 			(this.vsCodeApi as { postMessage: (msg: unknown) => void }).postMessage(
-				message,
+				safeMessage,
 			);
 		} else {
 			console.log("postMessage:", message);
@@ -70,8 +83,9 @@ class VSCodeAPIWrapper {
 
 	public setState(newState: unknown) {
 		if (this.vsCodeApi) {
+			const safeState = this.safeClone(newState);
 			(this.vsCodeApi as { setState: (state: unknown) => void }).setState(
-				newState,
+				safeState,
 			);
 		}
 	}
