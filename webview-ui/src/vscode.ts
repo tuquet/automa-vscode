@@ -52,7 +52,30 @@ class VSCodeAPIWrapper {
 		}
 	}
 
-	public postMessageAsync(
+	public async postMessageAsync(
+		type: string,
+		data?: unknown,
+		keys?: unknown,
+		timeoutMs = 30000,
+	): Promise<unknown> {
+		const maxRetries = 3;
+		let attempt = 0;
+		while (attempt < maxRetries) {
+			try {
+				return await this._postMessageAsyncSingle(type, data, keys, timeoutMs);
+			} catch (err) {
+				attempt++;
+				if (attempt >= maxRetries) {
+					this.emitter.emit("broadcast", { type: "error", data: (err as Error).message });
+					throw err;
+				}
+				const backoff = 1000 * Math.pow(1.5, attempt - 1);
+				await new Promise((r) => setTimeout(r, backoff));
+			}
+		}
+	}
+
+	private _postMessageAsyncSingle(
 		type: string,
 		data?: unknown,
 		keys?: unknown,

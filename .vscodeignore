@@ -1,0 +1,28 @@
+.vscode/**
+.vscode-test/**
+src/**
+.gitignore
+.yarnrc
+**/.yarn/**
+**/.pnp.*
+.vscodeignore
+.editorconfig
+tsconfig.json
+**/*.map
+**/*.ts
+**/*.tsx
+tests/**
+test/**
+scratch/**
+.turbo/**
+# Bỏ qua node_modules và mã nguồn của webview-ui, chỉ giữ lại bản build
+webview-ui/node_modules/**
+webview-ui/src/**
+webview-ui/public/**
+webview-ui/*.json
+webview-ui/*.ts
+webview-ui/*.js
+webview-ui/.vscode/**
+# Bỏ qua các file rác OS
+.DS_Store
+Thumbs.db
