@@ -300,13 +300,14 @@ export async function deleteVaultItemCommand(
 		}
 
 		const selected = await vscode.window.showQuickPick(items, {
-			placeHolder: "Select a Vault Item to delete",
+			placeHolder: "Select Vault Item(s) to delete",
 			matchOnDescription: true,
 			matchOnDetail: true,
+			canPickMany: true,
 		});
 
-		if (!selected) return;
-		targetItems = [selected.payload];
+		if (!selected || selected.length === 0) return;
+		targetItems = selected.map((s) => s.payload);
 	}
 
 	if (targetItems.length === 0) return;

@@ -123,10 +123,13 @@ export class HistoryTreeDataProvider
 					detail: i.tooltip as string,
 					item: i,
 				})),
-				{ placeHolder: "Select a history log to delete" },
+				{
+					placeHolder: "Select history log(s) to delete",
+					canPickMany: true,
+				},
 			);
-			if (!selected) return;
-			itemsToDelete = [selected.item];
+			if (!selected || selected.length === 0) return;
+			itemsToDelete = selected.map((s) => s.item);
 		}
 
 		if (itemsToDelete.length === 0) return;
