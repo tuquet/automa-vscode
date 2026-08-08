@@ -426,9 +426,11 @@ export class WorkflowPreviewEditorProvider
 			true,
 		);
 
+		const paramsBase64 = Buffer.from(JSON.stringify(triggerParams)).toString("base64");
+
 		htmlContent = htmlContent.replace(
 			"{{INJECT_PARAMS_DATA}}",
-			`const tParams = ${JSON.stringify(triggerParams).replace(/</g, "\\u003c")};\nconst defaultKeepBrowserOpen = ${defaultKeepBrowserOpen};`,
+			`const tParams = JSON.parse(atob('${paramsBase64}'));\nconst defaultKeepBrowserOpen = ${defaultKeepBrowserOpen};`,
 		);
 
 		return htmlContent;
@@ -452,11 +454,16 @@ export class WorkflowPreviewEditorProvider
 
 		if (htmlContent.startsWith("<body><h2>Error")) return htmlContent;
 
+		const inputsBase64 = Buffer.from(JSON.stringify(pkgInputs)).toString("base64");
+		const outputsBase64 = Buffer.from(JSON.stringify(pkgOutputs)).toString("base64");
+		const varsBase64 = Buffer.from(JSON.stringify(pkgVars)).toString("base64");
+		const paramsBase64 = Buffer.from(JSON.stringify(triggerParams)).toString("base64");
+
 		const injectPackageData = `
-				const pInputs = ${JSON.stringify(pkgInputs)};
-				const pOutputs = ${JSON.stringify(pkgOutputs)};
-				const pVars = ${JSON.stringify(pkgVars)};
-				const tParams = ${JSON.stringify(triggerParams)};
+				const pInputs = JSON.parse(atob('${inputsBase64}'));
+				const pOutputs = JSON.parse(atob('${outputsBase64}'));
+				const pVars = JSON.parse(atob('${varsBase64}'));
+				const tParams = JSON.parse(atob('${paramsBase64}'));
 			`;
 		htmlContent = htmlContent.replace(
 			"{{INJECT_PACKAGE_DATA}}",

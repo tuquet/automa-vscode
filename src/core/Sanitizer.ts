@@ -1,4 +1,5 @@
 import * as crypto from "node:crypto";
+import { z } from "zod";
 
 function generateShortId(): string {
 	const chars =
@@ -10,6 +11,30 @@ function generateShortId(): string {
 	}
 	return id;
 }
+
+const idRegex = /^[A-Za-z0-9_-]{4,21}$/;
+const validTypes = [
+	"BlockBasic",
+	"BlockDelay",
+	"BlockRepeatTask",
+	"BlockConditions",
+	"BlockElementExists",
+	"BlockBasicWithFallback",
+	"BlockLoopBreakpoint",
+	"BlockGroup",
+	"BlockGroup2",
+	"BlockPackage",
+	"BlockNote",
+	"BlockWebhook",
+];
+
+const NodeTypeSchema = z
+	.string()
+	.refine((val) => validTypes.includes(val), { message: "Unsupported node type" })
+	.catch((ctx) => {
+		console.warn(`[Sanitizer] Node type validation failed: ${ctx.error.issues[0]?.message}. Falling back to BlockBasic.`);
+		return "BlockBasic";
+	});
 
 export class WorkflowSanitizer {
 	static sanitize(json: Record<string, unknown>): boolean {
@@ -129,22 +154,6 @@ export class WorkflowSanitizer {
 			}
 		}
 
-		const idRegex = /^[A-Za-z0-9_-]{4,21}$/;
-		const validTypes = [
-			"BlockBasic",
-			"BlockDelay",
-			"BlockRepeatTask",
-			"BlockConditions",
-			"BlockElementExists",
-			"BlockBasicWithFallback",
-			"BlockLoopBreakpoint",
-			"BlockGroup",
-			"BlockGroup2",
-			"BlockPackage",
-			"BlockNote",
-			"BlockWebhook",
-		];
-
 		const sanitizeNodesAndEdges = (
 			nList: Record<string, unknown>[],
 			eList: Record<string, unknown>[],
@@ -162,11 +171,9 @@ export class WorkflowSanitizer {
 					isModified = true;
 				}
 
-				if (
-					!((node as Record<string, unknown>).type as string) ||
-					!validTypes.includes((node as Record<string, unknown>).type as string)
-				) {
-					((node as Record<string, unknown>).type as string) = "BlockBasic";
+				const parsedType = NodeTypeSchema.parse((node as Record<string, unknown>).type);
+				if ((node as Record<string, unknown>).type !== parsedType) {
+					((node as Record<string, unknown>).type as string) = parsedType;
 					isModified = true;
 				}
 

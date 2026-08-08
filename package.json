@@ -728,6 +728,7 @@
 	},
 	"dependencies": {
 		"leader-line-new": "^1.1.9",
-		"sortablejs": "^1.15.7"
+		"sortablejs": "^1.15.7",
+		"zod": "^4.4.3"
 	}
 }

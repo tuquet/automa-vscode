@@ -2,15 +2,14 @@
  * A utility wrapper around the acquireVsCodeApi() function, which enables
  * message passing and state management between the webview and extension.
  */
-import { type Ref, ref, toRaw, watch } from "vue";
+import { type Ref, ref, watch } from "vue";
+import { cloneDeep, merge } from "lodash-es";
+import mitt from "mitt";
 
 class VSCodeAPIWrapper {
 	private readonly vsCodeApi: unknown;
 	private messageId = 0;
-	private pendingMessages = new Map<
-		number,
-		{ resolve: (val: unknown) => void; reject: (err: unknown) => void }
-	>();
+	private emitter = mitt();
 	private listeners = new Set<(message: unknown) => void>();
 
 	constructor() {
@@ -26,19 +25,11 @@ class VSCodeAPIWrapper {
 				id?: number;
 				data?: unknown;
 			};
-			if (
-				message &&
-				typeof message.id === "number" &&
-				this.pendingMessages.has(message.id)
-			) {
-				const pending = this.pendingMessages.get(message.id);
-				if (pending) {
-					if (message.type === "error") {
-						pending.reject(new Error(String(message.data)));
-					} else {
-						pending.resolve(message.data);
-					}
-					this.pendingMessages.delete(message.id);
+			if (message && typeof message.id === "number") {
+				if (message.type === "error") {
+					this.emitter.emit(`error:${message.id}`, new Error(String(message.data)));
+				} else {
+					this.emitter.emit(`response:${message.id}`, message.data);
 				}
 			} else {
 				for (const listener of this.listeners) {
@@ -53,67 +44,8 @@ class VSCodeAPIWrapper {
 		return () => this.listeners.delete(callback);
 	}
 
-	private safeClone(
-		data: unknown,
-		visited = new WeakMap<object, unknown>(),
-	): unknown {
-		if (data === undefined) return undefined;
-		if (data === null) return null;
-
-		const unwrap = (obj: unknown): unknown => {
-			if (obj === null || typeof obj !== "object") return obj;
-
-			const rawObj = toRaw(obj) as object;
-
-			if (visited.has(rawObj)) return visited.get(rawObj);
-
-			if (rawObj instanceof Date) return new Date(rawObj.getTime());
-			if (rawObj instanceof RegExp)
-				return new RegExp(rawObj.source, rawObj.flags);
-
-			let cloned: unknown;
-			if (rawObj instanceof Map) {
-				cloned = new Map();
-				visited.set(rawObj, cloned);
-				for (const [key, value] of rawObj) {
-					(cloned as Map<unknown, unknown>).set(unwrap(key), unwrap(value));
-				}
-				return cloned;
-			}
-			if (rawObj instanceof Set) {
-				cloned = new Set();
-				visited.set(rawObj, cloned);
-				for (const value of rawObj) {
-					(cloned as Set<unknown>).add(unwrap(value));
-				}
-				return cloned;
-			}
-			if (Array.isArray(rawObj)) {
-				cloned = [] as unknown[];
-				visited.set(rawObj, cloned);
-				for (const item of rawObj) {
-					(cloned as unknown[]).push(unwrap(item));
-				}
-				return cloned;
-			}
-
-			cloned = {} as Record<string, unknown>;
-			visited.set(rawObj, cloned);
-			for (const key in rawObj) {
-				if (Object.hasOwn(rawObj, key)) {
-					(cloned as Record<string, unknown>)[key] = unwrap(
-						(rawObj as Record<string, unknown>)[key],
-					);
-				}
-			}
-			return cloned;
-		};
-
-		try {
-			return unwrap(data);
-		} catch {
-			return toRaw(data);
-		}
+	private safeClone(data: unknown): unknown {
+		return cloneDeep(data);
 	}
 
 	public postMessage(message: unknown) {
@@ -136,27 +68,27 @@ class VSCodeAPIWrapper {
 		return new Promise((resolve, reject) => {
 			const id = ++this.messageId;
 
-			const timeout = setTimeout(() => {
-				if (this.pendingMessages.has(id)) {
-					this.pendingMessages.delete(id);
-					reject(new Error(`Message timeout for type ${type}`));
-				}
-			}, timeoutMs);
-
-			const resolveWrapper = (val: unknown) => {
+			const onResponse = (val: unknown) => {
 				clearTimeout(timeout);
+				this.emitter.off(`error:${id}`, onError);
 				resolve(val);
 			};
 
-			const rejectWrapper = (err: unknown) => {
+			const onError = (err: unknown) => {
 				clearTimeout(timeout);
+				this.emitter.off(`response:${id}`, onResponse);
 				reject(err);
 			};
 
-			this.pendingMessages.set(id, {
-				resolve: resolveWrapper,
-				reject: rejectWrapper,
-			});
+			const timeout = setTimeout(() => {
+				this.emitter.off(`response:${id}`, onResponse);
+				this.emitter.off(`error:${id}`, onError);
+				reject(new Error(`Message timeout for type ${type}`));
+			}, timeoutMs);
+
+			this.emitter.on(`response:${id}`, onResponse);
+			this.emitter.on(`error:${id}`, onError);
+
 			this.postMessage({ type, id, data, keys });
 		});
 	}
@@ -184,38 +116,10 @@ class VSCodeAPIWrapper {
 	public useState<T>(initialState: T): Ref<T> {
 		const savedState = this.getState() as T | undefined;
 
-		const mergeDeep = (target: unknown, source: unknown): unknown => {
-			if (target === null || typeof target !== "object")
-				return source !== undefined ? source : target;
-			if (source === null || typeof source !== "object") return source;
-			if (Array.isArray(target) && Array.isArray(source)) return source;
-
-			const result = { ...(target as Record<string, unknown>) };
-			const sourceObj = source as Record<string, unknown>;
-
-			for (const key in sourceObj) {
-				if (Object.hasOwn(sourceObj, key)) {
-					if (
-						typeof sourceObj[key] === "object" &&
-						sourceObj[key] !== null &&
-						!Array.isArray(sourceObj[key]) &&
-						typeof result[key] === "object" &&
-						result[key] !== null &&
-						!Array.isArray(result[key])
-					) {
-						result[key] = mergeDeep(result[key], sourceObj[key]);
-					} else {
-						result[key] = sourceObj[key];
-					}
-				}
-			}
-			return result;
-		};
-
 		const mergedState =
 			savedState !== undefined
-				? mergeDeep(initialState, savedState)
-				: initialState;
+				? merge(cloneDeep(initialState), savedState)
+				: cloneDeep(initialState);
 
 		const stateRef = ref<T>(mergedState as T) as Ref<T>;
 
@@ -224,11 +128,12 @@ class VSCodeAPIWrapper {
 		watch(
 			stateRef,
 			(newState) => {
+				const clonedState = cloneDeep(newState);
 				if (saveTimeout !== null) {
 					clearTimeout(saveTimeout);
 				}
 				saveTimeout = setTimeout(() => {
-					this.setState(newState);
+					this.setState(clonedState);
 					saveTimeout = null;
 				}, 250);
 			},
