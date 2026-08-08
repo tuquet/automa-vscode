@@ -2,7 +2,7 @@
  * A utility wrapper around the acquireVsCodeApi() function, which enables
  * message passing and state management between the webview and extension.
  */
-import { toRaw } from "vue";
+import { type Ref, ref, toRaw, watch } from "vue";
 
 class VSCodeAPIWrapper {
 	private readonly vsCodeApi: unknown;
@@ -11,6 +11,7 @@ class VSCodeAPIWrapper {
 		number,
 		{ resolve: (val: unknown) => void; reject: (err: unknown) => void }
 	>();
+	private listeners = new Set<(message: unknown) => void>();
 
 	constructor() {
 		// @ts-expect-error
@@ -39,43 +40,71 @@ class VSCodeAPIWrapper {
 					}
 					this.pendingMessages.delete(message.id);
 				}
+			} else {
+				for (const listener of this.listeners) {
+					listener(message);
+				}
 			}
 		});
 	}
 
-	private safeClone(data: unknown): unknown {
+	public onMessage(callback: (message: unknown) => void): () => void {
+		this.listeners.add(callback);
+		return () => this.listeners.delete(callback);
+	}
+
+	private safeClone(
+		data: unknown,
+		visited = new WeakMap<object, unknown>(),
+	): unknown {
 		if (data === undefined) return undefined;
 		if (data === null) return null;
 
 		const unwrap = (obj: unknown): unknown => {
 			if (obj === null || typeof obj !== "object") return obj;
+
+			if (visited.has(obj)) return visited.get(obj);
+
 			if (obj instanceof Date) return new Date(obj.getTime());
-			if (obj instanceof RegExp) return new RegExp(obj);
+			if (obj instanceof RegExp) return new RegExp(obj.source, obj.flags);
+
+			let cloned: unknown;
 			if (obj instanceof Map) {
-				const map = new Map();
+				cloned = new Map();
+				visited.set(obj, cloned);
 				for (const [key, value] of obj) {
-					map.set(unwrap(key), unwrap(value));
+					(cloned as Map<unknown, unknown>).set(unwrap(key), unwrap(value));
 				}
-				return map;
+				return cloned;
 			}
 			if (obj instanceof Set) {
-				const set = new Set();
+				cloned = new Set();
+				visited.set(obj, cloned);
 				for (const value of obj) {
-					set.add(unwrap(value));
+					(cloned as Set<unknown>).add(unwrap(value));
 				}
-				return set;
+				return cloned;
 			}
 			const raw = toRaw(obj);
 			if (Array.isArray(raw)) {
-				return raw.map((item) => unwrap(item));
+				cloned = [] as unknown[];
+				visited.set(obj, cloned);
+				for (const item of raw) {
+					(cloned as unknown[]).push(unwrap(item));
+				}
+				return cloned;
 			}
-			const result = {} as Record<string, unknown>;
+
+			cloned = {} as Record<string, unknown>;
+			visited.set(obj, cloned);
 			for (const key in raw) {
 				if (Object.hasOwn(raw, key)) {
-					result[key] = unwrap((raw as Record<string, unknown>)[key]);
+					(cloned as Record<string, unknown>)[key] = unwrap(
+						(raw as Record<string, unknown>)[key],
+					);
 				}
 			}
-			return result;
+			return cloned;
 		};
 
 		try {
@@ -144,6 +173,27 @@ class VSCodeAPIWrapper {
 				safeState,
 			);
 		}
+	}
+
+	/**
+	 * Creates a Vue reactive state connected to VS Code's Webview state.
+	 * Reactivity works mượt mà (smoothly) and auto-saves to VS Code on mutation.
+	 */
+	public useState<T>(initialState: T): Ref<T> {
+		const savedState = this.getState() as T | undefined;
+		const stateRef = ref<T>(
+			(savedState !== undefined ? savedState : initialState) as T,
+		) as Ref<T>;
+
+		watch(
+			stateRef,
+			(newState) => {
+				this.setState(newState);
+			},
+			{ deep: true, immediate: true },
+		);
+
+		return stateRef;
 	}
 }
 
