@@ -157,7 +157,7 @@ export class DaemonManager {
 			output = e.message || String(e);
 		}
 
-		const extractJSON = (str: string) => {
+		const extractJSON = (str: string): unknown => {
 			const trimmed = str.trim();
 			if (!trimmed) throw new Error("Empty output");
 
