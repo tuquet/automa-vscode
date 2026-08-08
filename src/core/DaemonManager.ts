@@ -54,9 +54,11 @@ export class DaemonManager {
 					const options: Record<string, unknown> = {};
 					const vaultIdx = args.indexOf("--vault-path");
 					if (vaultIdx !== -1) options.vaultPath = args[vaultIdx + 1];
-					const projIdx = args.indexOf("--project");
+					let projIdx = args.indexOf("--project");
+					if (projIdx === -1) projIdx = args.indexOf("-p");
 					if (projIdx !== -1) options.project = args[projIdx + 1];
-					const varIdx = args.indexOf("--variables");
+					let varIdx = args.indexOf("--variables");
+					if (varIdx === -1) varIdx = args.indexOf("-v");
 					if (varIdx !== -1) {
 						const vars = args[varIdx + 1];
 						try {
@@ -82,8 +84,8 @@ export class DaemonManager {
 						const { jobId } = (await res.json()) as { jobId: string };
 						if (jobId) {
 							// Poll status
-							for (let i = 0; i < 600; i++) {
-								await new Promise((r) => setTimeout(r, 500));
+							for (let i = 0; i < 3000; i++) {
+								await new Promise((r) => setTimeout(r, 100));
 								const statusRes = await fetch(
 									`http://localhost:${this.port}/api/jobs/${jobId}/status`,
 								);
@@ -294,6 +296,11 @@ export class DaemonManager {
 				let startIndex = text.indexOf(startChar);
 				let lastValidJson: { data: unknown; index: number } | undefined;
 
+				const startCode = startChar.charCodeAt(0);
+				const endCode = endChar.charCodeAt(0);
+				const escapeCode = 92; // '\\'
+				const quoteCode = 34; // '"'
+
 				while (startIndex !== -1) {
 					let depth = 0;
 					let inString = false;
@@ -301,23 +308,23 @@ export class DaemonManager {
 					let endIndex = -1;
 
 					for (let i = startIndex; i < text.length; i++) {
-						const char = text[i];
+						const charCode = text.charCodeAt(i);
 						if (isEscape) {
 							isEscape = false;
 							continue;
 						}
-						if (char === "\\") {
+						if (charCode === escapeCode) {
 							isEscape = true;
 							continue;
 						}
-						if (char === '"') {
+						if (charCode === quoteCode) {
 							inString = !inString;
 							continue;
 						}
 						if (!inString) {
-							if (char === startChar) {
+							if (charCode === startCode) {
 								depth++;
-							} else if (char === endChar) {
+							} else if (charCode === endCode) {
 								depth--;
 								if (depth === 0) {
 									endIndex = i;
