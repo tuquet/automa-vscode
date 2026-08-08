@@ -3,6 +3,7 @@ import * as path from "node:path";
 import * as vscode from "vscode";
 import { runWorkflowCommand } from "../commands/runWorkflow";
 import { BaseCustomEditorProvider } from "./BaseCustomEditorProvider";
+import serialize from "serialize-javascript";
 
 export class WorkflowPreviewEditorProvider
 	extends BaseCustomEditorProvider
@@ -426,11 +427,9 @@ export class WorkflowPreviewEditorProvider
 			true,
 		);
 
-		const paramsBase64 = Buffer.from(JSON.stringify(triggerParams)).toString("base64");
-
 		htmlContent = htmlContent.replace(
 			"{{INJECT_PARAMS_DATA}}",
-			`const tParams = JSON.parse(atob('${paramsBase64}'));\nconst defaultKeepBrowserOpen = ${defaultKeepBrowserOpen};`,
+			`const tParams = ${serialize(triggerParams)};\nconst defaultKeepBrowserOpen = ${defaultKeepBrowserOpen};`,
 		);
 
 		return htmlContent;
@@ -454,16 +453,11 @@ export class WorkflowPreviewEditorProvider
 
 		if (htmlContent.startsWith("<body><h2>Error")) return htmlContent;
 
-		const inputsBase64 = Buffer.from(JSON.stringify(pkgInputs)).toString("base64");
-		const outputsBase64 = Buffer.from(JSON.stringify(pkgOutputs)).toString("base64");
-		const varsBase64 = Buffer.from(JSON.stringify(pkgVars)).toString("base64");
-		const paramsBase64 = Buffer.from(JSON.stringify(triggerParams)).toString("base64");
-
 		const injectPackageData = `
-				const pInputs = JSON.parse(atob('${inputsBase64}'));
-				const pOutputs = JSON.parse(atob('${outputsBase64}'));
-				const pVars = JSON.parse(atob('${varsBase64}'));
-				const tParams = JSON.parse(atob('${paramsBase64}'));
+				const pInputs = ${serialize(pkgInputs)};
+				const pOutputs = ${serialize(pkgOutputs)};
+				const pVars = ${serialize(pkgVars)};
+				const tParams = ${serialize(triggerParams)};
 			`;
 		htmlContent = htmlContent.replace(
 			"{{INJECT_PACKAGE_DATA}}",

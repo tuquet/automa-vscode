@@ -331,7 +331,7 @@ export class DaemonProcessController {
 
 		this.daemonProcess = spawn(cmd, args, {
 			shell: true,
-			detached: false,
+			detached: process.platform !== "win32",
 			stdio: "pipe",
 			env,
 		});
@@ -385,7 +385,15 @@ export class DaemonProcessController {
 
 	public stop() {
 		if (this.daemonProcess) {
-			this.daemonProcess.kill();
+			try {
+				if (process.platform !== "win32" && this.daemonProcess.pid) {
+					process.kill(-this.daemonProcess.pid);
+				} else {
+					this.daemonProcess.kill();
+				}
+			} catch (e) {
+				this.daemonProcess.kill();
+			}
 			this.daemonProcess = null;
 			Logger.info("Automa background daemon stopped.");
 		}

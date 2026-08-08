@@ -3,15 +3,10 @@ import { z } from "zod";
 import * as vscode from "vscode";
 import { diagnosticCollection } from "../commands/lintCheck";
 
+import { nanoid } from "nanoid";
+
 function generateShortId(): string {
-	const chars =
-		"useandom-26T198340PX75pxJACKVERYMINDBUSHWOLF_GQZbfghjklqvwyzrict";
-	let id = "";
-	const bytes = crypto.randomBytes(21);
-	for (let i = 0; i < 21; i++) {
-		id += chars[bytes[i] & 63];
-	}
-	return id;
+	return nanoid();
 }
 
 const idRegex = /^[A-Za-z0-9_-]{4,21}$/;

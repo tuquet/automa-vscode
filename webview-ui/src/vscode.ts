@@ -2,8 +2,8 @@
  * A utility wrapper around the acquireVsCodeApi() function, which enables
  * message passing and state management between the webview and extension.
  */
-import { type Ref, ref, watch } from "vue";
-import { cloneDeep, merge } from "lodash-es";
+import { type Ref, ref, watch, toRaw } from "vue";
+import { cloneDeep, merge, debounce } from "lodash-es";
 import mitt from "mitt";
 import pTimeout from "p-timeout";
 
@@ -108,19 +108,14 @@ class VSCodeAPIWrapper {
 
 		const stateRef = ref<T>(mergedState as T) as Ref<T>;
 
-		let saveTimeout: ReturnType<typeof setTimeout> | null = null;
+		const saveDebounced = debounce((stateToSave: T) => {
+			this.setState(cloneDeep(toRaw(stateToSave)));
+		}, 250);
 
 		watch(
 			stateRef,
 			(newState) => {
-				const clonedState = cloneDeep(newState);
-				if (saveTimeout !== null) {
-					clearTimeout(saveTimeout);
-				}
-				saveTimeout = setTimeout(() => {
-					this.setState(clonedState);
-					saveTimeout = null;
-				}, 250);
+				saveDebounced(newState);
 			},
 			{ deep: true, immediate: true },
 		);
