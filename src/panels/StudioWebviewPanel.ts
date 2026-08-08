@@ -149,6 +149,7 @@ export class StudioWebviewPanel {
 						try {
 							// Find the workflow file path
 							let targetPath = workflowData.id; // default
+							let found = false;
 							if (vscode.workspace.workspaceFolders) {
 								const EXCLUDE_PATTERN = "**/{node_modules,.git,dist,out,.gemini,tmp,build}/**";
 								const files = await vscode.workspace.findFiles("**/*.workflow.json", EXCLUDE_PATTERN);
@@ -158,11 +159,17 @@ export class StudioWebviewPanel {
 										const data = JSON.parse(Buffer.from(content).toString("utf-8"));
 										if (data.id === workflowData.id) {
 											targetPath = file.fsPath;
+											found = true;
 											break;
 										}
 									} catch (_e) {}
 								}
 							}
+							
+							if (!found) {
+								return { success: false, error: "Không tìm thấy file" };
+							}
+
 							const result = await daemon.executeCliCommand([
 								"run",
 								targetPath,
@@ -231,10 +238,28 @@ export class StudioWebviewPanel {
 				readJsonFiles(tableFiles),
 			]);
 
+			const transformToArray = (dataArray: any[]) => {
+				const result: any[] = [];
+				for (const data of dataArray.flat()) {
+					if (Array.isArray(data)) {
+						result.push(...data);
+					} else if (data && typeof data === 'object') {
+						if (data.name !== undefined || data.value !== undefined) {
+							result.push(data);
+						} else {
+							for (const [key, value] of Object.entries(data)) {
+								result.push({ name: key, value });
+							}
+						}
+					}
+				}
+				return result;
+			};
+
 			result.workflows = workflows;
-			result.variables = rawVars.flat();
-			result.credentials = rawCreds.flat();
-			result.tables = rawTables.flat();
+			result.variables = transformToArray(rawVars);
+			result.credentials = transformToArray(rawCreds);
+			result.tables = transformToArray(rawTables);
 			result.workflowStates = {}; // Initial state
 		} catch (e: any) {
 			Logger.error(`Failed to fetch storage get: ${e.message}`);
@@ -295,6 +320,16 @@ export class StudioWebviewPanel {
 					);
 				}
 			}
+
+			if (items.variables) {
+				vscode.window.showInformationMessage("Variables are read-only in this view. Please edit the JSON files directly.");
+			}
+			if (items.credentials) {
+				vscode.window.showInformationMessage("Credentials are read-only in this view. Please edit the JSON files directly.");
+			}
+			if (items.tables) {
+				vscode.window.showInformationMessage("Tables are read-only in this view. Please edit the JSON files directly.");
+			}
 		} catch (e: any) {
 			Logger.error(`Failed to handle storage set: ${e.message}`);
 		}
@@ -340,12 +375,14 @@ export class StudioWebviewPanel {
             });
             const originalError = console.error;
             console.error = function(...args) {
-                window.vscodeApi.postMessage({ type: 'error', data: args.join(' ') });
+                const message = args.map(a => typeof a === "object" ? JSON.stringify(a) : String(a)).join(' ');
+                window.vscodeApi.postMessage({ type: 'error', data: message });
                 originalError.apply(console, args);
             };
             const originalWarn = console.warn;
             console.warn = function(...args) {
-                window.vscodeApi.postMessage({ type: 'error', data: args.join(' ') });
+                const message = args.map(a => typeof a === "object" ? JSON.stringify(a) : String(a)).join(' ');
+                window.vscodeApi.postMessage({ type: 'error', data: message });
                 originalWarn.apply(console, args);
             };
         </script>
