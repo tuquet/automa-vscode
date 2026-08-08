@@ -28,12 +28,12 @@ function resolveUrisToProcess(
 		return nodesOrUris
 			.map((n) => {
 				const path = extractFsPath(n);
-				return path ? vscode.Uri.file(path) : null;
+				return path?.endsWith(".json") ? vscode.Uri.file(path) : null;
 			})
 			.filter((uri): uri is vscode.Uri => uri !== null);
 	}
 	const path = extractFsPath(nodeOrUri);
-	if (path) {
+	if (path?.endsWith(".json")) {
 		return [vscode.Uri.file(path)];
 	}
 	const activeEditor = vscode.window.activeTextEditor;
