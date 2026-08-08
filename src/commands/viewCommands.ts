@@ -5,7 +5,12 @@ import { extractUri } from "../utils/typeGuards";
 export function showWorkflowSourceCommand() {
 	return async (nodeOrUri: unknown) => {
 		let uri = extractUri(nodeOrUri);
-		if (!uri) uri = vscode.window.activeTextEditor?.document.uri;
+		if (!uri) {
+			const activeEditor = vscode.window.activeTextEditor;
+			if (activeEditor?.document.uri.fsPath.endsWith(".json")) {
+				uri = activeEditor.document.uri;
+			}
+		}
 
 		if (!uri) {
 			const uris = await vscode.window.showOpenDialog({
@@ -32,7 +37,12 @@ export function showWorkflowSourceCommand() {
 export function showWorkflowPreviewCommand() {
 	return async (nodeOrUri: unknown) => {
 		let uri = extractUri(nodeOrUri);
-		if (!uri) uri = vscode.window.activeTextEditor?.document.uri;
+		if (!uri) {
+			const activeEditor = vscode.window.activeTextEditor;
+			if (activeEditor?.document.uri.fsPath.endsWith(".json")) {
+				uri = activeEditor.document.uri;
+			}
+		}
 
 		if (!uri) {
 			const uris = await vscode.window.showOpenDialog({
@@ -63,7 +73,12 @@ export function showWorkflowPreviewCommand() {
 export function showFleetSourceCommand() {
 	return async (nodeOrUri: unknown) => {
 		let uri = extractUri(nodeOrUri);
-		if (!uri) uri = vscode.window.activeTextEditor?.document.uri;
+		if (!uri) {
+			const activeEditor = vscode.window.activeTextEditor;
+			if (activeEditor?.document.uri.fsPath.match(/\.(fleet|fleets)\.json$/)) {
+				uri = activeEditor.document.uri;
+			}
+		}
 
 		if (!uri) {
 			const uris = await vscode.window.showOpenDialog({
@@ -86,7 +101,12 @@ export function showFleetSourceCommand() {
 export function showFleetPreviewCommand() {
 	return async (nodeOrUri: unknown) => {
 		let uri = extractUri(nodeOrUri);
-		if (!uri) uri = vscode.window.activeTextEditor?.document.uri;
+		if (!uri) {
+			const activeEditor = vscode.window.activeTextEditor;
+			if (activeEditor?.document.uri.fsPath.match(/\.(fleet|fleets)\.json$/)) {
+				uri = activeEditor.document.uri;
+			}
+		}
 
 		if (!uri) {
 			const uris = await vscode.window.showOpenDialog({
@@ -113,7 +133,15 @@ export function showFleetPreviewCommand() {
 export function showLogSourceCommand() {
 	return async (nodeOrUri: unknown) => {
 		let uri = extractUri(nodeOrUri);
-		if (!uri) uri = vscode.window.activeTextEditor?.document.uri;
+		if (!uri) {
+			const activeEditor = vscode.window.activeTextEditor;
+			if (
+				activeEditor?.document.uri.scheme === "automa-log" ||
+				activeEditor?.document.uri.fsPath.endsWith(".json")
+			) {
+				uri = activeEditor.document.uri;
+			}
+		}
 
 		if (uri) {
 			await vscode.commands.executeCommand("vscode.openWith", uri, "default");
@@ -141,7 +169,15 @@ export function showLogSourceCommand() {
 export function showLogPreviewCommand(context: vscode.ExtensionContext) {
 	return async (nodeOrUri: unknown) => {
 		let uri = extractUri(nodeOrUri);
-		if (!uri) uri = vscode.window.activeTextEditor?.document.uri;
+		if (!uri) {
+			const activeEditor = vscode.window.activeTextEditor;
+			if (
+				activeEditor?.document.uri.scheme === "automa-log" ||
+				activeEditor?.document.uri.fsPath.endsWith(".json")
+			) {
+				uri = activeEditor.document.uri;
+			}
+		}
 
 		if (uri && uri.scheme === "automa-log") {
 			const jobId = uri.authority || uri.path.replace(/^\//, "");
