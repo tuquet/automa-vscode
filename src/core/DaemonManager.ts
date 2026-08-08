@@ -49,6 +49,9 @@ export class DaemonManager {
 				if (res.ok) return await res.json();
 			} else if (cmd === "run" && args[1]) {
 				const filePath = args[1];
+				if (args.includes("--scan-only")) {
+					return undefined;
+				}
 				if (isString(filePath) && fs.existsSync(filePath)) {
 					const workflowData = JSON.parse(fs.readFileSync(filePath, "utf-8"));
 					const options: Record<string, unknown> = {};
@@ -108,10 +111,10 @@ export class DaemonManager {
 						const { jobId } = (await res.json()) as { jobId: string };
 						if (jobId) {
 							// Poll status (Using exponential backoff to fix bottleneck)
-							let delay = 500;
+							let delay = 100;
 							for (let i = 0; i < 600; i++) {
 								await new Promise((r) => setTimeout(r, delay));
-								if (delay < 3000) delay += 500;
+								if (delay < 1000) delay += 100;
 								const statusRes = await fetch(
 									`http://localhost:${this.port}/api/jobs/${jobId}/status`,
 								);
@@ -323,6 +326,16 @@ export class DaemonManager {
 				endChar: string,
 			): { data: unknown; index: number } | undefined => {
 				let startIndex = text.indexOf(startChar);
+				const lastEndChar = text.lastIndexOf(endChar);
+
+				if (
+					startIndex === -1 ||
+					lastEndChar === -1 ||
+					startIndex > lastEndChar
+				) {
+					return undefined;
+				}
+
 				let lastValidJson: { data: unknown; index: number } | undefined;
 
 				const startCode = startChar.charCodeAt(0);
@@ -330,7 +343,7 @@ export class DaemonManager {
 				const escapeCode = 92; // '\\'
 				const quoteCode = 34; // '"'
 
-				while (startIndex !== -1) {
+				while (startIndex !== -1 && startIndex < lastEndChar) {
 					let depth = 0;
 					let inString = false;
 					let isEscape = false;
