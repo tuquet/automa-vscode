@@ -177,9 +177,18 @@ export class StudioWebviewPanel {
 								options: reqOptions,
 							}),
 						});
-						if (!res.ok) throw new Error(`Daemon responded with ${res.status}`);
+
+						if (!res.ok) {
+							const errBody = await res.json().catch(() => ({}));
+							const errMsg =
+								(errBody as { error?: string }).error ||
+								`Daemon responded with ${res.status}`;
+							return { success: false, error: errMsg };
+						}
+
 						return await res.json();
 					} catch (_error: unknown) {
+						// Daemon unreachable, fallback to CLI
 						try {
 							const result = await daemon.executeCliCommand([
 								"run",

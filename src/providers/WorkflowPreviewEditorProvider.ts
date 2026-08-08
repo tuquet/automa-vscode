@@ -132,15 +132,13 @@ export class WorkflowPreviewEditorProvider
 	) {
 		try {
 			const content = document.getText();
-			const json = JSON.parse(content);
+			const json = JSON.parse(content) as Record<string, unknown>;
 
 			await this.sanitizeDocument(document, json);
 
 			if (
-				((json as Record<string, unknown>).drawflow as Record<string, unknown>)
-					?.nodes &&
-				((json as Record<string, unknown>).drawflow as Record<string, unknown>)
-					?.edges &&
+				(json.drawflow as Record<string, unknown>)?.nodes &&
+				(json.drawflow as Record<string, unknown>)?.edges &&
 				Array.isArray(json)
 			) {
 				webviewPanel.webview.html = `<body><h2>Not an Automa workflow</h2><p>This JSON file does not appear to be an Automa workflow.</p></body>`;
@@ -193,26 +191,23 @@ export class WorkflowPreviewEditorProvider
 	) {
 		try {
 			const content = document.getText();
-			const json = JSON.parse(content);
+			const json = JSON.parse(content) as Record<string, unknown>;
 
 			// Update fields
-			if (updateData.name !== undefined)
-				(json as Record<string, unknown>).name = updateData.name;
+			if (updateData.name !== undefined) json.name = updateData.name;
 			if (updateData.description !== undefined)
-				(json as Record<string, unknown>).description = updateData.description;
-			if (updateData.version !== undefined)
-				(json as Record<string, unknown>).version = updateData.version;
+				json.description = updateData.description;
+			if (updateData.version !== undefined) json.version = updateData.version;
 			if (updateData.extVersion !== undefined)
-				(json as Record<string, unknown>).extVersion = updateData.extVersion;
-			if (updateData.icon !== undefined)
-				(json as Record<string, unknown>).icon = updateData.icon;
+				json.extVersion = updateData.extVersion;
+			if (updateData.icon !== undefined) json.icon = updateData.icon;
 			if (updateData.globalData !== undefined)
-				(json as Record<string, unknown>).globalData = updateData.globalData;
+				json.globalData = updateData.globalData;
 
 			// JSON parse for objects/arrays
 			if ((updateData.settings as string) !== undefined) {
 				try {
-					(json as Record<string, unknown>).settings =
+					json.settings =
 						(updateData.settings as string).trim() === ""
 							? {}
 							: JSON.parse(updateData.settings as string);
@@ -223,7 +218,7 @@ export class WorkflowPreviewEditorProvider
 			}
 			if ((updateData.table as string) !== undefined) {
 				try {
-					(json as Record<string, unknown>).table =
+					json.table =
 						(updateData.table as string).trim() === ""
 							? []
 							: JSON.parse(updateData.table as string);
@@ -234,7 +229,7 @@ export class WorkflowPreviewEditorProvider
 			}
 			if ((updateData.includedWorkflows as string) !== undefined) {
 				try {
-					(json as Record<string, unknown>).includedWorkflows =
+					json.includedWorkflows =
 						(updateData.includedWorkflows as string).trim() === ""
 							? {}
 							: JSON.parse(updateData.includedWorkflows as string);
@@ -247,66 +242,40 @@ export class WorkflowPreviewEditorProvider
 			// Update Trigger Parameters Default Values
 			if (
 				(updateData.triggerParams as Record<string, string>) &&
-				((json as Record<string, unknown>).drawflow ||
-					(json as Record<string, unknown>).data)
+				(json.drawflow || json.data)
 			) {
 				let nodesList: Record<string, unknown>[] = [];
 				if (
-					(json as Record<string, unknown>).data &&
-					Array.isArray(
-						((json as Record<string, unknown>).data as Record<string, unknown>)
-							?.nodes,
-					)
+					json.data &&
+					Array.isArray((json.data as Record<string, unknown>)?.nodes)
 				) {
-					nodesList = (
-						(json as Record<string, unknown>).data as Record<string, unknown>
-					)?.nodes as Record<string, unknown>[];
-				} else if ((json as Record<string, unknown>).drawflow) {
+					nodesList = (json.data as Record<string, unknown>)?.nodes as Record<
+						string,
+						unknown
+					>[];
+				} else if (json.drawflow) {
 					if (
-						Array.isArray(
-							(
-								(json as Record<string, unknown>).drawflow as Record<
-									string,
-									unknown
-								>
-							)?.nodes,
-						)
+						Array.isArray((json.drawflow as Record<string, unknown>)?.nodes)
 					) {
-						nodesList = (
-							(json as Record<string, unknown>).drawflow as Record<
-								string,
-								unknown
-							>
-						)?.nodes as Record<string, unknown>[];
+						nodesList = (json.drawflow as Record<string, unknown>)
+							?.nodes as Record<string, unknown>[];
 					} else {
-						Object.keys(
-							(json as Record<string, unknown>).drawflow as Record<
-								string,
-								unknown
-							>,
-						).forEach((tab) => {
-							if (
-								(
-									(json as Record<string, unknown>).drawflow as Record<
-										string,
-										unknown
-									>
-								)[tab]
-							) {
-								Object.entries(
-									(
+						Object.keys(json.drawflow as Record<string, unknown>).forEach(
+							(tab) => {
+								if ((json.drawflow as Record<string, unknown>)[tab]) {
+									Object.entries(
 										(
-											(json as Record<string, unknown>).drawflow as Record<
+											(json.drawflow as Record<string, unknown>)[tab] as Record<
 												string,
 												unknown
 											>
-										)[tab] as Record<string, unknown>
-									).data as Record<string, unknown>,
-								).forEach(([_key, node]: [string, unknown]) => {
-									nodesList.push(node as Record<string, unknown>);
-								});
-							}
-						});
+										).data as Record<string, unknown>,
+									).forEach(([_key, node]: [string, unknown]) => {
+										nodesList.push(node as Record<string, unknown>);
+									});
+								}
+							},
+						);
 					}
 				}
 
