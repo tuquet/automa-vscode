@@ -245,7 +245,7 @@
                     }
                 };
 
-                const currentDocState = {
+                let currentDocState = {
                     name: `{{JSON_NAME}}`,
                     description: `{{JSON_DESCRIPTION}}`,
                     icon: `{{JSON_ICON}}` || 'riGlobalLine',
@@ -265,10 +265,17 @@
                     window.addEventListener('message', event => {
                         const message = event.data;
                         if (message.type === 'update' && message.json) {
-                            workflow.name = message.json.name || '';
-                            workflow.description = message.json.description || '';
-                            workflow.icon = message.json.icon || 'riGlobalLine';
-                            workflow.settings = normalizeJsonStr(JSON.stringify(message.json.settings));
+                            currentDocState = {
+                                name: message.json.name || '',
+                                description: message.json.description || '',
+                                icon: message.json.icon || 'riGlobalLine',
+                                settings: normalizeJsonStr(JSON.stringify(message.json.settings))
+                            };
+
+                            workflow.name = currentDocState.name;
+                            workflow.description = currentDocState.description;
+                            workflow.icon = currentDocState.icon;
+                            workflow.settings = currentDocState.settings;
                             
                             inputs.value = Array.isArray(message.json.inputs) ? message.json.inputs : [];
                             outputs.value = Array.isArray(message.json.outputs) ? message.json.outputs : [];

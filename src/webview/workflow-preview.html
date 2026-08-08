@@ -365,7 +365,7 @@
                     }
                 };
 
-                const currentDocState = {
+                let currentDocState = {
                     name: `{{JSON_NAME}}`,
                     description: `{{JSON_DESCRIPTION}}`,
                     version: `{{JSON_VERSION}}`,
@@ -390,16 +390,28 @@
                     window.addEventListener('message', event => {
                         const message = event.data;
                         if (message.type === 'update' && message.json) {
+                            currentDocState = {
+                                name: message.json.name || '',
+                                description: message.json.description || '',
+                                version: message.json.version || '',
+                                extVersion: message.json.extVersion || '',
+                                icon: message.json.icon || 'riGlobalLine',
+                                globalData: typeof message.json.globalData === 'string' ? message.json.globalData : normalizeJsonStr(JSON.stringify(message.json.globalData)),
+                                table: normalizeJsonStr(JSON.stringify(message.json.table)),
+                                settings: normalizeJsonStr(JSON.stringify(message.json.settings)),
+                                includedWorkflows: normalizeJsonStr(JSON.stringify(message.json.includedWorkflows))
+                            };
+
                             // Update workflow reactive object
-                            workflow.name = message.json.name || '';
-                            workflow.description = message.json.description || '';
-                            workflow.version = message.json.version || '';
-                            workflow.extVersion = message.json.extVersion || '';
-                            workflow.icon = message.json.icon || 'riGlobalLine';
-                            workflow.globalData = typeof message.json.globalData === 'string' ? message.json.globalData : normalizeJsonStr(JSON.stringify(message.json.globalData));
-                            workflow.table = normalizeJsonStr(JSON.stringify(message.json.table));
-                            workflow.settings = normalizeJsonStr(JSON.stringify(message.json.settings));
-                            workflow.includedWorkflows = normalizeJsonStr(JSON.stringify(message.json.includedWorkflows));
+                            workflow.name = currentDocState.name;
+                            workflow.description = currentDocState.description;
+                            workflow.version = currentDocState.version;
+                            workflow.extVersion = currentDocState.extVersion;
+                            workflow.icon = currentDocState.icon;
+                            workflow.globalData = currentDocState.globalData;
+                            workflow.table = currentDocState.table;
+                            workflow.settings = currentDocState.settings;
+                            workflow.includedWorkflows = currentDocState.includedWorkflows;
                             
                             // Update triggerParams if available
                             if (message.triggerParams) {

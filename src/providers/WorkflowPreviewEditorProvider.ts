@@ -377,7 +377,7 @@ export class WorkflowPreviewEditorProvider
 							.replace(/\\/g, "\\\\")
 							.replace(/`/g, "\\`")
 							.replace(/\$\{/g, "\\${")
-							.replace(/<\/script>/gi, "<\\/script>")
+							.replace(/</g, "\\u003c")
 					: "";
 
 			htmlContent = htmlContent.replace(/\{\{WORKFLOW_NAME\}\}/g, () =>
@@ -511,7 +511,7 @@ export class WorkflowPreviewEditorProvider
 						.replace(/\\/g, "\\\\")
 						.replace(/`/g, "\\`")
 						.replace(/\$\{/g, "\\${")
-						.replace(/<\/script>/gi, "<\\/script>")
+						.replace(/</g, "\\u003c")
 				: "";
 
 		if (isPackage) {

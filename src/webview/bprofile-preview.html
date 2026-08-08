@@ -315,17 +315,17 @@
                     const state = vscode.getState() || {};
                     
                     if (this.isInternalSync) {
-                        vscode.setState({ ...state, profileDataStr: newVal, lastDocumentData: initialData, jsonError: null });
+                        vscode.setState({ ...state, profileDataStr: newVal, lastDocumentData: this.initialDataStr, jsonError: null });
                         return;
                     }
                     try {
                         JSON.parse(newVal);
                         this.jsonError = null;
-                        vscode.setState({ ...state, profileDataStr: newVal, jsonError: null, lastDocumentData: initialData });
+                        vscode.setState({ ...state, profileDataStr: newVal, jsonError: null, lastDocumentData: this.initialDataStr });
                         this.syncToForm();
                     } catch (e) {
                         this.jsonError = e.message;
-                        vscode.setState({ ...state, profileDataStr: newVal, jsonError: e.message, lastDocumentData: initialData });
+                        vscode.setState({ ...state, profileDataStr: newVal, jsonError: e.message, lastDocumentData: this.initialDataStr });
                     }
                 }
             },

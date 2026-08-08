@@ -121,10 +121,9 @@ export class LogCustomEditorProvider
 		webviewPanel: vscode.WebviewPanel,
 		_token: vscode.CancellationToken,
 	): Promise<void> {
-		let isFirstLoad = true;
+		let isRendered = false;
+		let hasError = false;
 		const updateWebview = async () => {
-			const isInitial = isFirstLoad;
-			isFirstLoad = false;
 			try {
 				const content = await fs.readFile(document.uri.fsPath, "utf-8");
 				const parsed = JSON.parse(content);
@@ -138,8 +137,10 @@ export class LogCustomEditorProvider
 				const results = parsed.results || { table: [], variables: {} };
 
 				job.results = results;
-				if (isInitial) {
+				if (!isRendered || hasError) {
 					webviewPanel.webview.html = this.getWebviewContent(job, logs);
+					isRendered = true;
+					hasError = false;
 				} else {
 					webviewPanel.webview.postMessage({
 						type: "update",
@@ -148,7 +149,7 @@ export class LogCustomEditorProvider
 					});
 				}
 			} catch (error: unknown) {
-				if (isInitial) {
+				if (!isRendered || hasError) {
 					const e = toError(error);
 					webviewPanel.webview.html = `
 						<!DOCTYPE html>
@@ -160,6 +161,8 @@ export class LogCustomEditorProvider
 							</body>
 						</html>
 					`;
+					isRendered = true;
+					hasError = true;
 				}
 				// If not initial, ignore parse errors (might be mid-write)
 			}
