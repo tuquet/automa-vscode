@@ -78,8 +78,8 @@ export class HistoryTreeDataProvider
 		this.context.subscriptions.push(
 			vscode.commands.registerCommand(
 				"automa.deleteHistoryItem",
-				async (item: vscode.TreeItem) =>
-					await this.handleDeleteHistoryItem(item),
+				async (item?: vscode.TreeItem, selectedItems?: vscode.TreeItem[]) =>
+					await this.handleDeleteHistoryItem(item, selectedItems),
 			),
 		);
 		this.context.subscriptions.push(
@@ -90,8 +90,21 @@ export class HistoryTreeDataProvider
 		);
 	}
 
-	private async handleDeleteHistoryItem(item?: vscode.TreeItem) {
-		if (!item?.id) {
+	private async handleDeleteHistoryItem(
+		item?: vscode.TreeItem,
+		selectedItems?: vscode.TreeItem[],
+	) {
+		let itemsToDelete: vscode.TreeItem[] = [];
+
+		if (
+			selectedItems &&
+			Array.isArray(selectedItems) &&
+			selectedItems.length > 0
+		) {
+			itemsToDelete = selectedItems.filter((i) => i.id);
+		} else if (item?.id) {
+			itemsToDelete = [item];
+		} else {
 			const items = await this.getChildren();
 			const validItems = items.filter(
 				(i) => i.contextValue === "automaHistoryLog" && i.id,
@@ -112,12 +125,17 @@ export class HistoryTreeDataProvider
 				{ placeHolder: "Select a history log to delete" },
 			);
 			if (!selected) return;
-			item = selected.item;
+			itemsToDelete = [selected.item];
 		}
 
-		if (!item?.id) return;
+		if (itemsToDelete.length === 0) return;
+
+		const msg =
+			itemsToDelete.length === 1
+				? "this log"
+				: `these ${itemsToDelete.length} logs`;
 		const confirm = await vscode.window.showWarningMessage(
-			`Are you sure you want to delete this log?`,
+			`Are you sure you want to delete ${msg}?`,
 			"Yes",
 			"No",
 		);
@@ -126,18 +144,30 @@ export class HistoryTreeDataProvider
 		try {
 			const daemon = DaemonManager.getInstance();
 			const port = daemon.getPort();
-			const res = await fetch(`http://localhost:${port}/api/jobs/${item.id}`, {
-				method: "DELETE",
-			});
-			if (!res.ok) throw new Error("Daemon not ready");
+			let failedCount = 0;
+			for (const itemToDelete of itemsToDelete) {
+				const res = await fetch(
+					`http://localhost:${port}/api/jobs/${itemToDelete.id}`,
+					{
+						method: "DELETE",
+					},
+				);
+				if (!res.ok) failedCount++;
+			}
+			if (failedCount === itemsToDelete.length && itemsToDelete.length > 0) {
+				throw new Error("Daemon not ready or all failed");
+			}
 			this.refresh();
 		} catch (_err: unknown) {
 			try {
-				await DaemonManager.getInstance().executeCliCommand([
-					"history",
-					"--delete",
-					item.id,
-				]);
+				for (const itemToDelete of itemsToDelete) {
+					if (!itemToDelete.id) continue;
+					await DaemonManager.getInstance().executeCliCommand([
+						"history",
+						"--delete",
+						itemToDelete.id,
+					]);
+				}
 				this.refresh();
 			} catch (cliErr: unknown) {
 				const msg = getErrorMessage(cliErr);

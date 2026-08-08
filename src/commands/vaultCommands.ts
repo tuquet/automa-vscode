@@ -222,10 +222,20 @@ async function executeEncryption(
 
 export async function deleteVaultItemCommand(
 	item?: import("../providers/VaultTreeDataProvider").VaultItem,
+	selectedItems?: import("../providers/VaultTreeDataProvider").VaultItem[],
 ) {
-	let targetItem = item;
+	let targetItems: import("../providers/VaultTreeDataProvider").VaultItem[] =
+		[];
 
-	if (!targetItem?.resourceUri || !targetItem.label) {
+	if (
+		selectedItems &&
+		Array.isArray(selectedItems) &&
+		selectedItems.length > 0
+	) {
+		targetItems = selectedItems.filter((i) => i.resourceUri && i.label);
+	} else if (item?.resourceUri && item?.label) {
+		targetItems = [item];
+	} else {
 		const items: (vscode.QuickPickItem & {
 			payload: import("../providers/VaultTreeDataProvider").VaultItem;
 		})[] = [];
@@ -296,52 +306,79 @@ export async function deleteVaultItemCommand(
 		});
 
 		if (!selected) return;
-		targetItem = selected.payload;
+		targetItems = [selected.payload];
 	}
 
-	if (!targetItem?.resourceUri || !targetItem.label) return;
+	if (targetItems.length === 0) return;
+
+	const msg =
+		targetItems.length === 1
+			? `${targetItems[0].type.toLowerCase()} '${targetItems[0].label}'`
+			: `${targetItems.length} items`;
 
 	const confirm = await vscode.window.showWarningMessage(
-		`Are you sure you want to delete ${targetItem.type.toLowerCase()} '${targetItem.label}'?`,
+		`Are you sure you want to delete ${msg}?`,
 		"Yes",
 		"No",
 	);
 	if (confirm !== "Yes") return;
 
-	try {
-		const content = fs.readFileSync(targetItem.resourceUri.fsPath, "utf8");
-		let data = JSON.parse(content);
-		let modified = false;
+	let totalDeleted = 0;
 
-		if (Array.isArray(data)) {
-			const initialLength = data.length;
-			data = data.filter((entry: Record<string, unknown>) => {
-				if (targetItem?.itemId) {
-					const entryId = entry.id || entry.key || entry.name;
-					return entryId !== targetItem?.itemId;
-				}
-				const name = entry.name || entry.id || entry.key;
-				return name !== targetItem?.label;
-			});
-			modified = data.length !== initialLength;
-		} else if (isRecord(data)) {
-			const keyToDelete = targetItem.itemId || targetItem.label;
-			if (hasProp(data, keyToDelete)) {
-				delete data[keyToDelete];
-				modified = true;
-			}
+	const fileMap = new Map<string, typeof targetItems>();
+	for (const tItem of targetItems) {
+		const fsPath = tItem.resourceUri.fsPath;
+		if (!fileMap.has(fsPath)) {
+			fileMap.set(fsPath, []);
 		}
+		fileMap.get(fsPath)?.push(tItem);
+	}
 
-		if (modified) {
-			writeJsonFile(targetItem.resourceUri.fsPath, data);
-			vscode.window.showInformationMessage(
-				`${targetItem.type} '${targetItem.label}' deleted.`,
+	for (const [fsPath, itemsInFile] of fileMap.entries()) {
+		try {
+			const content = fs.readFileSync(fsPath, "utf8");
+			let data = JSON.parse(content);
+			let modified = false;
+
+			if (Array.isArray(data)) {
+				const initialLength = data.length;
+				data = data.filter((entry: Record<string, unknown>) => {
+					const entryId = entry.id || entry.key || entry.name;
+					return !itemsInFile.some(
+						(targetItem) =>
+							(targetItem.itemId && entryId === targetItem.itemId) ||
+							(!targetItem.itemId && entryId === targetItem.label),
+					);
+				});
+				if (data.length !== initialLength) {
+					modified = true;
+					totalDeleted += initialLength - data.length;
+				}
+			} else if (isRecord(data)) {
+				for (const targetItem of itemsInFile) {
+					const keyToDelete = targetItem.itemId || targetItem.label;
+					if (hasProp(data, keyToDelete)) {
+						delete data[keyToDelete];
+						modified = true;
+						totalDeleted++;
+					}
+				}
+			}
+
+			if (modified) {
+				writeJsonFile(fsPath, data);
+			}
+		} catch (error: unknown) {
+			const e = toError(error);
+			vscode.window.showErrorMessage(
+				`Failed to delete items in ${path.basename(fsPath)}: ${e.message}`,
 			);
 		}
-	} catch (error: unknown) {
-		const e = toError(error);
-		vscode.window.showErrorMessage(
-			`Failed to delete ${targetItem.type.toLowerCase()}: ${e.message}`,
+	}
+
+	if (totalDeleted > 0) {
+		vscode.window.showInformationMessage(
+			`Deleted ${totalDeleted} item(s) from vault.`,
 		);
 	}
 }
