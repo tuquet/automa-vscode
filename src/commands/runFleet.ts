@@ -3,6 +3,16 @@ import * as vscode from "vscode";
 import { TaskRunner } from "../core/TaskRunner";
 import { extractFsPath } from "../utils/typeGuards";
 
+function getWorkspaceRoot(): string | undefined {
+	if (
+		vscode.workspace.workspaceFolders &&
+		vscode.workspace.workspaceFolders.length > 0
+	) {
+		return vscode.workspace.workspaceFolders[0].uri.fsPath;
+	}
+	return undefined;
+}
+
 export async function runFleetCommand(
 	nodeOrUri?: unknown,
 	nodesOrUris?: unknown[],
@@ -85,6 +95,11 @@ export async function runFleetCommand(
 		}
 		if (gridSystem) {
 			args.push("--grid");
+		}
+
+		const vaultPath = getWorkspaceRoot();
+		if (vaultPath) {
+			args.push("--vault-path", vaultPath);
 		}
 
 		await TaskRunner.runAutomaCli(args, {

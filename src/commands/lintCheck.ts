@@ -4,6 +4,16 @@ import { castRecord, extractFsPath, toError } from "../utils/typeGuards";
 
 let diagnosticCollection: vscode.DiagnosticCollection;
 
+function getWorkspaceRoot(): string | undefined {
+	if (
+		vscode.workspace.workspaceFolders &&
+		vscode.workspace.workspaceFolders.length > 0
+	) {
+		return vscode.workspace.workspaceFolders[0].uri.fsPath;
+	}
+	return undefined;
+}
+
 export function activateLintDiagnostics(context: vscode.ExtensionContext) {
 	diagnosticCollection =
 		vscode.languages.createDiagnosticCollection("automa-lint");
@@ -142,10 +152,11 @@ export async function lintCheckCommand(
 							filePath.endsWith(".credential.json")
 						)
 							type = "globals";
+						const vaultPath = getWorkspaceRoot();
 						const res = await fetch(`http://localhost:${port}/api/lint`, {
 							method: "POST",
 							headers: { "Content-Type": "application/json" },
-							body: JSON.stringify({ content, type }),
+							body: JSON.stringify({ content, type, options: { vaultPath } }),
 						});
 						if (!res.ok) throw new Error("Daemon not ready");
 
@@ -159,11 +170,13 @@ export async function lintCheckCommand(
 						output = [...errStrs, ...warnStrs].join("\n");
 					} catch (_err: unknown) {
 						// Fallback to CLI
+						const cliArgs = ["lint", filePath];
+						const vaultPath = getWorkspaceRoot();
+						if (vaultPath) {
+							cliArgs.push("--vault-path", vaultPath);
+						}
 						const { stdout, stderr } =
-							await DaemonManager.getInstance().executeRawCliCommand([
-								"lint",
-								filePath,
-							]);
+							await DaemonManager.getInstance().executeRawCliCommand(cliArgs);
 						output = `${stdout}\n${stderr}`;
 					}
 

@@ -13,6 +13,16 @@ import {
 
 let _automaOutputChannel: vscode.OutputChannel;
 
+function getWorkspaceRoot(): string | undefined {
+	if (
+		vscode.workspace.workspaceFolders &&
+		vscode.workspace.workspaceFolders.length > 0
+	) {
+		return vscode.workspace.workspaceFolders[0].uri.fsPath;
+	}
+	return undefined;
+}
+
 async function resolveTargets(
 	nodeOrUri?: unknown,
 	nodesOrUris?: unknown[],
@@ -119,6 +129,11 @@ function buildBaseArgs(
 
 	if (keepBrowserOpen) {
 		args.push("--keep-browser-open");
+	}
+
+	const vaultPath = getWorkspaceRoot();
+	if (vaultPath) {
+		args.push("--vault-path", vaultPath);
 	}
 
 	return args;
