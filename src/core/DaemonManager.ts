@@ -157,74 +157,36 @@ export class DaemonManager {
 			output = e.message || String(e);
 		}
 
-		const extractJSON = (str: string) => {
-			const trimmed = str.trim();
+		const startMarker = "---AUTOMA-JSON-START---";
+		const endMarker = "---AUTOMA-JSON-END---";
+
+		const startIdx = output.indexOf(startMarker);
+		const endIdx = output.lastIndexOf(endMarker);
+
+		if (startIdx !== -1 && endIdx !== -1 && startIdx < endIdx) {
+			const jsonStr = output
+				.substring(startIdx + startMarker.length, endIdx)
+				.trim();
 			try {
-				return JSON.parse(trimmed);
-			} catch (err: unknown) {
-				const errMsg = err instanceof Error ? err.message : String(err);
-				Logger.debug(`[Daemon IPC] First parse attempt failed: ${errMsg}`);
+				return JSON.parse(jsonStr);
+			} catch (error: unknown) {
+				const e =
+					error instanceof Error ? error : new Error(String(error as unknown));
+				throw new Error(
+					`Failed to parse CLI JSON output: ${e.message}\nPayload was: ${jsonStr.substring(0, 100)}...`,
+				);
 			}
-
-			// Find first { or [ and last } or ]
-			const firstCurly = trimmed.indexOf("{");
-			const firstSquare = trimmed.indexOf("[");
-			const firstIdx =
-				firstCurly === -1
-					? firstSquare
-					: firstSquare === -1
-						? firstCurly
-						: Math.min(firstCurly, firstSquare);
-			const isObject = firstIdx !== -1 && firstIdx === firstCurly;
-			const lastIdx = isObject
-				? trimmed.lastIndexOf("}")
-				: trimmed.lastIndexOf("]");
-
-			if (firstIdx !== -1 && lastIdx !== -1 && firstIdx < lastIdx) {
-				const potentialJson = trimmed.substring(firstIdx, lastIdx + 1);
-				try {
-					return JSON.parse(potentialJson);
-				} catch (err: unknown) {
-					const errMsg = err instanceof Error ? err.message : String(err);
-					Logger.debug(
-						`[Daemon IPC] Substring parse attempt failed: ${errMsg}`,
-					);
-				}
-			}
-
-			// Fallback: Check the last few lines for a single-line complete JSON without O(N) split allocation
-			let currentEnd = trimmed.length;
-			for (let i = 0; i < 100; i++) {
-				if (currentEnd <= 0) break;
-				const prevNewline = trimmed.lastIndexOf("\n", currentEnd - 1);
-				const startIndex = prevNewline === -1 ? 0 : prevNewline + 1;
-				const line = trimmed.substring(startIndex, currentEnd).trim();
-
-				if (line.startsWith("{") || line.startsWith("[")) {
-					try {
-						return JSON.parse(line);
-					} catch (err: unknown) {
-						const errMsg = err instanceof Error ? err.message : String(err);
-						Logger.debug(`[Daemon IPC] Line parse attempt failed: ${errMsg}`);
-					}
-				}
-
-				if (prevNewline === -1) break;
-				currentEnd = prevNewline;
-			}
-
-			throw new Error("No valid JSON found in output");
-		};
+		}
 
 		let parsed: unknown;
 		try {
-			parsed = extractJSON(output);
+			parsed = JSON.parse(output.trim());
 			return parsed;
 		} catch (error: unknown) {
 			const e =
 				error instanceof Error ? error : new Error(String(error as unknown));
 			throw new Error(
-				`Failed to parse CLI JSON output: ${e.message}\nOutput was: ${output}`,
+				`Failed to parse CLI JSON output (No markers found): ${e.message}\nOutput was: ${output.substring(0, 100)}...`,
 			);
 		}
 	}
