@@ -161,6 +161,9 @@ export class HistoryTreeDataProvider
 			if (failedCount === itemsToDelete.length && itemsToDelete.length > 0) {
 				throw new Error("Daemon not ready or all failed");
 			}
+			vscode.window.showInformationMessage(
+				`Successfully deleted ${itemsToDelete.length - failedCount} history log(s).`,
+			);
 			this.refresh();
 		} catch (_err: unknown) {
 			try {
@@ -172,6 +175,9 @@ export class HistoryTreeDataProvider
 						itemToDelete.id,
 					]);
 				}
+				vscode.window.showInformationMessage(
+					`Successfully deleted ${itemsToDelete.length} history log(s).`,
+				);
 				this.refresh();
 			} catch (cliErr: unknown) {
 				const msg = getErrorMessage(cliErr);
@@ -195,6 +201,9 @@ export class HistoryTreeDataProvider
 				method: "DELETE",
 			});
 			if (!res.ok) throw new Error("Daemon not ready");
+			vscode.window.showInformationMessage(
+				"Execution history cleared successfully.",
+			);
 			this.refresh();
 		} catch (_err: unknown) {
 			try {
@@ -202,6 +211,9 @@ export class HistoryTreeDataProvider
 					"history",
 					"--clear",
 				]);
+				vscode.window.showInformationMessage(
+					"Execution history cleared successfully.",
+				);
 				this.refresh();
 			} catch (cliErr: unknown) {
 				const msg = getErrorMessage(cliErr);
