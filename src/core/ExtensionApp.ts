@@ -100,13 +100,39 @@ export class ExtensionApp {
 			updated = true;
 		}
 
+		// Automate *.package.json -> automa.workflowPreview
+		const currentPackageAssoc = editorAssociations["*.package.json"];
+		if (defaultOnClick && currentPackageAssoc !== "automa.workflowPreview") {
+			editorAssociations["*.package.json"] = "automa.workflowPreview";
+			updated = true;
+		} else if (
+			!defaultOnClick &&
+			currentPackageAssoc === "automa.workflowPreview"
+		) {
+			editorAssociations["*.package.json"] = "default";
+			updated = true;
+		}
+
 		// Automate *.fleets.json -> automa.fleetPreview
-		const currentFleetAssoc = editorAssociations["*.fleets.json"];
-		if (defaultOnClick && currentFleetAssoc !== "automa.fleetPreview") {
+		const currentFleetsAssoc = editorAssociations["*.fleets.json"];
+		if (defaultOnClick && currentFleetsAssoc !== "automa.fleetPreview") {
 			editorAssociations["*.fleets.json"] = "automa.fleetPreview";
 			updated = true;
-		} else if (!defaultOnClick && currentFleetAssoc === "automa.fleetPreview") {
+		} else if (
+			!defaultOnClick &&
+			currentFleetsAssoc === "automa.fleetPreview"
+		) {
 			editorAssociations["*.fleets.json"] = "default";
+			updated = true;
+		}
+
+		// Automate *.fleet.json -> automa.fleetPreview
+		const currentFleetAssoc = editorAssociations["*.fleet.json"];
+		if (defaultOnClick && currentFleetAssoc !== "automa.fleetPreview") {
+			editorAssociations["*.fleet.json"] = "automa.fleetPreview";
+			updated = true;
+		} else if (!defaultOnClick && currentFleetAssoc === "automa.fleetPreview") {
+			editorAssociations["*.fleet.json"] = "default";
 			updated = true;
 		}
 
