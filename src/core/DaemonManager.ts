@@ -167,20 +167,11 @@ export class DaemonManager {
 			}
 
 			// Find first { or [ and last } or ]
-			const firstCurly = trimmed.indexOf("{");
-			const firstSquare = trimmed.indexOf("[");
-			let firstIdx = -1;
-			if (firstCurly !== -1 && firstSquare !== -1) {
-				firstIdx = Math.min(firstCurly, firstSquare);
-			} else if (firstCurly !== -1) {
-				firstIdx = firstCurly;
-			} else {
-				firstIdx = firstSquare;
-			}
-
-			const lastCurly = trimmed.lastIndexOf("}");
-			const lastSquare = trimmed.lastIndexOf("]");
-			const lastIdx = Math.max(lastCurly, lastSquare);
+			const firstCurly = trimmed.indexOf('{');
+			const firstSquare = trimmed.indexOf('[');
+			const firstIdx = (firstCurly === -1) ? firstSquare : (firstSquare === -1) ? firstCurly : Math.min(firstCurly, firstSquare);
+			const isObject = firstIdx !== -1 && firstIdx === firstCurly;
+			const lastIdx = isObject ? trimmed.lastIndexOf('}') : trimmed.lastIndexOf(']');
 
 			if (firstIdx !== -1 && lastIdx !== -1 && firstIdx < lastIdx) {
 				const potentialJson = trimmed.substring(firstIdx, lastIdx + 1);
@@ -406,9 +397,13 @@ export class DaemonManager {
 	private attachProcessListeners() {
 		if (!this.daemonProcess) return;
 
+		const { StringDecoder } = require("node:string_decoder");
+		const stdoutDecoder = new StringDecoder("utf-8");
+		const stderrDecoder = new StringDecoder("utf-8");
+
 		if (this.daemonProcess.stdout) {
-			this.daemonProcess.stdout.on("data", (data) => {
-				const msg = data.toString().trim();
+			this.daemonProcess.stdout.on("data", (data: Buffer) => {
+				const msg = stdoutDecoder.write(data).trim();
 				if (msg) {
 					Logger.info(`[CLI Daemon] ${msg}`);
 				}
@@ -416,8 +411,8 @@ export class DaemonManager {
 		}
 
 		if (this.daemonProcess.stderr) {
-			this.daemonProcess.stderr.on("data", (data) => {
-				const msg = data.toString().trim();
+			this.daemonProcess.stderr.on("data", (data: Buffer) => {
+				const msg = stderrDecoder.write(data).trim();
 				if (msg) {
 					Logger.error(`[CLI Daemon] ${msg}`);
 				}

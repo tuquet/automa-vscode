@@ -255,7 +255,7 @@ export class WorkflowPreviewEditorProvider
 						n.type === "BlockTrigger",
 				);
 				if (triggerNode && Array.isArray((triggerNode.data as Record<string, unknown>)?.parameters)) {
-					for (const param of ((triggerNode.data as Record<string, unknown>).parameters as Record<string, unknown>[])) {
+					for (const param of ((triggerNode.data as Record<string, unknown>).parameters as unknown[])) {
 						if ((updateData.triggerParams as Record<string, string>)[param.name as string] !== undefined) {
 							param.defaultValue = (updateData.triggerParams as Record<string, string>)[param.name as string];
 						}

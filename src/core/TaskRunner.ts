@@ -172,8 +172,16 @@ export class TaskRunner {
 			}
 		});
 
-		child.stderr.on("data", (data) => {
-			outputChannel.append(data.toString());
+		const { StringDecoder } = require("node:string_decoder");
+		const stderrDecoder = new StringDecoder("utf-8");
+
+		child.stderr.on("data", (data: Buffer) => {
+			outputChannel.append(stderrDecoder.write(data));
+		});
+		
+		child.stderr.on("end", () => {
+			const remainder = stderrDecoder.end();
+			if (remainder) outputChannel.append(remainder);
 		});
 
 		return new Promise((resolve) => {
