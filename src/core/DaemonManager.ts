@@ -369,7 +369,7 @@ export class DaemonManager {
 			// Exponential Backoff polling for Daemon health check
 			let attempts = 0;
 			let success = false;
-			while (attempts < 6 && !success) {
+			while (attempts < 10 && !success) {
 				if (await this.checkAutomaHealth(this.port)) {
 					success = true;
 					break;
