@@ -410,7 +410,7 @@
                     window.addEventListener('message', event => {
                         const message = event.data;
                         if (message.type === 'update' && message.json) {
-                            currentDocState = {
+                            const newDocState = {
                                 name: message.json.name || '',
                                 description: message.json.description || '',
                                 version: message.json.version || '',
@@ -422,16 +422,26 @@
                                 includedWorkflows: message.json.includedWorkflows ? normalizeJsonStr(JSON.stringify(message.json.includedWorkflows)) : "{}"
                             };
 
-                            // Update workflow reactive object
-                            workflow.name = currentDocState.name;
-                            workflow.description = currentDocState.description;
-                            workflow.version = currentDocState.version;
-                            workflow.extVersion = currentDocState.extVersion;
-                            workflow.icon = currentDocState.icon;
-                            workflow.globalData = currentDocState.globalData;
-                            workflow.table = currentDocState.table;
-                            workflow.settings = currentDocState.settings;
-                            workflow.includedWorkflows = currentDocState.includedWorkflows;
+                            const state = vscode.getState() || {};
+                            if (state.lastDocState && isStateEqual(state.lastDocState, newDocState)) {
+                                // Ignore update if disk content is unchanged from our last known state,
+                                // preserving any uncommitted user changes.
+                            } else {
+                                currentDocState = newDocState;
+                                
+                                // Update workflow reactive object
+                                workflow.name = currentDocState.name;
+                                workflow.description = currentDocState.description;
+                                workflow.version = currentDocState.version;
+                                workflow.extVersion = currentDocState.extVersion;
+                                workflow.icon = currentDocState.icon;
+                                workflow.globalData = currentDocState.globalData;
+                                workflow.table = currentDocState.table;
+                                workflow.settings = currentDocState.settings;
+                                workflow.includedWorkflows = currentDocState.includedWorkflows;
+                                
+                                vscode.setState({ ...state, lastDocState: currentDocState });
+                            }
                             
                             // Update triggerParams if available
                             if (message.triggerParams) {

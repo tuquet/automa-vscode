@@ -407,14 +407,21 @@
 
                 const selectLog = (index) => {
                     activeLogId.value = index;
+                };
+
+                watch(activeLog, (newVal) => {
                     nextTick(() => {
-                        if (jsonViewer.value && activeLog.value) {
-                            jsonViewer.value.textContent = JSON.stringify(activeLog.value.ctxData, null, 2);
-                            jsonViewer.value.removeAttribute('data-highlighted');
-                            hljs.highlightElement(jsonViewer.value);
+                        if (jsonViewer.value) {
+                            if (newVal) {
+                                jsonViewer.value.textContent = JSON.stringify(newVal.ctxData, null, 2);
+                                jsonViewer.value.removeAttribute('data-highlighted');
+                                hljs.highlightElement(jsonViewer.value);
+                            } else {
+                                jsonViewer.value.textContent = '';
+                            }
                         }
                     });
-                };
+                }, { deep: true });
 
                 // --- Table Tab ---
                 const tableTab = ref('grid');
