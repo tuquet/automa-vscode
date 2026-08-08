@@ -25,22 +25,30 @@ const validTypes = [
 	"BlockWebhook",
 ];
 
-const NodeTypeSchema = z
-	.string()
-	.refine((val) => validTypes.includes(val), { message: "Unsupported node type" });
+const PermissiveRootSchema = z.object({
+	id: z.string().catch(() => generateShortId()),
+	version: z.string().catch("1.28.0").default("1.28.0"),
+}).passthrough();
+
+const PermissiveNodeSchema = z.object({
+	id: z.string().regex(idRegex).catch(() => generateShortId()),
+	type: z.string().refine((val) => validTypes.includes(val)).catch("BlockBasic").default("BlockBasic"),
+}).passthrough();
+
+const PermissiveEdgeSchema = z.object({
+	id: z.string().regex(idRegex).catch(() => generateShortId()),
+}).passthrough();
 
 export class WorkflowSanitizer {
 	static sanitize(json: Record<string, unknown>, documentUri?: vscode.Uri): boolean {
 		let isModified = false;
 		const warnings: vscode.Diagnostic[] = [];
 
-		// 1. Ensure Root properties
-		if (!(json as Record<string, unknown>).id) {
-			(json as Record<string, unknown>).id = generateShortId();
-			isModified = true;
-		}
-		if (!(json as Record<string, unknown>).version) {
-			(json as Record<string, unknown>).version = "1.28.0";
+		// 1. Ensure Root properties via Zod
+		const parsedRoot = PermissiveRootSchema.parse(json);
+		if (json.id !== parsedRoot.id || json.version !== parsedRoot.version) {
+			json.id = parsedRoot.id;
+			json.version = parsedRoot.version;
 			isModified = true;
 		}
 
@@ -155,23 +163,19 @@ export class WorkflowSanitizer {
 			// Sanitize Nodes
 			nList.forEach((node: Record<string, unknown>) => {
 				const originalId = (node as Record<string, unknown>).id as string;
-				if (
-					!((node as Record<string, unknown>).id as string) ||
-					!idRegex.test((node as Record<string, unknown>).id as string)
-				) {
-					const newId = generateShortId();
-					((node as Record<string, unknown>).id as string) = newId;
-					if (originalId) idMap.set(originalId, newId);
-					isModified = true;
-				}
+				const originalType = (node as Record<string, unknown>).type as string;
 
-				const parsedType = NodeTypeSchema.safeParse((node as Record<string, unknown>).type);
-				if (!parsedType.success) {
-					((node as Record<string, unknown>).type as string) = "BlockBasic";
-					warnings.push(new vscode.Diagnostic(new vscode.Range(0,0,0,0), `Node ID '${originalId}': ${parsedType.error.errors[0].message}. Defaulting to BlockBasic.`, vscode.DiagnosticSeverity.Warning));
-					isModified = true;
-				} else if ((node as Record<string, unknown>).type !== parsedType.data) {
-					((node as Record<string, unknown>).type as string) = parsedType.data;
+				const parsedNode = PermissiveNodeSchema.parse(node);
+
+				if (parsedNode.id !== originalId || parsedNode.type !== originalType) {
+					if (parsedNode.id !== originalId && originalId) {
+						idMap.set(originalId, parsedNode.id);
+					}
+					if (parsedNode.type !== originalType) {
+						warnings.push(new vscode.Diagnostic(new vscode.Range(0,0,0,0), `Node ID '${originalId}': Invalid type. Defaulting to BlockBasic.`, vscode.DiagnosticSeverity.Warning));
+					}
+					node.id = parsedNode.id;
+					node.type = parsedNode.type;
 					isModified = true;
 				}
 
@@ -222,11 +226,11 @@ export class WorkflowSanitizer {
 
 			// Sanitize Edges
 			eList.forEach((edge: Record<string, unknown>) => {
-				if (
-					!((edge as Record<string, unknown>).id as string) ||
-					!idRegex.test((edge as Record<string, unknown>).id as string)
-				) {
-					((edge as Record<string, unknown>).id as string) = generateShortId();
+				const originalId = (edge as Record<string, unknown>).id as string;
+				const parsedEdge = PermissiveEdgeSchema.parse(edge);
+
+				if (parsedEdge.id !== originalId) {
+					edge.id = parsedEdge.id;
 					isModified = true;
 				}
 
@@ -268,6 +272,7 @@ export class WorkflowSanitizer {
 					isModified = true;
 				}
 			});
+
 		};
 
 		sanitizeNodesAndEdges(nodes, edges);

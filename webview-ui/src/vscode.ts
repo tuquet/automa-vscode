@@ -5,7 +5,6 @@
 import { type Ref, ref, watch, toRaw } from "vue";
 import { cloneDeep, merge, debounce } from "lodash-es";
 import mitt from "mitt";
-import pTimeout from "p-timeout";
 
 class VSCodeAPIWrapper {
 	private readonly vsCodeApi: unknown;
@@ -71,12 +70,22 @@ class VSCodeAPIWrapper {
 			this.postMessage({ type, id, data, keys });
 		});
 
-		return pTimeout(promise, { milliseconds: timeoutMs, message: `Message timeout for type ${type}` })
+		const abortController = new AbortController();
+		const timeoutPromise = new Promise((_, reject) => {
+			const timer = setTimeout(() => {
+				abortController.abort();
+				reject(new Error(`Message timeout for type ${type}`));
+			}, timeoutMs);
+			abortController.signal.addEventListener("abort", () => clearTimeout(timer));
+		});
+
+		return Promise.race([promise, timeoutPromise])
 			.catch((err) => {
-				this.emitter.emit("broadcast", { type: "error", data: err.message });
+				this.emitter.emit("broadcast", { type: "error", data: (err as Error).message });
 				throw err;
 			})
 			.finally(() => {
+				abortController.abort();
 				this.emitter.off(`response:${id}`);
 				this.emitter.off(`error:${id}`);
 			});
