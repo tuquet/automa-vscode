@@ -159,6 +159,8 @@ export class DaemonManager {
 
 		const extractJSON = (str: string) => {
 			const trimmed = str.trim();
+			if (!trimmed) throw new Error("Empty output");
+
 			try {
 				return JSON.parse(trimmed);
 			} catch (err: unknown) {
@@ -166,37 +168,18 @@ export class DaemonManager {
 				Logger.info(`[Daemon IPC] First parse attempt failed: ${errMsg}`);
 			}
 
-			// Find first { or [ and last } or ]
-			const firstCurly = trimmed.indexOf("{");
-			const firstSquare = trimmed.indexOf("[");
-			const firstIdx =
-				firstCurly === -1
-					? firstSquare
-					: firstSquare === -1
-						? firstCurly
-						: Math.min(firstCurly, firstSquare);
-			const isObject = firstIdx !== -1 && firstIdx === firstCurly;
-			const lastIdx = isObject
-				? trimmed.lastIndexOf("}")
-				: trimmed.lastIndexOf("]");
+			// Fallback: Check the tail of the output for a single-line complete JSON without O(N) scanning
+			const MAX_TAIL_LENGTH = 8192;
+			const tailEnd = trimmed.substring(
+				Math.max(0, trimmed.length - MAX_TAIL_LENGTH),
+			);
 
-			if (firstIdx !== -1 && lastIdx !== -1 && firstIdx < lastIdx) {
-				const potentialJson = trimmed.substring(firstIdx, lastIdx + 1);
-				try {
-					return JSON.parse(potentialJson);
-				} catch (err: unknown) {
-					const errMsg = err instanceof Error ? err.message : String(err);
-					Logger.info(`[Daemon IPC] Substring parse attempt failed: ${errMsg}`);
-				}
-			}
-
-			// Fallback: Check the last few lines for a single-line complete JSON without O(N) split allocation
-			let currentEnd = trimmed.length;
-			for (let i = 0; i < 100; i++) {
+			let currentEnd = tailEnd.length;
+			for (let i = 0; i < 50; i++) {
 				if (currentEnd <= 0) break;
-				const prevNewline = trimmed.lastIndexOf("\n", currentEnd - 1);
+				const prevNewline = tailEnd.lastIndexOf("\n", currentEnd - 1);
 				const startIndex = prevNewline === -1 ? 0 : prevNewline + 1;
-				const line = trimmed.substring(startIndex, currentEnd).trim();
+				const line = tailEnd.substring(startIndex, currentEnd).trim();
 
 				if (line.startsWith("{") || line.startsWith("[")) {
 					try {
@@ -209,6 +192,30 @@ export class DaemonManager {
 
 				if (prevNewline === -1) break;
 				currentEnd = prevNewline;
+			}
+
+			// Find first { or [ and last } or ] within the bounded tail
+			const firstCurly = tailEnd.indexOf("{");
+			const firstSquare = tailEnd.indexOf("[");
+			const firstIdx =
+				firstCurly === -1
+					? firstSquare
+					: firstSquare === -1
+						? firstCurly
+						: Math.min(firstCurly, firstSquare);
+			const isObject = firstIdx !== -1 && firstIdx === firstCurly;
+			const lastIdx = isObject
+				? tailEnd.lastIndexOf("}")
+				: tailEnd.lastIndexOf("]");
+
+			if (firstIdx !== -1 && lastIdx !== -1 && firstIdx < lastIdx) {
+				const potentialJson = tailEnd.substring(firstIdx, lastIdx + 1);
+				try {
+					return JSON.parse(potentialJson);
+				} catch (err: unknown) {
+					const errMsg = err instanceof Error ? err.message : String(err);
+					Logger.info(`[Daemon IPC] Substring parse attempt failed: ${errMsg}`);
+				}
 			}
 
 			throw new Error("No valid JSON found in output");
@@ -359,9 +366,26 @@ export class DaemonManager {
 
 			this.spawnDaemonProcess(cmd, args, config);
 
-			// Wait a bit for server to start
-			await new Promise((resolve) => setTimeout(resolve, 2000));
-			Logger.info("Automa background daemon started.");
+			// Exponential Backoff polling for Daemon health check
+			let attempts = 0;
+			let success = false;
+			while (attempts < 6 && !success) {
+				if (await this.checkAutomaHealth(this.port)) {
+					success = true;
+					break;
+				}
+				attempts++;
+				const backoffDelay = 500 * 1.5 ** (attempts - 1);
+				await new Promise((resolve) => setTimeout(resolve, backoffDelay));
+			}
+
+			if (!success) {
+				Logger.warn(
+					"Daemon might not have started successfully, health check failed after polling.",
+				);
+			} else {
+				Logger.info("Automa background daemon started.");
+			}
 			this.hasLoggedReuse = false;
 			this.statusBarItem.text = `$(radio-tower) Automa: :${this.port}`;
 			this.statusBarItem.tooltip =
