@@ -152,7 +152,8 @@ export class DaemonManager {
 			}
 			output = result.stdout || result.stderr;
 		} catch (error: unknown) {
-			const e = error instanceof Error ? error : new Error(String(error as unknown));
+			const e =
+				error instanceof Error ? error : new Error(String(error as unknown));
 			output = e.message || String(e);
 		}
 
@@ -184,7 +185,7 @@ export class DaemonManager {
 			if (firstIdx !== -1 && lastIdx !== -1 && firstIdx < lastIdx) {
 				const potentialJson = trimmed.substring(firstIdx, lastIdx + 1);
 				try {
-					return JSON.parse(potentialJson);
+					return JSON.parse(Buffer.from(potentialJson).toString());
 				} catch (err: unknown) {
 					const errMsg = err instanceof Error ? err.message : String(err);
 					Logger.debug(
@@ -203,7 +204,7 @@ export class DaemonManager {
 
 				if (line.startsWith("{") || line.startsWith("[")) {
 					try {
-						return JSON.parse(line);
+						return JSON.parse(Buffer.from(line).toString());
 					} catch (err: unknown) {
 						const errMsg = err instanceof Error ? err.message : String(err);
 						Logger.debug(`[Daemon IPC] Line parse attempt failed: ${errMsg}`);
@@ -222,7 +223,8 @@ export class DaemonManager {
 			parsed = extractJSON(output);
 			return parsed;
 		} catch (error: unknown) {
-			const e = error instanceof Error ? error : new Error(String(error as unknown));
+			const e =
+				error instanceof Error ? error : new Error(String(error as unknown));
 			throw new Error(
 				`Failed to parse CLI JSON output: ${e.message}\nOutput was: ${output}`,
 			);
@@ -266,7 +268,8 @@ export class DaemonManager {
 				});
 			});
 		} catch (error: unknown) {
-			const e = error instanceof Error ? error : new Error(String(error as unknown));
+			const e =
+				error instanceof Error ? error : new Error(String(error as unknown));
 			return { stdout: "", stderr: e.message || String(e) };
 		}
 	}
@@ -368,7 +371,8 @@ export class DaemonManager {
 			this.statusBarItem.tooltip =
 				"Automa CLI Daemon is running (Click to stop)";
 		} catch (error: unknown) {
-			const e = error instanceof Error ? error : new Error(String(error as unknown));
+			const e =
+				error instanceof Error ? error : new Error(String(error as unknown));
 			Logger.error(`Failed to launch daemon: ${e.message}`);
 			this.updateStatusStopped();
 		}
