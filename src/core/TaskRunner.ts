@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
 import { EventEmitter } from "node:events";
 import * as vscode from "vscode";
-import { DaemonManager } from "./DaemonManager";
+import type { IDaemonService } from "./interfaces/IDaemonService";
 
 export interface TaskOptions {
 	id: string;
@@ -23,9 +23,9 @@ export class TaskRunner {
 		taskConfig: Omit<TaskOptions, "command" | "args"> & {
 			useTelemetry?: boolean;
 		},
+		daemonService: IDaemonService,
 	): Promise<void> {
-		const { cmd, args } =
-			DaemonManager.getInstance().resolveCommandAndArgs(cliArgs);
+		const { cmd, args } = daemonService.resolveCommandAndArgs(cliArgs);
 
 		const cmdParts = cmd.split(" ");
 		const executable = cmdParts[0];
