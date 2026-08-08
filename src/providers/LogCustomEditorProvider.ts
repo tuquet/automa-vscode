@@ -64,7 +64,7 @@ export class LogCustomEditorProvider
 			);
 			if (!res.ok) throw new Error("Daemon not ready");
 			return (await res.json()) as ParsedLogResponse;
-		} catch (_err) {
+		} catch (_err: unknown) {
 			const { stdout } = await daemon.executeRawCliCommand([
 				"log",
 				jobId,

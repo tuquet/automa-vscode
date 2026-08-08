@@ -122,7 +122,7 @@ export class WorkflowPreviewEditorProvider
 				const updatedAt = fs.statSync(uri.fsPath).mtimeMs;
 				return new Date(updatedAt).toLocaleString();
 			}
-		} catch (_err) {}
+		} catch (_err: unknown) {}
 		return "";
 	}
 

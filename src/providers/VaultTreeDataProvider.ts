@@ -254,7 +254,7 @@ export class VaultTreeDataProvider
 					);
 				}
 				return items;
-			} catch (_e) {
+			} catch (_e: unknown) {
 				return [
 					new VaultItem(
 						errorMsg,

@@ -165,7 +165,7 @@ export class TaskRunner {
 					try {
 						const telemetry = JSON.parse(trimmed.substring(start, end + 1));
 						TaskRunner.telemetryEmitter.emit("telemetry", telemetry);
-					} catch (_e) {
+					} catch (_e: unknown) {
 						// ignore parse error
 					}
 				}

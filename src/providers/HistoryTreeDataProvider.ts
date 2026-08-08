@@ -212,7 +212,7 @@ export class HistoryTreeDataProvider
 				const res = await fetch(url);
 				if (!res.ok) throw new Error("Daemon not ready");
 				jobs = (await res.json()) as AutomaJob[];
-			} catch (_err) {
+			} catch (_err: unknown) {
 				const args = ["history", "--limit", this.currentLimit.toString()];
 				if (this.taskIdFilter) {
 					args.push("--task-id", this.taskIdFilter);

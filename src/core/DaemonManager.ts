@@ -160,7 +160,10 @@ export class DaemonManager {
 			const trimmed = str.trim();
 			try {
 				return JSON.parse(trimmed);
-			} catch (_e: unknown) {}
+			} catch (err: unknown) {
+				const errMsg = err instanceof Error ? err.message : String(err);
+				Logger.debug(`[Daemon IPC] First parse attempt failed: ${errMsg}`);
+			}
 
 			// Find first { or [ and last } or ]
 			const firstCurly = trimmed.indexOf("{");
@@ -182,8 +185,11 @@ export class DaemonManager {
 				const potentialJson = trimmed.substring(firstIdx, lastIdx + 1);
 				try {
 					return JSON.parse(potentialJson);
-				} catch (_e: unknown) {
-					// Continue to fallback
+				} catch (err: unknown) {
+					const errMsg = err instanceof Error ? err.message : String(err);
+					Logger.debug(
+						`[Daemon IPC] Substring parse attempt failed: ${errMsg}`,
+					);
 				}
 			}
 
@@ -198,7 +204,10 @@ export class DaemonManager {
 				if (line.startsWith("{") || line.startsWith("[")) {
 					try {
 						return JSON.parse(line);
-					} catch (_e: unknown) {}
+					} catch (err: unknown) {
+						const errMsg = err instanceof Error ? err.message : String(err);
+						Logger.debug(`[Daemon IPC] Line parse attempt failed: ${errMsg}`);
+					}
 				}
 			}
 
