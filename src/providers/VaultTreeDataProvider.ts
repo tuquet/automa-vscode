@@ -251,7 +251,7 @@ export class VaultTreeDataProvider
 						parseErrors.length > limit
 							? `\n...and ${parseErrors.length - limit} more`
 							: "";
-					console.warn(
+					vscode.window.showWarningMessage(
 						`Failed to parse ${parseErrors.length} vault file(s):\n${displayErrors}${more}`,
 					);
 				}

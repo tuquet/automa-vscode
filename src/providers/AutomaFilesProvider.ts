@@ -137,7 +137,7 @@ export class AutomaFilesProvider implements vscode.TreeDataProvider<FileItem> {
 					parseErrors.length > limit
 						? ` and ${parseErrors.length - limit} more`
 						: "";
-				console.warn(
+				vscode.window.showWarningMessage(
 					`Failed to parse ${parseErrors.length} file(s) for ${this.viewId}: ${displayErrors}${more}`,
 				);
 			}
