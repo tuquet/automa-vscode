@@ -111,7 +111,7 @@ export class StudioWebviewPanel {
 							typeof resource === "string"
 								? resource
 								: String(resource.url || "");
-						options = resource;
+						options = resource as Record<string, unknown>;
 					}
 
 					if (!url) throw new Error("Fetch URL missing");

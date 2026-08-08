@@ -25,31 +25,31 @@ export class WorkflowSanitizer {
 			isModified = true;
 		}
 
-		const isPackage = !json.drawflow && json.data;
+		const isPackage = !(json.drawflow as Record<string, unknown>) && (json.data as Record<string, unknown>);
 		const idMap = new Map<string, string>();
 
 		let nodes: Record<string, unknown>[] = [];
 		let edges: Record<string, unknown>[] = [];
 
-		if (isPackage && json.data) {
-			if (Array.isArray(json.data.nodes)) nodes = json.data.nodes;
-			if (Array.isArray(json.data.edges)) edges = json.data.edges;
-		} else if (!isPackage && json.drawflow) {
-			if (Array.isArray(json.drawflow.nodes)) nodes = json.drawflow.nodes;
-			if (Array.isArray(json.drawflow.edges)) edges = json.drawflow.edges;
+		if (isPackage && (json.data as Record<string, unknown>)) {
+			if (Array.isArray((json.data as Record<string, unknown>).nodes)) nodes = (json.data as Record<string, unknown>).nodes;
+			if (Array.isArray((json.data as Record<string, unknown>).edges)) edges = (json.data as Record<string, unknown>).edges;
+		} else if (!isPackage && (json.drawflow as Record<string, unknown>)) {
+			if (Array.isArray((json.drawflow as Record<string, unknown>).nodes)) nodes = (json.drawflow as Record<string, unknown>).nodes;
+			if (Array.isArray((json.drawflow as Record<string, unknown>).edges)) edges = (json.drawflow as Record<string, unknown>).edges;
 			// Fallback for object-based nodes
 			if (
-				!Array.isArray(json.drawflow.nodes) &&
-				json.drawflow.Home &&
-				json.drawflow.Home.data
+				!Array.isArray((json.drawflow as Record<string, unknown>).nodes) &&
+				((json.drawflow as Record<string, unknown>).Home as Record<string, unknown>) &&
+				((json.drawflow as Record<string, unknown>).Home as Record<string, unknown>).data
 			) {
-				Object.entries(json.drawflow.Home.data).forEach(
-					([key, node]: [string, Record<string, unknown>]) => {
-						if (!node.id) node.id = key;
+				Object.entries(((json.drawflow as Record<string, unknown>).Home as Record<string, unknown>).data).forEach(
+					([key, node]: [string, unknown]) => {
+						if (!(node.id as string)) (node.id as string) = key;
 						nodes.push(node);
 					},
 				);
-				json.drawflow.nodes = nodes; // normalize to array
+				(json.drawflow as Record<string, unknown>).nodes = nodes; // normalize to array
 				isModified = true;
 			}
 		}
@@ -76,27 +76,27 @@ export class WorkflowSanitizer {
 		) => {
 			// Sanitize Nodes
 			nList.forEach((node: Record<string, unknown>) => {
-				const originalId = node.id;
-				if (!node.id || !idRegex.test(node.id)) {
+				const originalId = (node.id as string);
+				if (!(node.id as string) || !idRegex.test((node.id as string))) {
 					const newId = generateShortId();
-					node.id = newId;
+					(node.id as string) = newId;
 					if (originalId) idMap.set(originalId, newId);
 					isModified = true;
 				}
 
-				if (!node.type || !validTypes.includes(node.type)) {
-					node.type = "BlockBasic";
+				if (!(node.type as string) || !validTypes.includes((node.type as string))) {
+					(node.type as string) = "BlockBasic";
 					isModified = true;
 				}
 
-				if (node.data) {
-					if (typeof node.data.disableBlock !== "boolean") {
-						node.data.disableBlock = false;
+				if ((node.data as Record<string, unknown>)) {
+					if (typeof (node.data as Record<string, unknown>).disableBlock !== "boolean") {
+						(node.data as Record<string, unknown>).disableBlock = false;
 						isModified = true;
 					}
 
 					// Recursively sanitize nested nodes/edges (e.g. in BlockPackage/BlockGroup)
-					const nestedData = node.data.data ? node.data.data : node.data;
+					const nestedData = (node.data as Record<string, unknown>).data ? (node.data as Record<string, unknown>).data : (node.data as Record<string, unknown>);
 					if (
 						nestedData &&
 						Array.isArray(nestedData.nodes) &&
@@ -109,16 +109,16 @@ export class WorkflowSanitizer {
 
 			// Sanitize Edges
 			eList.forEach((edge: Record<string, unknown>) => {
-				if (!edge.id || !idRegex.test(edge.id)) {
-					edge.id = generateShortId();
+				if (!(edge.id as string) || !idRegex.test((edge.id as string))) {
+					(edge.id as string) = generateShortId();
 					isModified = true;
 				}
 
 				if (edge.source && idMap.has(edge.source as string)) {
 					const newSource =
 						idMap.get(edge.source as string) || (edge.source as string);
-					if (edge.sourceHandle) {
-						edge.sourceHandle = edge.sourceHandle.replace(
+					if ((edge.sourceHandle as string)) {
+						(edge.sourceHandle as string) = (edge.sourceHandle as string).replace(
 							edge.source,
 							newSource,
 						);
@@ -130,8 +130,8 @@ export class WorkflowSanitizer {
 				if (edge.target && idMap.has(edge.target as string)) {
 					const newTarget =
 						idMap.get(edge.target as string) || (edge.target as string);
-					if (edge.targetHandle) {
-						edge.targetHandle = edge.targetHandle.replace(
+					if ((edge.targetHandle as string)) {
+						(edge.targetHandle as string) = (edge.targetHandle as string).replace(
 							edge.target,
 							newTarget,
 						);

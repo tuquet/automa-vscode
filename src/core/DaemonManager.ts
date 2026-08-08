@@ -152,7 +152,7 @@ export class DaemonManager {
 			}
 			output = result.stdout || result.stderr;
 		} catch (error: unknown) {
-			const e = error instanceof Error ? error : new Error(String(error));
+			const e = error instanceof Error ? error : new Error(String(error as unknown));
 			output = e.message || String(e);
 		}
 
@@ -210,7 +210,7 @@ export class DaemonManager {
 			parsed = extractJSON(output);
 			return parsed;
 		} catch (error: unknown) {
-			const e = error instanceof Error ? error : new Error(String(error));
+			const e = error instanceof Error ? error : new Error(String(error as unknown));
 			throw new Error(
 				`Failed to parse CLI JSON output: ${e.message}\nOutput was: ${output}`,
 			);
@@ -254,7 +254,7 @@ export class DaemonManager {
 				});
 			});
 		} catch (error: unknown) {
-			const e = error instanceof Error ? error : new Error(String(error));
+			const e = error instanceof Error ? error : new Error(String(error as unknown));
 			return { stdout: "", stderr: e.message || String(e) };
 		}
 	}
@@ -356,7 +356,7 @@ export class DaemonManager {
 			this.statusBarItem.tooltip =
 				"Automa CLI Daemon is running (Click to stop)";
 		} catch (error: unknown) {
-			const e = error instanceof Error ? error : new Error(String(error));
+			const e = error instanceof Error ? error : new Error(String(error as unknown));
 			Logger.error(`Failed to launch daemon: ${e.message}`);
 			this.updateStatusStopped();
 		}

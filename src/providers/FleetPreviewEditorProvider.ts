@@ -146,8 +146,8 @@ export class FleetPreviewEditorProvider
 		return this.buildDictionaryFromFiles(
 			"**/*.workflow.json",
 			(json) => {
-				if (json.id && json.name) {
-					return { id: json.id, name: json.name };
+				if (json.id as string && json.name as string) {
+					return { id: json.id as string, name: json.name as string };
 				}
 				return undefined;
 			},
@@ -159,8 +159,8 @@ export class FleetPreviewEditorProvider
 		return this.buildDictionaryFromFiles(
 			"**/*.{profile,bprofile}.json",
 			(json, filePath) => {
-				const id = json.id || path.basename(filePath, path.extname(filePath));
-				const name = json.name || id;
+				const id = json.id as string || path.basename(filePath, path.extname(filePath));
+				const name = json.name as string || id;
 				return { id, name };
 			},
 			"profiles",
