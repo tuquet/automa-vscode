@@ -157,13 +157,38 @@ export class DaemonManager {
 		}
 
 		const extractJSON = (str: string) => {
+			const trimmed = str.trim();
 			try {
-				return JSON.parse(str);
-			} catch (_e) {}
+				return JSON.parse(trimmed);
+			} catch (_e: unknown) {}
 
-			const lines = str.trim().split("\n");
+			// Find first { or [ and last } or ]
+			const firstCurly = trimmed.indexOf("{");
+			const firstSquare = trimmed.indexOf("[");
+			let firstIdx = -1;
+			if (firstCurly !== -1 && firstSquare !== -1) {
+				firstIdx = Math.min(firstCurly, firstSquare);
+			} else if (firstCurly !== -1) {
+				firstIdx = firstCurly;
+			} else {
+				firstIdx = firstSquare;
+			}
 
-			// Strategy 1: Check the last few lines for a single-line complete JSON object/array
+			const lastCurly = trimmed.lastIndexOf("}");
+			const lastSquare = trimmed.lastIndexOf("]");
+			const lastIdx = Math.max(lastCurly, lastSquare);
+
+			if (firstIdx !== -1 && lastIdx !== -1 && firstIdx < lastIdx) {
+				const potentialJson = trimmed.substring(firstIdx, lastIdx + 1);
+				try {
+					return JSON.parse(potentialJson);
+				} catch (_e: unknown) {
+					// Continue to fallback
+				}
+			}
+
+			// Fallback: Check the last few lines for a single-line complete JSON
+			const lines = trimmed.split("\n");
 			for (
 				let i = lines.length - 1;
 				i >= Math.max(0, lines.length - 100);
@@ -173,27 +198,7 @@ export class DaemonManager {
 				if (line.startsWith("{") || line.startsWith("[")) {
 					try {
 						return JSON.parse(line);
-					} catch (_e) {}
-				}
-			}
-
-			// Strategy 2: Multi-line JSON extraction
-			// Search for the first line that starts with { or [ to avoid O(N^2) character-by-character search
-			for (let i = 0; i < lines.length; i++) {
-				const line = lines[i].trim();
-				if (line.startsWith("{") || line.startsWith("[")) {
-					const potentialJson = lines.slice(i).join("\n");
-					const lastCharIdx = Math.max(
-						potentialJson.lastIndexOf("}"),
-						potentialJson.lastIndexOf("]"),
-					);
-					if (lastCharIdx !== -1) {
-						try {
-							return JSON.parse(potentialJson.substring(0, lastCharIdx + 1));
-						} catch (_e) {
-							// Continue checking next lines if parsing fails
-						}
-					}
+					} catch (_e: unknown) {}
 				}
 			}
 
@@ -228,21 +233,24 @@ export class DaemonManager {
 						(executable === "npx" || executable === "npx.cmd"),
 				});
 
-				let stdoutData = "";
-				let stderrData = "";
+				const stdoutChunks: Buffer[] = [];
+				const stderrChunks: Buffer[] = [];
 
 				child.stdout?.on("data", (data) => {
-					stdoutData += data.toString();
+					stdoutChunks.push(Buffer.isBuffer(data) ? data : Buffer.from(data));
 				});
 
 				child.stderr?.on("data", (data) => {
-					stderrData += data.toString();
+					stderrChunks.push(Buffer.isBuffer(data) ? data : Buffer.from(data));
 				});
 
 				child.on("error", reject);
 
 				child.on("close", () => {
-					resolve({ stdout: stdoutData || "", stderr: stderrData || "" });
+					resolve({
+						stdout: Buffer.concat(stdoutChunks).toString("utf-8"),
+						stderr: Buffer.concat(stderrChunks).toString("utf-8"),
+					});
 				});
 			});
 		} catch (error: unknown) {
@@ -264,7 +272,7 @@ export class DaemonManager {
 				const data = (await res.json()) as { status?: string };
 				return data.status === "ok";
 			}
-		} catch (_e) {
+		} catch (_e: unknown) {
 			// Ignore fetch errors (e.g. connection refused)
 		}
 		return false;
