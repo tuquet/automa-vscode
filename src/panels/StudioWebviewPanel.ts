@@ -26,7 +26,7 @@ export class StudioWebviewPanel {
 			(message: Record<string, unknown>) => {
 				switch (message.type) {
 					case "runtime-message":
-						this.handleRuntimeMessage(message.data as Record<string, unknown>)
+						this.handleRuntimeMessage(castRecord(message.data))
 							.then((result) => {
 								this._panel.webview.postMessage({
 									type: "runtime-message-response",

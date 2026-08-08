@@ -57,16 +57,13 @@ export class WorkflowPreviewEditorProvider
 					if (message.command === "runWorkflow") {
 						await runWorkflowCommand(
 							document.uri,
-							message.parameters as Record<string, unknown>,
+							castRecord(message.parameters),
 							{
 								keepBrowserOpen: message.keepBrowserOpen as boolean,
 							},
 						);
 					} else if (message.command === "saveWorkflow") {
-						await this.handleSaveWorkflow(
-							document,
-							message.data as Record<string, unknown>,
-						);
+						await this.handleSaveWorkflow(document, castRecord(message.data));
 					} else if (message.command === "openInStudio") {
 						await vscode.commands.executeCommand(
 							"automa.openInStudio",

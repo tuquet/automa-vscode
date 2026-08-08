@@ -3,6 +3,7 @@ import * as path from "node:path";
 import * as vscode from "vscode";
 import { TaskRunner } from "../core/TaskRunner";
 import {
+	castRecord,
 	extractFsPath,
 	hasStringProp,
 	isRecord,
@@ -134,7 +135,7 @@ export async function runWorkflowCommand(
 	if (Array.isArray(params)) {
 		nodesOrUris = params;
 	} else if (isRecord(params)) {
-		parsedParams = params as Record<string, unknown>;
+		parsedParams = castRecord(params);
 	}
 
 	const targets = await resolveTargets(nodeOrUri, nodesOrUris);
