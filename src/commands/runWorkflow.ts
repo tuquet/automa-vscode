@@ -12,58 +12,78 @@ import {
 
 let _automaOutputChannel: vscode.OutputChannel;
 
-async function resolveTarget(
+async function resolveTargets(
 	nodeOrUri?: unknown,
-): Promise<{ targetPath: string; displayName: string } | null> {
-	let targetPath = "";
-	let displayName = "";
+	nodesOrUris?: unknown[],
+): Promise<Array<{ targetPath: string; displayName: string }>> {
+	const targets: Array<{ targetPath: string; displayName: string }> = [];
 
-	const pathFromNode = extractFsPath(nodeOrUri);
-	if (pathFromNode) {
-		targetPath = pathFromNode;
-		displayName = hasStringProp(nodeOrUri, "label")
-			? nodeOrUri.label
-			: path.basename(targetPath);
-	} else {
-		const activeEditor = vscode.window.activeTextEditor;
-		if (activeEditor?.document.uri.fsPath.endsWith(".json")) {
-			targetPath = activeEditor.document.uri.fsPath;
-			displayName = path.basename(targetPath);
+	if (Array.isArray(nodesOrUris) && nodesOrUris.length > 0) {
+		for (const n of nodesOrUris) {
+			const pathFromNode = extractFsPath(n);
+			if (pathFromNode?.endsWith(".json")) {
+				const displayName = hasStringProp(n, "label")
+					? n.label
+					: path.basename(pathFromNode);
+				targets.push({ targetPath: pathFromNode, displayName });
+			}
 		}
 	}
 
-	if (!targetPath) {
+	if (targets.length === 0) {
+		const pathFromNode = extractFsPath(nodeOrUri);
+		if (pathFromNode) {
+			if (pathFromNode.endsWith(".json")) {
+				const displayName = hasStringProp(nodeOrUri, "label")
+					? nodeOrUri.label
+					: path.basename(pathFromNode);
+				targets.push({ targetPath: pathFromNode, displayName });
+			}
+		} else {
+			const activeEditor = vscode.window.activeTextEditor;
+			if (activeEditor?.document.uri.fsPath.endsWith(".json")) {
+				const targetPath = activeEditor.document.uri.fsPath;
+				const displayName = path.basename(targetPath);
+				targets.push({ targetPath, displayName });
+			}
+		}
+	}
+
+	if (targets.length === 0) {
 		const uris = await vscode.window.showOpenDialog({
-			canSelectMany: false,
-			openLabel: "Select Workflow",
+			canSelectMany: true,
+			openLabel: "Select Workflow(s)",
 			filters: {
 				"JSON files": ["json"],
 			},
 		});
-		if (!uris || uris.length === 0) return null;
-
-		targetPath = uris[0].fsPath;
-		displayName = path.basename(targetPath);
+		if (uris && uris.length > 0) {
+			for (const uri of uris) {
+				targets.push({
+					targetPath: uri.fsPath,
+					displayName: path.basename(uri.fsPath),
+				});
+			}
+		}
 	}
 
-	if (!targetPath.endsWith(".json")) {
-		vscode.window.showErrorMessage(
-			"Invalid file type. Only local JSON workflows (.json) are supported.",
-		);
-		return null;
+	if (targets.length === 0) {
+		return [];
 	}
 
-	try {
-		// Just to validate it's readable
-		fs.accessSync(targetPath, fs.constants.R_OK);
-	} catch (e: unknown) {
-		vscode.window.showErrorMessage(
-			`Failed to access workflow file: ${toError(e).message}`,
-		);
-		return null;
+	const validTargets: Array<{ targetPath: string; displayName: string }> = [];
+	for (const t of targets) {
+		try {
+			fs.accessSync(t.targetPath, fs.constants.R_OK);
+			validTargets.push(t);
+		} catch (e: unknown) {
+			vscode.window.showErrorMessage(
+				`Failed to access workflow file: ${toError(e).message}`,
+			);
+		}
 	}
 
-	return { targetPath, displayName };
+	return validTargets;
 }
 
 function buildBaseArgs(
@@ -105,54 +125,68 @@ function buildBaseArgs(
 
 export async function runWorkflowCommand(
 	nodeOrUri?: unknown,
-	params?: Record<string, unknown>,
+	params?: unknown | Record<string, unknown> | unknown[],
 	runOptions?: { keepBrowserOpen?: boolean },
 ) {
-	if (!isRecord(params)) {
-		params = undefined;
+	let nodesOrUris: unknown[] | undefined;
+	let parsedParams: Record<string, unknown> | undefined;
+
+	if (Array.isArray(params)) {
+		nodesOrUris = params;
+	} else if (isRecord(params)) {
+		parsedParams = params as Record<string, unknown>;
 	}
 
-	const target = await resolveTarget(nodeOrUri);
-	if (!target) return;
-	const { targetPath, displayName } = target;
+	const targets = await resolveTargets(nodeOrUri, nodesOrUris);
+	if (targets.length === 0) return;
 
 	const config = vscode.workspace.getConfiguration("automa");
 	const keepBrowserOpen =
 		runOptions?.keepBrowserOpen ??
 		!config.get<boolean>("vault.run.closeBrowserOnFinish", true);
 
-	const args = buildBaseArgs(targetPath, config, keepBrowserOpen);
-
 	const globalVariables = config.get<Record<string, string>>(
 		"vault.run.globalVariables",
 		{},
 	);
-	const mergedVariables = { ...globalVariables, ...(params || {}) };
+	const mergedVariables = { ...globalVariables, ...(parsedParams || {}) };
+	const hasMergedVariables = Object.keys(mergedVariables).length > 0;
+	const useDefaultParameters = config.get<boolean>(
+		"run.useDefaultParameters",
+		false,
+	);
 
-	if (Object.keys(mergedVariables).length > 0) {
-		args.push("--variables", JSON.stringify(mergedVariables));
+	for (const target of targets) {
+		const { targetPath, displayName } = target;
+		const args = buildBaseArgs(targetPath, config, keepBrowserOpen);
+
+		if (hasMergedVariables) {
+			args.push("--variables", JSON.stringify(mergedVariables));
+		}
+
+		if (useDefaultParameters) {
+			args.push("--use-default-parameters");
+		}
+
+		await TaskRunner.runAutomaCli(args, {
+			id: `workflow-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+			name: `Workflow: ${displayName}`,
+			source: "Automa",
+			startMessage: `Running Workflow: ${displayName}`,
+			successMessage: `Workflow finished: ${displayName}`,
+			errorMessage: `Workflow failed: ${displayName}`,
+			statusBarText: `Running: ${displayName}`,
+			useTelemetry: false,
+		});
 	}
-
-	if (config.get<boolean>("run.useDefaultParameters", false)) {
-		args.push("--use-default-parameters");
-	}
-
-	await TaskRunner.runAutomaCli(args, {
-		id: `workflow-${Date.now()}`,
-		name: `Workflow: ${displayName}`,
-		source: "Automa",
-		startMessage: `Running Workflow: ${displayName}`,
-		successMessage: `Workflow finished: ${displayName}`,
-		errorMessage: `Workflow failed: ${displayName}`,
-		statusBarText: `Running: ${displayName}`,
-		useTelemetry: false,
-	});
 }
 
-export async function runWorkflowWithParamsCommand(nodeOrUri?: unknown) {
-	const target = await resolveTarget(nodeOrUri);
-	if (!target) return;
-	const { targetPath, displayName } = target;
+export async function runWorkflowWithParamsCommand(
+	nodeOrUri?: unknown,
+	nodesOrUris?: unknown[],
+) {
+	const targets = await resolveTargets(nodeOrUri, nodesOrUris);
+	if (targets.length === 0) return;
 
 	// Bỏ qua logic tự parse params bằng showInputBox vì CLI đã có wizard (prompts) rất tốt.
 	// Chúng ta sẽ gọi thẳng CLI và KHÔNG truyền --use-default-parameters để ép nó hiện wizard trong Terminal.
@@ -161,25 +195,29 @@ export async function runWorkflowWithParamsCommand(nodeOrUri?: unknown) {
 		"vault.run.closeBrowserOnFinish",
 		true,
 	);
-
-	const args = buildBaseArgs(targetPath, config, keepBrowserOpen);
-
 	const globalVariables = config.get<Record<string, string>>(
 		"vault.run.globalVariables",
 		{},
 	);
-	if (Object.keys(globalVariables).length > 0) {
-		args.push("--variables", JSON.stringify(globalVariables));
-	}
+	const hasGlobalVariables = Object.keys(globalVariables).length > 0;
 
-	await TaskRunner.runAutomaCli(args, {
-		id: `workflow-${Date.now()}`,
-		name: `Workflow (Params): ${displayName}`,
-		source: "Automa",
-		startMessage: `Running Workflow with Params: ${displayName}`,
-		successMessage: `Workflow finished: ${displayName}`,
-		errorMessage: `Workflow failed: ${displayName}`,
-		statusBarText: `Running (Params): ${displayName}`,
-		useTelemetry: false,
-	});
+	for (const target of targets) {
+		const { targetPath, displayName } = target;
+		const args = buildBaseArgs(targetPath, config, keepBrowserOpen);
+
+		if (hasGlobalVariables) {
+			args.push("--variables", JSON.stringify(globalVariables));
+		}
+
+		await TaskRunner.runAutomaCli(args, {
+			id: `workflow-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+			name: `Workflow (Params): ${displayName}`,
+			source: "Automa",
+			startMessage: `Running Workflow with Params: ${displayName}`,
+			successMessage: `Workflow finished: ${displayName}`,
+			errorMessage: `Workflow failed: ${displayName}`,
+			statusBarText: `Running (Params): ${displayName}`,
+			useTelemetry: false,
+		});
+	}
 }
