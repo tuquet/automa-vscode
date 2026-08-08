@@ -65,7 +65,7 @@ export class BrowserProfileEditorProvider
 			const isTable = fileName.includes(".table.");
 			const label = isProfile ? "Profile" : "Data";
 			const icon = isProfile ? "ri-window-line" : "ri-database-2-line";
-			webviewPanel.title = `${label}: ${json.name || fileName}`;
+			webviewPanel.title = `${label}: ${(json as Record<string, unknown>).name || fileName}`;
 			webviewPanel.webview.html = this.getHtmlContent(
 				json,
 				label,
@@ -126,7 +126,7 @@ export class BrowserProfileEditorProvider
 			);
 			htmlContent = htmlContent.replace(
 				"{{PROFILE_NAME}}",
-				safeString(json.name || fileName),
+				safeString((json as Record<string, unknown>).name || fileName),
 			);
 			htmlContent = htmlContent.replace("{{LABEL}}", label);
 			htmlContent = htmlContent.replace("{{ICON}}", icon);

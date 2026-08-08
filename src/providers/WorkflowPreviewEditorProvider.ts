@@ -137,7 +137,10 @@ export class WorkflowPreviewEditorProvider
 			await this.sanitizeDocument(document, json);
 
 			if (
-				!(json.drawflow?.nodes && json.drawflow.edges) &&
+				((json as Record<string, unknown>).drawflow as Record<string, unknown>)
+					?.nodes &&
+				((json as Record<string, unknown>).drawflow as Record<string, unknown>)
+					?.edges &&
 				Array.isArray(json)
 			) {
 				webviewPanel.webview.html = `<body><h2>Not an Automa workflow</h2><p>This JSON file does not appear to be an Automa workflow.</p></body>`;
@@ -152,22 +155,31 @@ export class WorkflowPreviewEditorProvider
 			const updatedAtStr = this.getUpdatedAtString(document.uri);
 
 			const isPackage =
-				json.settings?.asBlock === true ||
-				Array.isArray(json.inputs) ||
-				Array.isArray(json.outputs);
-			const pkgInputs = Array.isArray(json.inputs) ? json.inputs : [];
-			const pkgOutputs = Array.isArray(json.outputs) ? json.outputs : [];
-			const pkgVars = Array.isArray(json.variable) ? json.variable : [];
+				((json as Record<string, unknown>).settings as Record<string, unknown>)
+					?.asBlock === true ||
+				Array.isArray((json as Record<string, unknown>).inputs) ||
+				Array.isArray((json as Record<string, unknown>).outputs);
+			const pkgInputs = Array.isArray((json as Record<string, unknown>).inputs)
+				? (json as Record<string, unknown>).inputs
+				: [];
+			const pkgOutputs = Array.isArray(
+				(json as Record<string, unknown>).outputs,
+			)
+				? (json as Record<string, unknown>).outputs
+				: [];
+			const pkgVars = Array.isArray((json as Record<string, unknown>).variable)
+				? (json as Record<string, unknown>).variable
+				: [];
 
-			webviewPanel.title = `Preview: ${(json.name as string) || "Workflow"}`;
+			webviewPanel.title = `Preview: ${((json as Record<string, unknown>).name as string) || "Workflow"}`;
 			webviewPanel.webview.html = this.getHtmlContent(
 				json,
 				triggerParams,
 				updatedAtStr,
 				isPackage,
-				pkgInputs,
-				pkgOutputs,
-				pkgVars,
+				pkgInputs as Record<string, unknown>[],
+				pkgOutputs as Record<string, unknown>[],
+				pkgVars as Record<string, unknown>[],
 			);
 		} catch (error: unknown) {
 			const e = error instanceof Error ? error : new Error(String(error));
@@ -184,20 +196,23 @@ export class WorkflowPreviewEditorProvider
 			const json = JSON.parse(content);
 
 			// Update fields
-			if (updateData.name !== undefined) json.name = updateData.name;
+			if (updateData.name !== undefined)
+				(json as Record<string, unknown>).name = updateData.name;
 			if (updateData.description !== undefined)
-				json.description = updateData.description;
-			if (updateData.version !== undefined) json.version = updateData.version;
+				(json as Record<string, unknown>).description = updateData.description;
+			if (updateData.version !== undefined)
+				(json as Record<string, unknown>).version = updateData.version;
 			if (updateData.extVersion !== undefined)
-				json.extVersion = updateData.extVersion;
-			if (updateData.icon !== undefined) json.icon = updateData.icon;
+				(json as Record<string, unknown>).extVersion = updateData.extVersion;
+			if (updateData.icon !== undefined)
+				(json as Record<string, unknown>).icon = updateData.icon;
 			if (updateData.globalData !== undefined)
-				json.globalData = updateData.globalData;
+				(json as Record<string, unknown>).globalData = updateData.globalData;
 
 			// JSON parse for objects/arrays
 			if ((updateData.settings as string) !== undefined) {
 				try {
-					json.settings =
+					(json as Record<string, unknown>).settings =
 						(updateData.settings as string).trim() === ""
 							? {}
 							: JSON.parse(updateData.settings as string);
@@ -208,7 +223,7 @@ export class WorkflowPreviewEditorProvider
 			}
 			if ((updateData.table as string) !== undefined) {
 				try {
-					json.table =
+					(json as Record<string, unknown>).table =
 						(updateData.table as string).trim() === ""
 							? []
 							: JSON.parse(updateData.table as string);
@@ -219,7 +234,7 @@ export class WorkflowPreviewEditorProvider
 			}
 			if ((updateData.includedWorkflows as string) !== undefined) {
 				try {
-					json.includedWorkflows =
+					(json as Record<string, unknown>).includedWorkflows =
 						(updateData.includedWorkflows as string).trim() === ""
 							? {}
 							: JSON.parse(updateData.includedWorkflows as string);
@@ -232,22 +247,64 @@ export class WorkflowPreviewEditorProvider
 			// Update Trigger Parameters Default Values
 			if (
 				(updateData.triggerParams as Record<string, string>) &&
-				(json.drawflow || json.data)
+				((json as Record<string, unknown>).drawflow ||
+					(json as Record<string, unknown>).data)
 			) {
 				let nodesList: Record<string, unknown>[] = [];
-				if (json.data && Array.isArray(json.data.nodes)) {
-					nodesList = json.data.nodes;
-				} else if (json.drawflow) {
-					if (Array.isArray(json.drawflow.nodes)) {
-						nodesList = json.drawflow.nodes;
+				if (
+					(json as Record<string, unknown>).data &&
+					Array.isArray(
+						((json as Record<string, unknown>).data as Record<string, unknown>)
+							?.nodes,
+					)
+				) {
+					nodesList = (
+						(json as Record<string, unknown>).data as Record<string, unknown>
+					)?.nodes as Record<string, unknown>[];
+				} else if ((json as Record<string, unknown>).drawflow) {
+					if (
+						Array.isArray(
+							(
+								(json as Record<string, unknown>).drawflow as Record<
+									string,
+									unknown
+								>
+							)?.nodes,
+						)
+					) {
+						nodesList = (
+							(json as Record<string, unknown>).drawflow as Record<
+								string,
+								unknown
+							>
+						)?.nodes as Record<string, unknown>[];
 					} else {
-						Object.keys(json.drawflow).forEach((tab) => {
-							if (json.drawflow[tab]?.data) {
-								Object.entries(json.drawflow[tab].data).forEach(
-									([_key, node]: [string, unknown]) => {
-										nodesList.push(node as Record<string, unknown>);
-									},
-								);
+						Object.keys(
+							(json as Record<string, unknown>).drawflow as Record<
+								string,
+								unknown
+							>,
+						).forEach((tab) => {
+							if (
+								(
+									(json as Record<string, unknown>).drawflow as Record<
+										string,
+										unknown
+									>
+								)[tab]
+							) {
+								Object.entries(
+									(
+										(
+											(json as Record<string, unknown>).drawflow as Record<
+												string,
+												unknown
+											>
+										)[tab] as Record<string, unknown>
+									).data as Record<string, unknown>,
+								).forEach(([_key, node]: [string, unknown]) => {
+									nodesList.push(node as Record<string, unknown>);
+								});
 							}
 						});
 					}
@@ -269,12 +326,12 @@ export class WorkflowPreviewEditorProvider
 						.parameters as unknown[]) {
 						if (
 							(updateData.triggerParams as Record<string, string>)[
-								param.name as string
+								(param as Record<string, unknown>).name as string
 							] !== undefined
 						) {
-							param.defaultValue = (
+							(param as Record<string, unknown>).defaultValue = (
 								updateData.triggerParams as Record<string, string>
-							)[param.name as string];
+							)[(param as Record<string, unknown>).name as string];
 						}
 					}
 				}
@@ -323,7 +380,7 @@ export class WorkflowPreviewEditorProvider
 
 			htmlContent = htmlContent.replace(
 				/\{\{WORKFLOW_NAME\}\}/g,
-				(json.name as string) ||
+				((json as Record<string, unknown>).name as string) ||
 					(templateName.includes("package")
 						? "Untitled Package"
 						: "Untitled Workflow"),
@@ -331,45 +388,45 @@ export class WorkflowPreviewEditorProvider
 			htmlContent = htmlContent.replace("{{UPDATED_AT_HTML}}", updatedAtHtml);
 			htmlContent = htmlContent.replace(
 				"{{JSON_ID}}",
-				safeString(json.id) || "N/A",
+				safeString((json as Record<string, unknown>).id) || "N/A",
 			);
 			htmlContent = htmlContent.replace(
 				"{{JSON_NAME}}",
-				safeString(json.name as string),
+				safeString((json as Record<string, unknown>).name as string),
 			);
 			htmlContent = htmlContent.replace(
 				"{{JSON_DESCRIPTION}}",
-				safeString(json.description),
+				safeString((json as Record<string, unknown>).description),
 			);
 			htmlContent = htmlContent.replace(
 				"{{JSON_SETTINGS}}",
-				jsonStringifySafe(json.settings),
+				jsonStringifySafe((json as Record<string, unknown>).settings),
 			);
 			htmlContent = htmlContent.replace(
 				"{{JSON_ICON}}",
-				(json.icon as string) || "riGlobalLine",
+				((json as Record<string, unknown>).icon as string) || "riGlobalLine",
 			);
 
 			// Additional fields common but maybe not in both, replacing won't hurt if they don't exist in template
 			htmlContent = htmlContent.replace(
 				"{{JSON_VERSION}}",
-				safeString(json.version),
+				safeString((json as Record<string, unknown>).version),
 			);
 			htmlContent = htmlContent.replace(
 				"{{JSON_EXT_VERSION}}",
-				safeString(json.extVersion),
+				safeString((json as Record<string, unknown>).extVersion),
 			);
 			htmlContent = htmlContent.replace(
 				"{{JSON_GLOBAL_DATA}}",
-				safeString(json.globalData),
+				safeString((json as Record<string, unknown>).globalData),
 			);
 			htmlContent = htmlContent.replace(
 				"{{JSON_TABLE}}",
-				jsonStringifySafe(json.table),
+				jsonStringifySafe((json as Record<string, unknown>).table),
 			);
 			htmlContent = htmlContent.replace(
 				"{{JSON_INCLUDED_WORKFLOWS}}",
-				jsonStringifySafe(json.includedWorkflows),
+				jsonStringifySafe((json as Record<string, unknown>).includedWorkflows),
 			);
 
 			return htmlContent;

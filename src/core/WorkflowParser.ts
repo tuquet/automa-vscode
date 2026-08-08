@@ -28,16 +28,24 @@ export class WorkflowParser {
 		const json = (jsonObj || {}) as Record<string, unknown>;
 
 		if (
-			json.data &&
-			typeof json.data === "object" &&
-			Array.isArray((json.data as Record<string, unknown>).nodes)
+			(json as Record<string, unknown>).data &&
+			typeof (json as Record<string, unknown>).data === "object" &&
+			Array.isArray(
+				((json as Record<string, unknown>).data as Record<string, unknown>)
+					.nodes,
+			)
 		) {
-			nodesList = (json.data as Record<string, unknown>).nodes as Record<
+			nodesList = (
+				(json as Record<string, unknown>).data as Record<string, unknown>
+			).nodes as Record<string, unknown>[];
+		} else if (
+			(json as Record<string, unknown>).drawflow &&
+			typeof (json as Record<string, unknown>).drawflow === "object"
+		) {
+			const drawflow = (json as Record<string, unknown>).drawflow as Record<
 				string,
 				unknown
-			>[];
-		} else if (json.drawflow && typeof json.drawflow === "object") {
-			const drawflow = json.drawflow as Record<string, unknown>;
+			>;
 			if (Array.isArray(drawflow.nodes)) {
 				nodesList = drawflow.nodes as Record<string, unknown>[];
 			} else {
@@ -57,24 +65,32 @@ export class WorkflowParser {
 		if (nodesList.length > 0) {
 			for (const node of nodesList) {
 				if (
-					(node.label === "trigger" ||
-						node.name === "trigger" ||
-						node.type === "BlockTrigger") &&
-					node.data &&
-					typeof node.data === "object" &&
-					Array.isArray((node.data as Record<string, unknown>).parameters)
+					((node as Record<string, unknown>).label === "trigger" ||
+						(node as Record<string, unknown>).name === "trigger" ||
+						(node as Record<string, unknown>).type === "BlockTrigger") &&
+					(node as Record<string, unknown>).data &&
+					typeof (node as Record<string, unknown>).data === "object" &&
+					Array.isArray(
+						((node as Record<string, unknown>).data as Record<string, unknown>)
+							.parameters,
+					)
 				) {
-					for (const param of (node.data as Record<string, unknown>)
-						.parameters as Record<string, unknown>[]) {
+					for (const param of (
+						(node as Record<string, unknown>).data as Record<string, unknown>
+					).parameters as Record<string, unknown>[]) {
 						if (
-							param.name &&
-							!triggerParams.some((p) => p.name === param.name)
+							(param as Record<string, unknown>).name &&
+							!triggerParams.some(
+								(p) => p.name === (param as Record<string, unknown>).name,
+							)
 						) {
 							triggerParams.push({
 								...param,
 								isImplicit: false,
 							});
-							implicitVars.delete(param.name as string);
+							implicitVars.delete(
+								(param as Record<string, unknown>).name as string,
+							);
 						}
 					}
 				}

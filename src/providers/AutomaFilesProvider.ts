@@ -112,9 +112,14 @@ export class AutomaFilesProvider implements vscode.TreeDataProvider<FileItem> {
 						const content = Buffer.from(contentArray).toString("utf8");
 						const json = JSON.parse(content);
 						const isPackage =
-							json.settings?.asBlock === true ||
-							Array.isArray(json.inputs) ||
-							Array.isArray(json.outputs);
+							(
+								(json as Record<string, unknown>).settings as Record<
+									string,
+									unknown
+								>
+							)?.asBlock === true ||
+							Array.isArray((json as Record<string, unknown>).inputs) ||
+							Array.isArray((json as Record<string, unknown>).outputs);
 
 						if (this.filterType === "package") return isPackage;
 						if (this.filterType === "workflow") return !isPackage;

@@ -16,13 +16,23 @@ async function resolveTarget(
 		displayName = path.basename(nodeOrUri.fsPath);
 	} else if (nodeOrUri && typeof nodeOrUri === "object") {
 		const node = nodeOrUri as Record<string, unknown>;
-		if ("fsPath" in node && typeof node.fsPath === "string") {
-			targetPath = node.fsPath;
-			displayName = path.basename(node.fsPath);
-		} else if ("fullPath" in node && typeof node.fullPath === "string") {
-			targetPath = node.fullPath;
+		if (
+			"fsPath" in node &&
+			typeof (node as Record<string, unknown>).fsPath === "string"
+		) {
+			targetPath = (node as Record<string, unknown>).fsPath as string;
+			displayName = path.basename(
+				(node as Record<string, unknown>).fsPath as string,
+			);
+		} else if (
+			"fullPath" in node &&
+			typeof (node as Record<string, unknown>).fullPath === "string"
+		) {
+			targetPath = (node as Record<string, unknown>).fullPath as string;
 			displayName =
-				typeof node.label === "string" ? node.label : path.basename(targetPath);
+				typeof (node as Record<string, unknown>).label === "string"
+					? ((node as Record<string, unknown>).label as string)
+					: path.basename(targetPath);
 		}
 	}
 
