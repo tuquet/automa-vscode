@@ -34,6 +34,8 @@ class VSCodeAPIWrapper {
 				if (pending) {
 					if (message.type?.endsWith("-response")) {
 						pending.resolve(message.data);
+					} else if (message.type === "error") {
+						pending.reject(new Error(String(message.data)));
 					}
 					this.pendingMessages.delete(message.id);
 				}
@@ -43,9 +45,41 @@ class VSCodeAPIWrapper {
 
 	private safeClone(data: unknown): unknown {
 		if (data === undefined) return undefined;
+		if (data === null) return null;
+
+		const unwrap = (obj: unknown): unknown => {
+			if (obj === null || typeof obj !== "object") return obj;
+			if (obj instanceof Date) return new Date(obj.getTime());
+			if (obj instanceof RegExp) return new RegExp(obj);
+			if (obj instanceof Map) {
+				const map = new Map();
+				for (const [key, value] of obj) {
+					map.set(unwrap(key), unwrap(value));
+				}
+				return map;
+			}
+			if (obj instanceof Set) {
+				const set = new Set();
+				for (const value of obj) {
+					set.add(unwrap(value));
+				}
+				return set;
+			}
+			const raw = toRaw(obj);
+			if (Array.isArray(raw)) {
+				return raw.map((item) => unwrap(item));
+			}
+			const result = {} as Record<string, unknown>;
+			for (const key in raw) {
+				if (Object.hasOwn(raw, key)) {
+					result[key] = unwrap((raw as Record<string, unknown>)[key]);
+				}
+			}
+			return result;
+		};
+
 		try {
-			// Using JSON parse/stringify is safest to strip proxies and non-serializable Vue state
-			return JSON.parse(JSON.stringify(toRaw(data)));
+			return unwrap(data);
 		} catch {
 			return toRaw(data);
 		}
@@ -66,10 +100,32 @@ class VSCodeAPIWrapper {
 		type: string,
 		data?: unknown,
 		keys?: unknown,
+		timeoutMs = 30000,
 	): Promise<unknown> {
 		return new Promise((resolve, reject) => {
 			const id = ++this.messageId;
-			this.pendingMessages.set(id, { resolve, reject });
+
+			const timeout = setTimeout(() => {
+				if (this.pendingMessages.has(id)) {
+					this.pendingMessages.delete(id);
+					reject(new Error(`Message timeout for type ${type}`));
+				}
+			}, timeoutMs);
+
+			const resolveWrapper = (val: unknown) => {
+				clearTimeout(timeout);
+				resolve(val);
+			};
+
+			const rejectWrapper = (err: unknown) => {
+				clearTimeout(timeout);
+				reject(err);
+			};
+
+			this.pendingMessages.set(id, {
+				resolve: resolveWrapper,
+				reject: rejectWrapper,
+			});
 			this.postMessage({ type, id, data, keys });
 		});
 	}
