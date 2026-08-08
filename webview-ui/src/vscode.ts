@@ -33,10 +33,10 @@ class VSCodeAPIWrapper {
 			) {
 				const pending = this.pendingMessages.get(message.id);
 				if (pending) {
-					if (message.type?.endsWith("-response")) {
-						pending.resolve(message.data);
-					} else if (message.type === "error") {
+					if (message.type === "error") {
 						pending.reject(new Error(String(message.data)));
+					} else {
+						pending.resolve(message.data);
 					}
 					this.pendingMessages.delete(message.id);
 				}
@@ -63,44 +63,46 @@ class VSCodeAPIWrapper {
 		const unwrap = (obj: unknown): unknown => {
 			if (obj === null || typeof obj !== "object") return obj;
 
-			if (visited.has(obj)) return visited.get(obj);
+			const rawObj = toRaw(obj) as object;
 
-			if (obj instanceof Date) return new Date(obj.getTime());
-			if (obj instanceof RegExp) return new RegExp(obj.source, obj.flags);
+			if (visited.has(rawObj)) return visited.get(rawObj);
+
+			if (rawObj instanceof Date) return new Date(rawObj.getTime());
+			if (rawObj instanceof RegExp)
+				return new RegExp(rawObj.source, rawObj.flags);
 
 			let cloned: unknown;
-			if (obj instanceof Map) {
+			if (rawObj instanceof Map) {
 				cloned = new Map();
-				visited.set(obj, cloned);
-				for (const [key, value] of obj) {
+				visited.set(rawObj, cloned);
+				for (const [key, value] of rawObj) {
 					(cloned as Map<unknown, unknown>).set(unwrap(key), unwrap(value));
 				}
 				return cloned;
 			}
-			if (obj instanceof Set) {
+			if (rawObj instanceof Set) {
 				cloned = new Set();
-				visited.set(obj, cloned);
-				for (const value of obj) {
+				visited.set(rawObj, cloned);
+				for (const value of rawObj) {
 					(cloned as Set<unknown>).add(unwrap(value));
 				}
 				return cloned;
 			}
-			const raw = toRaw(obj);
-			if (Array.isArray(raw)) {
+			if (Array.isArray(rawObj)) {
 				cloned = [] as unknown[];
-				visited.set(obj, cloned);
-				for (const item of raw) {
+				visited.set(rawObj, cloned);
+				for (const item of rawObj) {
 					(cloned as unknown[]).push(unwrap(item));
 				}
 				return cloned;
 			}
 
 			cloned = {} as Record<string, unknown>;
-			visited.set(obj, cloned);
-			for (const key in raw) {
-				if (Object.hasOwn(raw, key)) {
+			visited.set(rawObj, cloned);
+			for (const key in rawObj) {
+				if (Object.hasOwn(rawObj, key)) {
 					(cloned as Record<string, unknown>)[key] = unwrap(
-						(raw as Record<string, unknown>)[key],
+						(rawObj as Record<string, unknown>)[key],
 					);
 				}
 			}
@@ -181,14 +183,54 @@ class VSCodeAPIWrapper {
 	 */
 	public useState<T>(initialState: T): Ref<T> {
 		const savedState = this.getState() as T | undefined;
-		const stateRef = ref<T>(
-			(savedState !== undefined ? savedState : initialState) as T,
-		) as Ref<T>;
+
+		const mergeDeep = (target: unknown, source: unknown): unknown => {
+			if (target === null || typeof target !== "object")
+				return source !== undefined ? source : target;
+			if (source === null || typeof source !== "object") return source;
+			if (Array.isArray(target) && Array.isArray(source)) return source;
+
+			const result = { ...(target as Record<string, unknown>) };
+			const sourceObj = source as Record<string, unknown>;
+
+			for (const key in sourceObj) {
+				if (Object.hasOwn(sourceObj, key)) {
+					if (
+						typeof sourceObj[key] === "object" &&
+						sourceObj[key] !== null &&
+						!Array.isArray(sourceObj[key]) &&
+						typeof result[key] === "object" &&
+						result[key] !== null &&
+						!Array.isArray(result[key])
+					) {
+						result[key] = mergeDeep(result[key], sourceObj[key]);
+					} else {
+						result[key] = sourceObj[key];
+					}
+				}
+			}
+			return result;
+		};
+
+		const mergedState =
+			savedState !== undefined
+				? mergeDeep(initialState, savedState)
+				: initialState;
+
+		const stateRef = ref<T>(mergedState as T) as Ref<T>;
+
+		let saveTimeout: ReturnType<typeof setTimeout> | null = null;
 
 		watch(
 			stateRef,
 			(newState) => {
-				this.setState(newState);
+				if (saveTimeout !== null) {
+					clearTimeout(saveTimeout);
+				}
+				saveTimeout = setTimeout(() => {
+					this.setState(newState);
+					saveTimeout = null;
+				}, 250);
 			},
 			{ deep: true, immediate: true },
 		);
