@@ -364,7 +364,10 @@ export class DaemonManager {
 						startIndex = text.indexOf(startChar, endIndex + 1);
 					} else {
 						// Tối ưu hóa: Bỏ qua chuỗi không hợp lệ thay vì chỉ nhảy 1 ký tự
-						startIndex = text.indexOf(startChar, startIndex + 1);
+						startIndex = text.indexOf(
+							startChar,
+							endIndex !== -1 ? endIndex + 1 : startIndex + 1,
+						);
 					}
 				}
 				return lastValidJson;
