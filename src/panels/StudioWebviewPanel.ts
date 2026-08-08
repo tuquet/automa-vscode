@@ -1,4 +1,5 @@
 import * as fs from "node:fs";
+import * as path from "node:path";
 import * as vscode from "vscode";
 import { Logger } from "../core/Logger";
 import {
@@ -546,7 +547,6 @@ export class StudioWebviewPanel {
 				}
 			} catch (e: unknown) {
 				const msg = getErrorMessage(e);
-				const path = require("node:path");
 				parseErrors.push(`${path.basename(file.fsPath)}: ${msg}`);
 			}
 		}
