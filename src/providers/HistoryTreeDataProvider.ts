@@ -1,6 +1,5 @@
 import * as vscode from "vscode";
 import { DaemonManager } from "../core/DaemonManager";
-import { getErrorMessage } from "../utils/typeGuards";
 
 interface AutomaJob {
 	id: string;
@@ -33,7 +32,6 @@ export class HistoryTreeDataProvider
 	public register(context: vscode.ExtensionContext) {
 		const treeView = vscode.window.createTreeView("automa.executionHistory", {
 			treeDataProvider: this,
-			canSelectMany: true,
 		});
 		context.subscriptions.push(treeView);
 
@@ -66,80 +64,33 @@ export class HistoryTreeDataProvider
 						placeHolder: "e.g. tsk_dev002",
 					});
 					if (taskId) {
-						await this.setFilter(taskId);
+						this.setFilter(taskId);
 					}
 				},
 			),
 		);
 		this.context.subscriptions.push(
-			vscode.commands.registerCommand("automa.clearHistoryFilter", async () => {
-				await this.clearFilter();
+			vscode.commands.registerCommand("automa.clearHistoryFilter", () => {
+				this.clearFilter();
 			}),
 		);
 		this.context.subscriptions.push(
 			vscode.commands.registerCommand(
 				"automa.deleteHistoryItem",
-				async (item?: vscode.TreeItem, selectedItems?: vscode.TreeItem[]) =>
-					await this.handleDeleteHistoryItem(item, selectedItems),
+				(item: vscode.TreeItem) => this.handleDeleteHistoryItem(item),
 			),
 		);
 		this.context.subscriptions.push(
-			vscode.commands.registerCommand(
-				"automa.clearHistory",
-				async () => await this.handleClearHistory(),
+			vscode.commands.registerCommand("automa.clearHistory", () =>
+				this.handleClearHistory(),
 			),
 		);
 	}
 
-	private async handleDeleteHistoryItem(
-		item?: vscode.TreeItem,
-		selectedItems?: vscode.TreeItem[],
-	) {
-		let itemsToDelete: vscode.TreeItem[] = [];
-
-		if (
-			selectedItems &&
-			Array.isArray(selectedItems) &&
-			selectedItems.length > 0
-		) {
-			itemsToDelete = selectedItems.filter((i) => i.id);
-		} else if (item?.id) {
-			itemsToDelete = [item];
-		} else {
-			const items = await this.getChildren();
-			const validItems = items.filter(
-				(i) => i.contextValue === "automaHistoryLog" && i.id,
-			);
-			if (validItems.length === 0) {
-				vscode.window.showInformationMessage(
-					"No history logs available to delete.",
-				);
-				return;
-			}
-			const selected = await vscode.window.showQuickPick(
-				validItems.map((i) => ({
-					label: (i.label as string) || "Unknown",
-					description: i.description as string,
-					detail: i.tooltip as string,
-					item: i,
-				})),
-				{
-					placeHolder: "Select history log(s) to delete",
-					canPickMany: true,
-				},
-			);
-			if (!selected || selected.length === 0) return;
-			itemsToDelete = selected.map((s) => s.item);
-		}
-
-		if (itemsToDelete.length === 0) return;
-
-		const msg =
-			itemsToDelete.length === 1
-				? "this log"
-				: `these ${itemsToDelete.length} logs`;
+	private async handleDeleteHistoryItem(item: vscode.TreeItem) {
+		if (!item?.id) return;
 		const confirm = await vscode.window.showWarningMessage(
-			`Are you sure you want to delete ${msg}?`,
+			`Are you sure you want to delete this log?`,
 			"Yes",
 			"No",
 		);
@@ -148,39 +99,21 @@ export class HistoryTreeDataProvider
 		try {
 			const daemon = DaemonManager.getInstance();
 			const port = daemon.getPort();
-			let failedCount = 0;
-			for (const itemToDelete of itemsToDelete) {
-				const res = await fetch(
-					`http://localhost:${port}/api/jobs/${itemToDelete.id}`,
-					{
-						method: "DELETE",
-					},
-				);
-				if (!res.ok) failedCount++;
-			}
-			if (failedCount === itemsToDelete.length && itemsToDelete.length > 0) {
-				throw new Error("Daemon not ready or all failed");
-			}
-			vscode.window.showInformationMessage(
-				`Successfully deleted ${itemsToDelete.length - failedCount} history log(s).`,
-			);
+			const res = await fetch(`http://localhost:${port}/api/jobs/${item.id}`, {
+				method: "DELETE",
+			});
+			if (!res.ok) throw new Error("Daemon not ready");
 			this.refresh();
 		} catch (_err: unknown) {
 			try {
-				for (const itemToDelete of itemsToDelete) {
-					if (!itemToDelete.id) continue;
-					await DaemonManager.getInstance().executeCliCommand([
-						"history",
-						"--delete",
-						itemToDelete.id,
-					]);
-				}
-				vscode.window.showInformationMessage(
-					`Successfully deleted ${itemsToDelete.length} history log(s).`,
-				);
+				await DaemonManager.getInstance().executeCliCommand([
+					"history",
+					"--delete",
+					item.id,
+				]);
 				this.refresh();
 			} catch (cliErr: unknown) {
-				const msg = getErrorMessage(cliErr);
+				const msg = cliErr instanceof Error ? cliErr.message : String(cliErr);
 				vscode.window.showErrorMessage(`Failed to delete log: ${msg}`);
 			}
 		}
@@ -201,9 +134,6 @@ export class HistoryTreeDataProvider
 				method: "DELETE",
 			});
 			if (!res.ok) throw new Error("Daemon not ready");
-			vscode.window.showInformationMessage(
-				"Execution history cleared successfully.",
-			);
 			this.refresh();
 		} catch (_err: unknown) {
 			try {
@@ -211,12 +141,9 @@ export class HistoryTreeDataProvider
 					"history",
 					"--clear",
 				]);
-				vscode.window.showInformationMessage(
-					"Execution history cleared successfully.",
-				);
 				this.refresh();
 			} catch (cliErr: unknown) {
-				const msg = getErrorMessage(cliErr);
+				const msg = cliErr instanceof Error ? cliErr.message : String(cliErr);
 				vscode.window.showErrorMessage(`Failed to clear history: ${msg}`);
 			}
 		}
@@ -285,7 +212,7 @@ export class HistoryTreeDataProvider
 				const res = await fetch(url);
 				if (!res.ok) throw new Error("Daemon not ready");
 				jobs = (await res.json()) as AutomaJob[];
-			} catch (_err: unknown) {
+			} catch (_err) {
 				const args = ["history", "--limit", this.currentLimit.toString()];
 				if (this.taskIdFilter) {
 					args.push("--task-id", this.taskIdFilter);
@@ -360,7 +287,7 @@ export class HistoryTreeDataProvider
 
 			return treeItems;
 		} catch (err: unknown) {
-			const msg = getErrorMessage(err);
+			const msg = err instanceof Error ? err.message : String(err);
 			const errorItem = new vscode.TreeItem(
 				"Error loading history",
 				vscode.TreeItemCollapsibleState.None,

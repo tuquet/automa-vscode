@@ -1,18 +1,7 @@
 import * as vscode from "vscode";
 import { DaemonManager } from "../core/DaemonManager";
-import { castRecord, extractFsPath, toError } from "../utils/typeGuards";
 
 let diagnosticCollection: vscode.DiagnosticCollection;
-
-function getWorkspaceRoot(): string | undefined {
-	if (
-		vscode.workspace.workspaceFolders &&
-		vscode.workspace.workspaceFolders.length > 0
-	) {
-		return vscode.workspace.workspaceFolders[0].uri.fsPath;
-	}
-	return undefined;
-}
 
 export function activateLintDiagnostics(context: vscode.ExtensionContext) {
 	diagnosticCollection =
@@ -26,19 +15,27 @@ function resolveUrisToProcess(
 ): vscode.Uri[] {
 	if (Array.isArray(nodesOrUris) && nodesOrUris.length > 0) {
 		return nodesOrUris
-			.map((n) => {
-				const path = extractFsPath(n);
-				return path?.endsWith(".json") ? vscode.Uri.file(path) : null;
-			})
+			.map((n) =>
+				n instanceof vscode.Uri
+					? n
+					: typeof n === "object" && n !== null && "resourceUri" in n
+						? ((n as Record<string, unknown>).resourceUri as vscode.Uri)
+						: null,
+			)
 			.filter((uri): uri is vscode.Uri => uri !== null);
-	}
-	const path = extractFsPath(nodeOrUri);
-	if (path?.endsWith(".json")) {
-		return [vscode.Uri.file(path)];
-	}
-	const activeEditor = vscode.window.activeTextEditor;
-	if (activeEditor?.document.uri.fsPath.endsWith(".json")) {
-		return [activeEditor.document.uri];
+	} else if (nodeOrUri instanceof vscode.Uri) {
+		return [nodeOrUri];
+	} else if (
+		nodeOrUri &&
+		typeof nodeOrUri === "object" &&
+		"resourceUri" in nodeOrUri
+	) {
+		return [(nodeOrUri as Record<string, unknown>).resourceUri as vscode.Uri];
+	} else {
+		const activeEditor = vscode.window.activeTextEditor;
+		if (activeEditor) {
+			return [activeEditor.document.uri];
+		}
 	}
 	return [];
 }
@@ -125,11 +122,6 @@ export async function lintCheckCommand(
 			cancellable: false,
 		},
 		async () => {
-			let totalErrors = 0;
-			let totalWarnings = 0;
-			let totalPassed = 0;
-			let totalProcessed = 0;
-
 			for (const uri of urisToProcess) {
 				const filePath = uri.fsPath;
 
@@ -143,24 +135,14 @@ export async function lintCheckCommand(
 					try {
 						const daemon = DaemonManager.getInstance();
 						const port = daemon.getPort();
-						let type = "workflow";
-						if (filePath.endsWith(".package.json")) type = "package";
-						else if (filePath.endsWith(".fleet.json")) type = "fleet";
-						else if (
-							filePath.endsWith(".table.json") ||
-							filePath.endsWith(".variable.json") ||
-							filePath.endsWith(".credential.json")
-						)
-							type = "globals";
-						const vaultPath = getWorkspaceRoot();
 						const res = await fetch(`http://localhost:${port}/api/lint`, {
 							method: "POST",
 							headers: { "Content-Type": "application/json" },
-							body: JSON.stringify({ content, type, options: { vaultPath } }),
+							body: JSON.stringify({ content }),
 						});
 						if (!res.ok) throw new Error("Daemon not ready");
 
-						const data = castRecord(await res.json());
+						const data = (await res.json()) as Record<string, unknown>;
 						const errStrs = ((data.errors as string[]) || []).map(
 							(e: string) => `- [Error] ${e}`,
 						);
@@ -168,61 +150,38 @@ export async function lintCheckCommand(
 							(w: string) => `- [Warning] ${w}`,
 						);
 						output = [...errStrs, ...warnStrs].join("\n");
-					} catch (_err: unknown) {
+					} catch (_err) {
 						// Fallback to CLI
-						const cliArgs = ["lint", filePath];
-						const vaultPath = getWorkspaceRoot();
-						if (vaultPath) {
-							cliArgs.push("--vault-path", vaultPath);
-						}
 						const { stdout, stderr } =
-							await DaemonManager.getInstance().executeRawCliCommand(cliArgs);
+							await DaemonManager.getInstance().executeRawCliCommand([
+								"lint",
+								filePath,
+							]);
 						output = `${stdout}\n${stderr}`;
 					}
 
 					const diagnostics = parseDiagnosticsFromOutput(output, lines);
 					diagnosticCollection.set(uri, diagnostics);
 
-					totalProcessed++;
-
 					if (diagnostics.length === 0) {
-						totalPassed++;
+						vscode.window.showInformationMessage(
+							`Lint passed for ${filePath.split(/\\|\//).pop()}`,
+						);
 					} else {
 						const errorCount = diagnostics.filter(
 							(d) => d.severity === vscode.DiagnosticSeverity.Error,
 						).length;
 						const warnCount = diagnostics.length - errorCount;
-						totalErrors += errorCount;
-						totalWarnings += warnCount;
+						const msg = `Lint finished: ${errorCount} error(s), ${warnCount} warning(s) in ${filePath.split(/\\|\//).pop()}`;
+						if (errorCount > 0) {
+							vscode.window.showErrorMessage(msg);
+						} else {
+							vscode.window.showWarningMessage(msg);
+						}
 					}
 				} catch (error: unknown) {
-					const e = toError(error);
-					vscode.window.showErrorMessage(
-						`Failed to run linter on ${filePath.split(/\\|\//).pop()}: ${e.message}`,
-					);
-				}
-			}
-
-			if (totalProcessed === 1) {
-				const filePath = urisToProcess[0].fsPath.split(/\\|\//).pop();
-				if (totalErrors === 0 && totalWarnings === 0) {
-					vscode.window.showInformationMessage(`Lint passed for ${filePath}`);
-				} else {
-					const msg = `Lint finished: ${totalErrors} error(s), ${totalWarnings} warning(s) in ${filePath}`;
-					if (totalErrors > 0) {
-						vscode.window.showErrorMessage(msg);
-					} else {
-						vscode.window.showWarningMessage(msg);
-					}
-				}
-			} else if (totalProcessed > 1) {
-				const msg = `Lint finished for ${totalProcessed} files: ${totalPassed} passed, ${totalErrors} total error(s), ${totalWarnings} total warning(s).`;
-				if (totalErrors > 0) {
-					vscode.window.showErrorMessage(msg);
-				} else if (totalWarnings > 0) {
-					vscode.window.showWarningMessage(msg);
-				} else {
-					vscode.window.showInformationMessage(msg);
+					const e = error instanceof Error ? error : new Error(String(error));
+					vscode.window.showErrorMessage(`Failed to run linter: ${e.message}`);
 				}
 			}
 		},

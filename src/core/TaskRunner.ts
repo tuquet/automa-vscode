@@ -1,7 +1,6 @@
 import { spawn } from "node:child_process";
 import { EventEmitter } from "node:events";
 import * as vscode from "vscode";
-import { castRecord } from "../utils/typeGuards";
 import { DaemonManager } from "./DaemonManager";
 
 export interface TaskOptions {
@@ -16,10 +15,10 @@ export interface TaskOptions {
 	statusBarText?: string;
 }
 
-export const TaskRunner = {
-	telemetryEmitter: new EventEmitter(),
+export class TaskRunner {
+	public static telemetryEmitter = new EventEmitter();
 
-	runAutomaCli(
+	public static runAutomaCli(
 		cliArgs: string[],
 		taskConfig: Omit<TaskOptions, "command" | "args"> & {
 			useTelemetry?: boolean;
@@ -28,10 +27,14 @@ export const TaskRunner = {
 		const { cmd, args } =
 			DaemonManager.getInstance().resolveCommandAndArgs(cliArgs);
 
+		const cmdParts = cmd.split(" ");
+		const executable = cmdParts[0];
+		const finalArgs = [...cmdParts.slice(1), ...args];
+
 		const options: TaskOptions = {
 			...taskConfig,
-			command: cmd,
-			args: args,
+			command: executable,
+			args: finalArgs,
 		};
 
 		if (taskConfig.useTelemetry) {
@@ -39,11 +42,11 @@ export const TaskRunner = {
 		} else {
 			return TaskRunner.run(options);
 		}
-	},
+	}
 
-	run(options: TaskOptions): Promise<void> {
+	public static run(options: TaskOptions): Promise<void> {
 		if (options.startMessage) {
-			vscode.window.setStatusBarMessage(options.startMessage, 5000);
+			vscode.window.showInformationMessage(options.startMessage);
 		}
 
 		let statusBarItem: vscode.StatusBarItem | undefined;
@@ -100,7 +103,7 @@ export const TaskRunner = {
 
 					if (e.exitCode === 0) {
 						if (options.successMessage) {
-							vscode.window.setStatusBarMessage(options.successMessage, 5000);
+							vscode.window.showInformationMessage(options.successMessage);
 						}
 					} else {
 						if (options.errorMessage) {
@@ -113,11 +116,11 @@ export const TaskRunner = {
 				}
 			});
 		});
-	},
+	}
 
-	runWithTelemetry(options: TaskOptions): Promise<void> {
+	public static runWithTelemetry(options: TaskOptions): Promise<void> {
 		if (options.startMessage) {
-			vscode.window.setStatusBarMessage(options.startMessage, 5000);
+			vscode.window.showInformationMessage(options.startMessage);
 		}
 
 		let statusBarItem: vscode.StatusBarItem | undefined;
@@ -135,23 +138,8 @@ export const TaskRunner = {
 		const command = options.command || defaultCommand;
 
 		const _config = vscode.workspace.getConfiguration("automa");
-		const browserPathOverride =
-			_config.get<string>("browserPathOverride") || "";
-		const extensionPaths = _config.get<string>("extensionPaths") || "";
 
-		const env: { [key: string]: string } = {};
-		for (const key in process.env) {
-			if (process.env[key] !== undefined) {
-				env[key] = process.env[key] as string;
-			}
-		}
-
-		if (browserPathOverride) {
-			env.AUTOMA_BROWSER_PATH = browserPathOverride;
-		}
-		if (extensionPaths) {
-			env.EXTENSION_PATHS = extensionPaths;
-		}
+		const env = { ...process.env };
 
 		// Create an output channel to show logs
 		const outputChannel = vscode.window.createOutputChannel(options.name);
@@ -170,20 +158,16 @@ export const TaskRunner = {
 		rl.on("line", (line: string) => {
 			outputChannel.appendLine(line);
 			const trimmed = line.trim();
-			const match = trimmed.match(/("type":"telemetry".+)/);
-			if (match) {
-				try {
-					// Look for a valid JSON boundary. Automa outputs it as a complete object.
-					const start = trimmed.indexOf("{");
-					const end = trimmed.lastIndexOf("}");
-					if (start !== -1 && end !== -1 && end > start) {
-						const telemetry = castRecord(
-							JSON.parse(trimmed.substring(start, end + 1)),
-						);
+			if (trimmed.includes('"type":"telemetry"')) {
+				const start = trimmed.indexOf("{");
+				const end = trimmed.lastIndexOf("}");
+				if (start !== -1 && end !== -1 && end > start) {
+					try {
+						const telemetry = JSON.parse(trimmed.substring(start, end + 1));
 						TaskRunner.telemetryEmitter.emit("telemetry", telemetry);
+					} catch (_e) {
+						// ignore parse error
 					}
-				} catch (_e: unknown) {
-					// ignore parse error
 				}
 			}
 		});
@@ -201,7 +185,7 @@ export const TaskRunner = {
 
 				if (code === 0) {
 					if (options.successMessage) {
-						vscode.window.setStatusBarMessage(options.successMessage, 5000);
+						vscode.window.showInformationMessage(options.successMessage);
 					}
 				} else {
 					if (options.errorMessage) {
@@ -213,5 +197,5 @@ export const TaskRunner = {
 				resolve();
 			});
 		});
-	},
-};
+	}
+}

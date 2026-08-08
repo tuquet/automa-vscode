@@ -1,14 +1,13 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as vscode from "vscode";
-import { toError } from "../utils/typeGuards";
 import { BaseCustomEditorProvider } from "./BaseCustomEditorProvider";
 
 export class BrowserProfileEditorProvider
 	extends BaseCustomEditorProvider
 	implements vscode.CustomTextEditorProvider
 {
-	public static readonly viewType = "automa.bprofileEditor";
+	public static readonly viewType = "automa.browserProfileEditor";
 
 	public static register(context: vscode.ExtensionContext) {
 		context.subscriptions.push(
@@ -30,40 +29,17 @@ export class BrowserProfileEditorProvider
 		webviewPanel: vscode.WebviewPanel,
 		_token: vscode.CancellationToken,
 	): Promise<void> {
-		let isRendered = false;
-		let hasError = false;
-		const updateWebview = async () => {
-			if (!isRendered || hasError) {
-				const success = this.renderWebview(document, webviewPanel);
-				hasError = !success;
-				isRendered = true;
-			} else {
-				try {
-					const content = document.getText();
-					await webviewPanel.webview.postMessage({
-						type: "update",
-						text: content,
-					});
-				} catch (_e: unknown) {
-					// Ignore parse errors on external edits until fixed
-				}
-			}
+		const updateWebview = () => {
+			this.renderWebview(document, webviewPanel);
 		};
 
 		const messageDisposable = webviewPanel.webview.onDidReceiveMessage(
-			async (message: Record<string, unknown>) => {
-				try {
-					if (message.type === "save-profile") {
-						await this.handleSaveProfile(document, message.data as string);
-					}
-					if (message.command === "error" || message.type === "error") {
-						vscode.window.showErrorMessage(
-							(message.text as string) || "Webview Error",
-						);
-					}
-				} catch (error: unknown) {
-					const e = toError(error);
-					vscode.window.showErrorMessage(`Action failed: ${e.message}`);
+			async (message) => {
+				if (message.type === "save-profile") {
+					await this.handleSaveProfile(document, message.data);
+				}
+				if (message.command === "error" || message.type === "error") {
+					vscode.window.showErrorMessage(message.text || "Webview Error");
 				}
 			},
 		);
@@ -72,13 +48,13 @@ export class BrowserProfileEditorProvider
 			messageDisposable,
 		]);
 
-		await updateWebview();
+		updateWebview();
 	}
 
 	private renderWebview(
 		document: vscode.TextDocument,
 		webviewPanel: vscode.WebviewPanel,
-	): boolean {
+	) {
 		try {
 			const content = document.getText();
 			const json = JSON.parse(content || "{}");
@@ -97,11 +73,9 @@ export class BrowserProfileEditorProvider
 				fileName,
 				isTable,
 			);
-			return true;
 		} catch (error: unknown) {
-			const e = toError(error);
+			const e = error instanceof Error ? error : new Error(String(error));
 			webviewPanel.webview.html = `<body><h2>Error reading profile</h2><p>${e.message}</p></body>`;
-			return false;
 		}
 	}
 
@@ -112,12 +86,11 @@ export class BrowserProfileEditorProvider
 		try {
 			await this.saveDocument(document, newJsonStr);
 
-			vscode.window.setStatusBarMessage(
+			vscode.window.showInformationMessage(
 				"Browser Profile saved successfully!",
-				3000,
 			);
 		} catch (error: unknown) {
-			const e = toError(error);
+			const e = error instanceof Error ? error : new Error(String(error));
 			vscode.window.showErrorMessage(`Failed to save profile: ${e.message}`);
 		}
 	}
@@ -144,24 +117,27 @@ export class BrowserProfileEditorProvider
 							.replace(/\\/g, "\\\\")
 							.replace(/`/g, "\\`")
 							.replace(/\$\{/g, "\\${")
-							.replace(/</g, "\\u003c")
+							.replace(/<\/script>/gi, "<\\/script>")
 					: "";
 
-			htmlContent = htmlContent.replace(/\{\{PROFILE_DATA\}\}/g, () =>
+			htmlContent = htmlContent.replace(
+				"{{PROFILE_DATA}}",
 				safeString(JSON.stringify(json, null, 2)),
 			);
-			htmlContent = htmlContent.replace(/\{\{PROFILE_NAME\}\}/g, () =>
+			htmlContent = htmlContent.replace(
+				"{{PROFILE_NAME}}",
 				safeString(json.name || fileName),
 			);
-			htmlContent = htmlContent.replace(/\{\{LABEL\}\}/g, () => label);
-			htmlContent = htmlContent.replace(/\{\{ICON\}\}/g, () => icon);
-			htmlContent = htmlContent.replace(/\{\{IS_TABLE\}\}/g, () =>
+			htmlContent = htmlContent.replace("{{LABEL}}", label);
+			htmlContent = htmlContent.replace("{{ICON}}", icon);
+			htmlContent = htmlContent.replace(
+				"{{IS_TABLE}}",
 				isTable ? "true" : "false",
 			);
 
 			return htmlContent;
 		} catch (error: unknown) {
-			const e = toError(error);
+			const e = error instanceof Error ? error : new Error(String(error));
 			return `<body><h2>Error loading HTML template</h2><pre>${e.message}</pre></body>`;
 		}
 	}

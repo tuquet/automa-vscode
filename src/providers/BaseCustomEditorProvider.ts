@@ -1,6 +1,5 @@
 import * as path from "node:path";
 import * as vscode from "vscode";
-import { isTextDocument } from "../utils/typeGuards";
 
 export abstract class BaseCustomEditorProvider {
 	protected internalSaves = new Set<string>();
@@ -18,17 +17,12 @@ export abstract class BaseCustomEditorProvider {
 		let changeDisposable: vscode.Disposable;
 
 		// Check if it's a TextDocument
-		if (isTextDocument(document)) {
+		if ("getText" in document) {
 			changeDisposable = vscode.workspace.onDidChangeTextDocument((e) => {
 				const uriStr = document.uri.toString();
 				if (e.document.uri.toString() === uriStr) {
 					if (!this.internalSaves.has(uriStr)) {
-						const res = updateWebview();
-						if (res instanceof Promise) {
-							res.catch((err: unknown) =>
-								console.error("Webview update error:", err),
-							);
-						}
+						updateWebview();
 					}
 				}
 			});
@@ -43,14 +37,7 @@ export abstract class BaseCustomEditorProvider {
 			const uriStr = document.uri.toString();
 			const handleChange = () => {
 				if (!this.internalSaves.has(uriStr)) {
-					setTimeout(() => {
-						const res = updateWebview();
-						if (res instanceof Promise) {
-							res.catch((err: unknown) =>
-								console.error("Webview update error:", err),
-							);
-						}
-					}, 50);
+					setTimeout(() => updateWebview(), 50);
 				}
 			};
 

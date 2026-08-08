@@ -258,10 +258,6 @@
                     </div>
                 </div>
             </form>
-        <!-- Error Banner overlay -->
-        <div v-if="jsonError" class="absolute bottom-4 left-4 right-4 p-3 border border-red-900 bg-red-900/90 text-red-200 rounded text-sm font-mono flex items-start gap-2 shadow-lg z-10 backdrop-blur-sm">
-            <svg xmlns="http://www.w3.org/2000/svg" class="mt-0.5" width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM11 15V17H13V15H11ZM11 7V13H13V7H11Z"></path></svg>
-            <div>{{ jsonError }}</div>
         </div>
     </div>
 
@@ -330,7 +326,6 @@
             setup() {
                 const previousState = vscode.getState() || {};
                 const currentTab = ref(previousState.currentTab || 'params');
-                const jsonError = ref(null);
                 const tabs = [
                     { id: 'params', label: 'Trigger Parameters' },
                     { id: 'global-data', label: 'Global Data' },
@@ -338,12 +333,12 @@
                     { id: 'properties', label: 'Properties' }
                 ];
 
-                const triggerParams = ref(tParams || []);
-                const explicitParams = computed(() => triggerParams.value.filter(p => !p.isImplicit));
-                const implicitParams = computed(() => triggerParams.value.filter(p => p.isImplicit));
+                const triggerParams = tParams || [];
+                const explicitParams = computed(() => triggerParams.filter(p => !p.isImplicit));
+                const implicitParams = computed(() => triggerParams.filter(p => p.isImplicit));
 
                 const paramValues = reactive({});
-                triggerParams.value.forEach(p => {
+                triggerParams.forEach(p => {
                     paramValues[p.name] = previousState.paramValues?.[p.name] !== undefined 
                         ? previousState.paramValues[p.name] 
                         : (p.defaultValue || '');
@@ -361,101 +356,26 @@
                     vscode.setState({ ...state, currentTab: newTab, keepBrowserOpen: newKeepOpen });
                 });
 
-                const normalizeJsonStr = (str) => {
-                    if (!str || typeof str !== 'string') return str || '';
-                    try {
-                        return JSON.stringify(JSON.parse(str), null, 2);
-                    } catch(e) {
-                        return str;
-                    }
-                };
-
-                let currentDocState = {
+                const currentDocState = {
                     name: `{{JSON_NAME}}`,
                     description: `{{JSON_DESCRIPTION}}`,
                     version: `{{JSON_VERSION}}`,
                     extVersion: `{{JSON_EXT_VERSION}}`,
                     icon: `{{JSON_ICON}}` || 'riGlobalLine',
-                    globalData: normalizeJsonStr(`{{JSON_GLOBAL_DATA}}`),
-                    table: normalizeJsonStr(`{{JSON_TABLE}}`.trim() === "" ? "[]" : `{{JSON_TABLE}}`),
-                    settings: normalizeJsonStr(`{{JSON_SETTINGS}}`.trim() === "" ? "{}" : `{{JSON_SETTINGS}}`),
-                    includedWorkflows: normalizeJsonStr(`{{JSON_INCLUDED_WORKFLOWS}}`.trim() === "" ? "{}" : `{{JSON_INCLUDED_WORKFLOWS}}`)
-                };
-
-                const isStateEqual = (stateA, stateB) => {
-                    if (!stateA || !stateB) return false;
-                    const keys = ['name', 'description', 'version', 'extVersion', 'icon', 'globalData', 'table', 'settings', 'includedWorkflows'];
-                    for (const key of keys) {
-                        const valA = stateA[key];
-                        const valB = stateB[key];
-                        if (key === 'globalData' || key === 'table' || key === 'settings' || key === 'includedWorkflows') {
-                            if (normalizeJsonStr(valA) !== normalizeJsonStr(valB)) return false;
-                        } else {
-                            if (valA !== valB) return false;
-                        }
-                    }
-                    return true;
+                    globalData: `{{JSON_GLOBAL_DATA}}`,
+                    table: `{{JSON_TABLE}}`,
+                    settings: `{{JSON_SETTINGS}}`,
+                    includedWorkflows: `{{JSON_INCLUDED_WORKFLOWS}}`
                 };
 
                 let workflowData = currentDocState;
-                if (previousState.lastDocState && isStateEqual(previousState.lastDocState, currentDocState)) {
+                if (previousState.lastDocState && JSON.stringify(previousState.lastDocState) === JSON.stringify(currentDocState)) {
                     if (previousState.workflow) {
                         workflowData = previousState.workflow;
                     }
                 }
 
                 const workflow = reactive(workflowData);
-
-                onMounted(() => {
-                    window.addEventListener('message', event => {
-                        const message = event.data;
-                        if (message.type === 'update' && message.json) {
-                            const newDocState = {
-                                name: message.json.name || '',
-                                description: message.json.description || '',
-                                version: message.json.version || '',
-                                extVersion: message.json.extVersion || '',
-                                icon: message.json.icon || 'riGlobalLine',
-                                globalData: typeof message.json.globalData === 'string' ? message.json.globalData : (message.json.globalData ? normalizeJsonStr(JSON.stringify(message.json.globalData)) : ''),
-                                table: message.json.table ? normalizeJsonStr(JSON.stringify(message.json.table)) : "[]",
-                                settings: message.json.settings ? normalizeJsonStr(JSON.stringify(message.json.settings)) : "{}",
-                                includedWorkflows: message.json.includedWorkflows ? normalizeJsonStr(JSON.stringify(message.json.includedWorkflows)) : "{}"
-                            };
-
-                            const state = vscode.getState() || {};
-                            if (state.lastDocState && isStateEqual(state.lastDocState, newDocState)) {
-                                // Ignore update if disk content is unchanged from our last known state,
-                                // preserving any uncommitted user changes.
-                            } else {
-                                currentDocState = newDocState;
-                                
-                                // Update workflow reactive object
-                                workflow.name = currentDocState.name;
-                                workflow.description = currentDocState.description;
-                                workflow.version = currentDocState.version;
-                                workflow.extVersion = currentDocState.extVersion;
-                                workflow.icon = currentDocState.icon;
-                                workflow.globalData = currentDocState.globalData;
-                                workflow.table = currentDocState.table;
-                                workflow.settings = currentDocState.settings;
-                                workflow.includedWorkflows = currentDocState.includedWorkflows;
-                                
-                                vscode.setState({ ...state, lastDocState: currentDocState });
-                            }
-                            
-                            // Update triggerParams if available
-                            if (message.triggerParams) {
-                                triggerParams.value = message.triggerParams;
-                                // Merge paramValues
-                                triggerParams.value.forEach(p => {
-                                    if (paramValues[p.name] === undefined) {
-                                        paramValues[p.name] = p.defaultValue || '';
-                                    }
-                                });
-                            }
-                        }
-                    });
-                });
 
                 watch(workflow, (newVal) => {
                     const state = vscode.getState() || {};
@@ -485,38 +405,13 @@
                 const paramsForm = ref(null);
 
                 const saveWorkflow = () => {
-                    // Validate JSON fields first
-                    const jsonFields = ['globalData', 'table', 'settings', 'includedWorkflows'];
-                    for (const field of jsonFields) {
-                        if (workflow[field] && typeof workflow[field] === 'string') {
-                            try {
-                                JSON.parse(workflow[field]);
-                            } catch (e) {
-                                jsonError.value = `Cannot save: Invalid JSON in ${field}`;
-                                setTimeout(() => { jsonError.value = null; }, 5000);
-                                return;
-                            }
-                        }
-                    }
-                    
-                    jsonError.value = null;
                     const dataToSave = JSON.parse(JSON.stringify(workflow));
-                    
-                    dataToSave.table = dataToSave.table.trim() === "" ? "[]" : dataToSave.table;
-                    dataToSave.settings = dataToSave.settings.trim() === "" ? "{}" : dataToSave.settings;
-                    dataToSave.includedWorkflows = dataToSave.includedWorkflows.trim() === "" ? "{}" : dataToSave.includedWorkflows;
                     
                     // Allow saving current explicit parameter values as defaultValue in workflow
                     const explicitParamsData = {};
-                    triggerParams.value.forEach(p => {
+                    triggerParams.forEach(p => {
                         if (!p.isImplicit) {
-                            let val = paramValues[p.name];
-                            if (p.type === 'number' && val !== '' && !isNaN(val)) {
-                                val = Number(val);
-                            } else if (p.type === 'boolean') {
-                                val = (val === 'true' || val === true);
-                            }
-                            explicitParamsData[p.name] = val;
+                            explicitParamsData[p.name] = paramValues[p.name];
                         }
                     });
                     dataToSave.triggerParams = explicitParamsData;
@@ -529,9 +424,9 @@
                         extVersion: dataToSave.extVersion,
                         icon: dataToSave.icon,
                         globalData: dataToSave.globalData,
-                        table: normalizeJsonStr(dataToSave.table),
-                        settings: normalizeJsonStr(dataToSave.settings),
-                        includedWorkflows: normalizeJsonStr(dataToSave.includedWorkflows)
+                        table: dataToSave.table,
+                        settings: dataToSave.settings,
+                        includedWorkflows: dataToSave.includedWorkflows
                     };
                     vscode.setState({ ...state, lastDocState: newDocState });
 
@@ -554,14 +449,10 @@
                     }
                     
                     const params = {};
-                    triggerParams.value.forEach(p => {
-                        let val = paramValues[p.name];
-                        if (p.type === 'number' && val !== '' && !isNaN(val)) {
-                            val = Number(val);
-                        } else if (p.type === 'boolean') {
-                            val = (val === 'true' || val === true);
-                        }
-                        params[p.name] = val;
+
+                    
+                    triggerParams.forEach(p => {
+                        params[p.name] = paramValues[p.name];
                     });
 
                     vscode.postMessage({
@@ -585,8 +476,7 @@
                     runWorkflow,
                     explicitParams,
                     implicitParams,
-                    paramsForm,
-                    jsonError
+                    paramsForm
                 };
             }
         });

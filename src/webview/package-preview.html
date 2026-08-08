@@ -184,10 +184,6 @@
                     </div>
                 </div>
             </form>
-        <!-- Error Banner overlay -->
-        <div v-if="jsonError" class="absolute bottom-4 left-4 right-4 p-3 border border-red-900 bg-red-900/90 text-red-200 rounded text-sm font-mono flex items-start gap-2 shadow-lg z-10 backdrop-blur-sm">
-            <svg xmlns="http://www.w3.org/2000/svg" class="mt-0.5" width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM11 15V17H13V15H11ZM11 7V13H13V7H11Z"></path></svg>
-            <div>{{ jsonError }}</div>
         </div>
     </div>
 
@@ -200,7 +196,6 @@
             setup() {
                 const previousState = vscode.getState() || {};
                 const currentTab = ref(previousState.currentTab || 'params');
-                const jsonError = ref(null);
                 const tabs = [
                     { id: 'params', label: 'Package Interface' },
                     { id: 'settings', label: 'Settings' },
@@ -212,15 +207,15 @@
                     vscode.setState({ ...state, currentTab: newTab });
                 });
 
-                const inputs = ref(typeof pInputs !== 'undefined' ? pInputs : []);
-                const outputs = ref(typeof pOutputs !== 'undefined' ? pOutputs : []);
-                const pVarsList = ref(typeof pVars !== 'undefined' ? pVars : []);
-                const tParamsList = ref(typeof tParams !== 'undefined' ? tParams : []);
+                const inputs = ref(pInputs || []);
+                const outputs = ref(pOutputs || []);
                 
                 const variables = computed(() => {
                     const vars = [];
+                    const pVarsList = pVars || [];
+                    const tParamsList = tParams || [];
                     
-                    pVarsList.value.forEach(v => {
+                    pVarsList.forEach(v => {
                         vars.push({
                             name: v.name,
                             type: 'Explicit Variable',
@@ -228,8 +223,8 @@
                         });
                     });
                     
-                    tParamsList.value.forEach(v => {
-                        if (!pVarsList.value.some(pv => pv.name === v.name)) {
+                    tParamsList.forEach(v => {
+                        if (!pVarsList.some(pv => pv.name === v.name)) {
                             vars.push({
                                 name: v.name,
                                 type: v.description || 'Implicit',
@@ -241,72 +236,21 @@
                     return vars;
                 });
 
-                const normalizeJsonStr = (str) => {
-                    if (!str || typeof str !== 'string') return str || '';
-                    try {
-                        return JSON.stringify(JSON.parse(str), null, 2);
-                    } catch(e) {
-                        return str;
-                    }
-                };
-
-                let currentDocState = {
+                const currentDocState = {
                     name: `{{JSON_NAME}}`,
                     description: `{{JSON_DESCRIPTION}}`,
                     icon: `{{JSON_ICON}}` || 'riGlobalLine',
-                    settings: normalizeJsonStr(`{{JSON_SETTINGS}}`.trim() === "" ? "{}" : `{{JSON_SETTINGS}}`)
-                };
-
-                const isStateEqual = (stateA, stateB) => {
-                    if (!stateA || !stateB) return false;
-                    const keys = ['name', 'description', 'icon', 'settings'];
-                    for (const key of keys) {
-                        const valA = stateA[key];
-                        const valB = stateB[key];
-                        if (key === 'settings') {
-                            if (normalizeJsonStr(valA) !== normalizeJsonStr(valB)) return false;
-                        } else {
-                            if (valA !== valB) return false;
-                        }
-                    }
-                    return true;
+                    settings: `{{JSON_SETTINGS}}`
                 };
 
                 let workflowData = currentDocState;
-                if (previousState.lastDocState && isStateEqual(previousState.lastDocState, currentDocState)) {
+                if (previousState.lastDocState && JSON.stringify(previousState.lastDocState) === JSON.stringify(currentDocState)) {
                     if (previousState.workflow) {
                         workflowData = previousState.workflow;
                     }
                 }
 
                 const workflow = reactive(workflowData);
-
-                Vue.onMounted(() => {
-                    window.addEventListener('message', event => {
-                        const message = event.data;
-                        if (message.type === 'update' && message.json) {
-                            currentDocState = {
-                                name: message.json.name || '',
-                                description: message.json.description || '',
-                                icon: message.json.icon || 'riGlobalLine',
-                                settings: message.json.settings ? normalizeJsonStr(JSON.stringify(message.json.settings)) : "{}"
-                            };
-
-                            workflow.name = currentDocState.name;
-                            workflow.description = currentDocState.description;
-                            workflow.icon = currentDocState.icon;
-                            workflow.settings = currentDocState.settings;
-                            
-                            inputs.value = Array.isArray(message.json.inputs) ? message.json.inputs : [];
-                            outputs.value = Array.isArray(message.json.outputs) ? message.json.outputs : [];
-                            pVarsList.value = Array.isArray(message.json.variable) ? message.json.variable : [];
-                            
-                            if (message.triggerParams) {
-                                tParamsList.value = message.triggerParams;
-                            }
-                        }
-                    });
-                });
 
                 watch(workflow, (newVal) => {
                     const state = vscode.getState() || {};
@@ -334,31 +278,19 @@
                 });
 
                 const saveWorkflow = () => {
-                    // Validate JSON fields first
-                    const jsonFields = ['settings'];
-                    for (const field of jsonFields) {
-                        if (workflow[field] && typeof workflow[field] === 'string') {
-                            try {
-                                JSON.parse(workflow[field]);
-                            } catch (e) {
-                                jsonError.value = `Cannot save: Invalid JSON in ${field}`;
-                                setTimeout(() => { jsonError.value = null; }, 5000);
-                                return;
-                            }
-                        }
-                    }
-
-                    jsonError.value = null;
                     const dataToSave = JSON.parse(JSON.stringify(workflow));
-                    
-                    dataToSave.settings = dataToSave.settings.trim() === "" ? "{}" : dataToSave.settings;
 
                     const state = vscode.getState() || {};
                     const newDocState = {
                         name: dataToSave.name,
                         description: dataToSave.description,
+                        version: dataToSave.version,
+                        extVersion: dataToSave.extVersion,
                         icon: dataToSave.icon,
-                        settings: normalizeJsonStr(dataToSave.settings)
+                        globalData: dataToSave.globalData,
+                        table: dataToSave.table,
+                        settings: dataToSave.settings,
+                        includedWorkflows: dataToSave.includedWorkflows
                     };
                     vscode.setState({ ...state, lastDocState: newDocState });
 
@@ -384,8 +316,7 @@
                     iconsList,
                     iconClass,
                     saveWorkflow,
-                    openStudio,
-                    jsonError
+                    openStudio
                 };
             }
         }).mount('#app');

@@ -481,18 +481,7 @@
                                 const newFleetData = JSON.parse(message.text);
                                 const state = vscode.getState() || {};
 
-                                let isUnchanged = false;
-                                if (state.lastDocumentData) {
-                                    try {
-                                        isUnchanged = JSON.stringify(JSON.parse(state.lastDocumentData)) === JSON.stringify(newFleetData);
-                                    } catch(e) {
-                                        isUnchanged = state.lastDocumentData === message.text;
-                                    }
-                                } else {
-                                    isUnchanged = state.lastDocumentData === message.text;
-                                }
-
-                                if (isUnchanged && state.fleetData) {
+                                if (state.lastDocumentData === message.text && state.fleetData) {
                                     this.fleetData = state.fleetData;
                                     this.isModified = state.isModified || false;
                                 } else {

@@ -1,5 +1,4 @@
 import * as vscode from "vscode";
-import { getErrorMessage, isRecord } from "../utils/typeGuards";
 
 export class VaultTreeDataProvider
 	implements vscode.TreeDataProvider<VaultItem>
@@ -68,7 +67,6 @@ export class VaultTreeDataProvider
 	public register(context: vscode.ExtensionContext) {
 		const treeView = vscode.window.createTreeView("automa.globalVault", {
 			treeDataProvider: this,
-			canSelectMany: true,
 		});
 		context.subscriptions.push(treeView);
 
@@ -142,11 +140,7 @@ export class VaultTreeDataProvider
 			"Error reading variables",
 			"No *.variable.json found",
 			(item, isArray, _key, val) =>
-				isArray
-					? (item.value as string | undefined)
-					: isRecord(val) || Array.isArray(val)
-						? JSON.stringify(val)
-						: String(val),
+				isArray ? (item.value as string | undefined) : String(val),
 			true,
 		);
 	}
@@ -221,7 +215,11 @@ export class VaultTreeDataProvider
 									),
 								);
 							}
-						} else if (allowObjects && isRecord(data)) {
+						} else if (
+							allowObjects &&
+							typeof data === "object" &&
+							data !== null
+						) {
 							for (const [key, val] of Object.entries(data)) {
 								const value = extractValue(data, false, key, val);
 								items.push(
@@ -238,7 +236,7 @@ export class VaultTreeDataProvider
 							}
 						}
 					} catch (e: unknown) {
-						const msg = getErrorMessage(e);
+						const msg = e instanceof Error ? e.message : String(e);
 						parseErrors.push(
 							`Failed to parse vault file ${file.fsPath}: ${msg}`,
 						);
@@ -251,12 +249,12 @@ export class VaultTreeDataProvider
 						parseErrors.length > limit
 							? `\n...and ${parseErrors.length - limit} more`
 							: "";
-					console.warn(
+					vscode.window.showWarningMessage(
 						`Failed to parse ${parseErrors.length} vault file(s):\n${displayErrors}${more}`,
 					);
 				}
 				return items;
-			} catch (_e: unknown) {
+			} catch (_e) {
 				return [
 					new VaultItem(
 						errorMsg,

@@ -206,15 +206,6 @@
         const initialName = `{{PROFILE_NAME}}`;
         const isTable = {{IS_TABLE}};
 
-        const normalizeJsonStr = (str) => {
-            if (!str || typeof str !== 'string') return str || '';
-            try {
-                return JSON.stringify(JSON.parse(str));
-            } catch(e) {
-                return str;
-            }
-        };
-
         const { createApp, ref, onMounted, watch } = Vue;
 
         const JsonEditor = {
@@ -268,10 +259,8 @@
                 const state = vscode.getState() || {};
                 
                 let loadedDataStr = initialData;
-                let loadedJsonError = null;
-                if (normalizeJsonStr(state.lastDocumentData) === normalizeJsonStr(initialData)) {
+                if (state.lastDocumentData === initialData) {
                     if (state.profileDataStr !== undefined) loadedDataStr = state.profileDataStr;
-                    if (state.jsonError !== undefined) loadedJsonError = state.jsonError;
                 }
                 
                 return {
@@ -280,26 +269,13 @@
                     profileName: initialName,
                     profileDataStr: loadedDataStr,
                     initialDataStr: initialData,
-                    jsonError: loadedJsonError,
+                    jsonError: null,
                     formData: null,
                     isInternalSync: false
                 }
             },
             created() {
                 this.syncToForm();
-            },
-            mounted() {
-                window.addEventListener('message', event => {
-                    const message = event.data;
-                    if (message.type === 'update') {
-                        const state = vscode.getState() || {};
-                        if (normalizeJsonStr(state.lastDocumentData) === normalizeJsonStr(message.text)) {
-                            return; // unchanged
-                        }
-                        this.profileDataStr = message.text;
-                        this.initialDataStr = message.text;
-                    }
-                });
             },
             computed: {
                 isModified() {
@@ -313,19 +289,15 @@
                 },
                 profileDataStr(newVal) {
                     const state = vscode.getState() || {};
-                    
-                    if (this.isInternalSync) {
-                        vscode.setState({ ...state, profileDataStr: newVal, lastDocumentData: this.initialDataStr, jsonError: null });
-                        return;
-                    }
+                    vscode.setState({ ...state, profileDataStr: newVal, lastDocumentData: initialData });
+
+                    if (this.isInternalSync) return;
                     try {
                         JSON.parse(newVal);
                         this.jsonError = null;
-                        vscode.setState({ ...state, profileDataStr: newVal, jsonError: null, lastDocumentData: this.initialDataStr });
                         this.syncToForm();
                     } catch (e) {
                         this.jsonError = e.message;
-                        vscode.setState({ ...state, profileDataStr: newVal, jsonError: e.message, lastDocumentData: this.initialDataStr });
                     }
                 }
             },
@@ -345,12 +317,11 @@
                     }
                     this.viewMode = 'form';
                 },
-                async syncToJson() {
+                syncToJson() {
                     this.isInternalSync = true;
                     this.profileDataStr = JSON.stringify(this.formData, null, 2);
                     this.jsonError = null;
-                    await Vue.nextTick();
-                    this.isInternalSync = false;
+                    setTimeout(() => { this.isInternalSync = false; }, 50);
                 },
                 addArrayItem() {
                     if (!Array.isArray(this.formData)) {
@@ -379,18 +350,6 @@
                         vscode.postMessage({ command: 'error', text: 'Cannot save: JSON is invalid.' });
                         return;
                     }
-
-                    try {
-                        const parsed = JSON.parse(this.profileDataStr);
-                        this.profileDataStr = JSON.stringify(parsed, null, 2);
-                        if (this.viewMode === 'form') {
-                            this.syncToForm();
-                        }
-                    } catch(e) {
-                        vscode.postMessage({ command: 'error', text: 'Cannot save: JSON is invalid.' });
-                        return;
-                    }
-
                     this.initialDataStr = this.profileDataStr;
                     
                     const state = vscode.getState() || {};

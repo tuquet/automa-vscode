@@ -2,7 +2,6 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as vscode from "vscode";
 import { DaemonManager } from "../core/DaemonManager";
-import { hasProp, isRecord, toError } from "../utils/typeGuards";
 
 export interface ITable {
 	id: string | number;
@@ -38,18 +37,42 @@ function getGlobalsFilePath(filename: string): string | undefined {
 	return path.join(globalsDir, filename);
 }
 
-function readVaultFileSafely(filePath: string): {
-	data: Record<string, unknown>[] | Record<string, unknown>;
-	success: boolean;
-} {
-	if (!fs.existsSync(filePath)) return { data: [], success: true };
+function loadVariables(
+	varsPath: string,
+): Array<{ name?: string; key?: string; value: unknown }> {
+	if (!fs.existsSync(varsPath)) return [];
 	try {
-		const content = fs.readFileSync(filePath, "utf8");
-		return { data: JSON.parse(content), success: true };
-	} catch (_e: unknown) {
-		vscode.window.showErrorMessage(`Failed to read ${path.basename(filePath)}`);
-		return { data: [], success: false };
+		const content = fs.readFileSync(varsPath, "utf8");
+		const data = JSON.parse(content);
+		if (Array.isArray(data)) {
+			return data;
+		}
+		if (typeof data === "object" && data !== null) {
+			return Object.entries(data).map(([k, v]) => ({
+				name: k,
+				value: v,
+			}));
+		}
+	} catch (_e) {
+		vscode.window.showErrorMessage(`Failed to read ${path.basename(varsPath)}`);
 	}
+	return [];
+}
+
+function loadTables(tablesPath: string): ITable[] {
+	if (!fs.existsSync(tablesPath)) return [];
+	try {
+		const content = fs.readFileSync(tablesPath, "utf8");
+		const data = JSON.parse(content);
+		if (Array.isArray(data)) {
+			return data;
+		}
+	} catch (_e) {
+		vscode.window.showErrorMessage(
+			`Failed to read ${path.basename(tablesPath)}`,
+		);
+	}
+	return [];
 }
 
 function writeJsonFile(filePath: string, data: unknown): void {
@@ -71,27 +94,18 @@ export async function addVariableCommand() {
 	const varsPath = getGlobalsFilePath("globals.variable.json");
 	if (!varsPath) return;
 
-	const { data: rawData, success } = readVaultFileSafely(varsPath);
-	if (!success) return;
+	const variables = loadVariables(varsPath);
 
-	let data = rawData;
-
-	if (Array.isArray(data)) {
-		const existingIndex = data.findIndex(
-			(v: Record<string, unknown>) => v.name === key || v.key === key,
-		);
-		if (existingIndex >= 0) {
-			data[existingIndex].value = value;
-		} else {
-			data.push({ name: key, value: value });
-		}
-	} else if (isRecord(data)) {
-		data[key] = value;
+	const existingIndex = variables.findIndex(
+		(v) => v.name === key || v.key === key,
+	);
+	if (existingIndex >= 0) {
+		variables[existingIndex].value = value;
 	} else {
-		data = [{ name: key, value: value }];
+		variables.push({ name: key, value: value });
 	}
 
-	writeJsonFile(varsPath, data);
+	writeJsonFile(varsPath, variables);
 	vscode.window.showInformationMessage(`Variable ${key} added successfully.`);
 }
 
@@ -140,13 +154,10 @@ export async function addTableCommand() {
 	const tablesPath = getGlobalsFilePath("globals.table.json");
 	if (!tablesPath) return;
 
-	const { data: rawData, success } = readVaultFileSafely(tablesPath);
-	if (!success) return;
-
-	let data = rawData;
+	const tables = loadTables(tablesPath);
 
 	const newTableId = `table_${Date.now().toString(36)}`;
-	const newTable = {
+	tables.push({
 		id: newTableId,
 		name: name,
 		columns: [],
@@ -154,17 +165,9 @@ export async function addTableCommand() {
 		columnsIndex: {},
 		createdAt: Date.now(),
 		modifiedAt: Date.now(),
-	};
+	});
 
-	if (Array.isArray(data)) {
-		data.push(newTable);
-	} else if (isRecord(data)) {
-		data[newTableId] = newTable;
-	} else {
-		data = [newTable];
-	}
-
-	writeJsonFile(tablesPath, data);
+	writeJsonFile(tablesPath, tables);
 	vscode.window.showInformationMessage(`Table ${name} added successfully.`);
 }
 
@@ -199,18 +202,12 @@ async function executeEncryption(
 				if (passphrase) {
 					args.push("-p", passphrase);
 				}
-				const result =
-					await DaemonManager.getInstance().executeRawCliCommand(args);
-				if (result.code !== 0) {
-					throw new Error(
-						`Command failed with exit code ${result.code}\n${result.stderr}`,
-					);
-				}
+				await DaemonManager.getInstance().executeRawCliCommand(args);
 				vscode.window.showInformationMessage(
 					`Credential ${name} encrypted and added successfully.`,
 				);
 			} catch (error: unknown) {
-				const e = toError(error);
+				const e = error instanceof Error ? error : new Error(String(error));
 				vscode.window.showErrorMessage(
 					`Failed to add credential: ${e.message}`,
 				);
@@ -221,165 +218,51 @@ async function executeEncryption(
 }
 
 export async function deleteVaultItemCommand(
-	item?: import("../providers/VaultTreeDataProvider").VaultItem,
-	selectedItems?: import("../providers/VaultTreeDataProvider").VaultItem[],
+	item: import("../providers/VaultTreeDataProvider").VaultItem,
 ) {
-	let targetItems: import("../providers/VaultTreeDataProvider").VaultItem[] =
-		[];
-
-	if (
-		selectedItems &&
-		Array.isArray(selectedItems) &&
-		selectedItems.length > 0
-	) {
-		targetItems = selectedItems.filter((i) => i.resourceUri && i.label);
-	} else if (item?.resourceUri && item?.label) {
-		targetItems = [item];
-	} else {
-		const items: (vscode.QuickPickItem & {
-			payload: import("../providers/VaultTreeDataProvider").VaultItem;
-		})[] = [];
-		const workspaceRoot = getWorkspaceRoot();
-		if (!workspaceRoot) return;
-
-		const patterns = [
-			{ pattern: "**/*.variable.json", type: "Variable" as const },
-			{ pattern: "**/*.credential.json", type: "Credential" as const },
-			{ pattern: "**/*.table.json", type: "Table" as const },
-		];
-
-		for (const p of patterns) {
-			const files = await vscode.workspace.findFiles(
-				p.pattern,
-				"**/{node_modules,.git,dist,out,.gemini,tmp,build}/**",
-			);
-			for (const file of files) {
-				const { data, success } = readVaultFileSafely(file.fsPath);
-				if (!success) continue;
-				if (Array.isArray(data)) {
-					for (const entry of data) {
-						const label = String(
-							entry.name || entry.id || entry.key || "Unnamed",
-						);
-						const itemId = String(entry.id || entry.key || entry.name);
-						items.push({
-							label: `$(symbol-field) ${label}`,
-							description: p.type,
-							detail: file.fsPath,
-							payload: {
-								label,
-								type: p.type,
-								resourceUri: file,
-								itemId,
-								collapsibleState: vscode.TreeItemCollapsibleState.None,
-							},
-						});
-					}
-				} else if (isRecord(data) && p.type !== "Table") {
-					for (const [key] of Object.entries(data)) {
-						items.push({
-							label: `$(symbol-field) ${key}`,
-							description: p.type,
-							detail: file.fsPath,
-							payload: {
-								label: key,
-								type: p.type,
-								resourceUri: file,
-								itemId: key,
-								collapsibleState: vscode.TreeItemCollapsibleState.None,
-							},
-						});
-					}
-				}
-			}
-		}
-
-		if (items.length === 0) {
-			vscode.window.showInformationMessage("No vault items found to delete.");
-			return;
-		}
-
-		const selected = await vscode.window.showQuickPick(items, {
-			placeHolder: "Select Vault Item(s) to delete",
-			matchOnDescription: true,
-			matchOnDetail: true,
-			canPickMany: true,
-		});
-
-		if (!selected || selected.length === 0) return;
-		targetItems = selected.map((s) => s.payload);
-	}
-
-	if (targetItems.length === 0) return;
-
-	const msg =
-		targetItems.length === 1
-			? `${targetItems[0].type.toLowerCase()} '${targetItems[0].label}'`
-			: `${targetItems.length} items`;
+	if (!item?.resourceUri || !item.label) return;
 
 	const confirm = await vscode.window.showWarningMessage(
-		`Are you sure you want to delete ${msg}?`,
+		`Are you sure you want to delete ${item.type.toLowerCase()} '${item.label}'?`,
 		"Yes",
 		"No",
 	);
 	if (confirm !== "Yes") return;
 
-	let totalDeleted = 0;
+	try {
+		const content = fs.readFileSync(item.resourceUri.fsPath, "utf8");
+		let data = JSON.parse(content);
+		let modified = false;
 
-	const fileMap = new Map<string, typeof targetItems>();
-	for (const tItem of targetItems) {
-		const fsPath = tItem.resourceUri.fsPath;
-		if (!fileMap.has(fsPath)) {
-			fileMap.set(fsPath, []);
-		}
-		fileMap.get(fsPath)?.push(tItem);
-	}
-
-	for (const [fsPath, itemsInFile] of fileMap.entries()) {
-		try {
-			const content = fs.readFileSync(fsPath, "utf8");
-			let data = JSON.parse(content);
-			let modified = false;
-
-			if (Array.isArray(data)) {
-				const initialLength = data.length;
-				data = data.filter((entry: Record<string, unknown>) => {
+		if (Array.isArray(data)) {
+			const initialLength = data.length;
+			data = data.filter((entry: Record<string, unknown>) => {
+				if (item.itemId) {
 					const entryId = entry.id || entry.key || entry.name;
-					return !itemsInFile.some(
-						(targetItem) =>
-							(targetItem.itemId && entryId === targetItem.itemId) ||
-							(!targetItem.itemId && entryId === targetItem.label),
-					);
-				});
-				if (data.length !== initialLength) {
-					modified = true;
-					totalDeleted += initialLength - data.length;
+					return entryId !== item.itemId;
 				}
-			} else if (isRecord(data)) {
-				for (const targetItem of itemsInFile) {
-					const keyToDelete = targetItem.itemId || targetItem.label;
-					if (hasProp(data, keyToDelete)) {
-						delete data[keyToDelete];
-						modified = true;
-						totalDeleted++;
-					}
-				}
+				const name = entry.name || entry.id || entry.key;
+				return name !== item.label;
+			});
+			modified = data.length !== initialLength;
+		} else if (typeof data === "object" && data !== null) {
+			const keyToDelete = item.itemId || item.label;
+			if (keyToDelete in data) {
+				delete (data as Record<string, unknown>)[keyToDelete];
+				modified = true;
 			}
+		}
 
-			if (modified) {
-				writeJsonFile(fsPath, data);
-			}
-		} catch (error: unknown) {
-			const e = toError(error);
-			vscode.window.showErrorMessage(
-				`Failed to delete items in ${path.basename(fsPath)}: ${e.message}`,
+		if (modified) {
+			writeJsonFile(item.resourceUri.fsPath, data);
+			vscode.window.showInformationMessage(
+				`${item.type} '${item.label}' deleted.`,
 			);
 		}
-	}
-
-	if (totalDeleted > 0) {
-		vscode.window.showInformationMessage(
-			`Deleted ${totalDeleted} item(s) from vault.`,
+	} catch (error: unknown) {
+		const e = error instanceof Error ? error : new Error(String(error));
+		vscode.window.showErrorMessage(
+			`Failed to delete ${item.type.toLowerCase()}: ${e.message}`,
 		);
 	}
 }

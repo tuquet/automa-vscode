@@ -2,15 +2,6 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as vscode from "vscode";
 import { runWorkflowCommand } from "../commands/runWorkflow";
-import {
-	castRecord,
-	castRecordArray,
-	getProp,
-	hasObjectProp,
-	isRecord,
-	isString,
-	toError,
-} from "../utils/typeGuards";
 import { BaseCustomEditorProvider } from "./BaseCustomEditorProvider";
 
 export class WorkflowPreviewEditorProvider
@@ -39,45 +30,22 @@ export class WorkflowPreviewEditorProvider
 		webviewPanel: vscode.WebviewPanel,
 		_token: vscode.CancellationToken,
 	): Promise<void> {
-		let isRendered = false;
-		let hasError = false;
-		const updateWebview = async () => {
-			if (!isRendered || hasError) {
-				const success = await this.renderWebview(document, webviewPanel);
-				hasError = !success;
-				isRendered = true;
-			} else {
-				await this.postUpdateMessage(document, webviewPanel);
-			}
-		};
+		const updateWebview = () => this.renderWebview(document, webviewPanel);
 
 		// Message Listener
 		const messageDisposable = webviewPanel.webview.onDidReceiveMessage(
-			async (message: Record<string, unknown>) => {
-				try {
-					if (message.command === "runWorkflow") {
-						await runWorkflowCommand(
-							document.uri,
-							castRecord(message.parameters),
-							{
-								keepBrowserOpen: message.keepBrowserOpen as boolean,
-							},
-						);
-					} else if (message.command === "saveWorkflow") {
-						await this.handleSaveWorkflow(document, castRecord(message.data));
-					} else if (message.command === "openInStudio") {
-						await vscode.commands.executeCommand(
-							"automa.openInStudio",
-							document.uri,
-						);
-					} else if (message.command === "error" || message.type === "error") {
-						vscode.window.showErrorMessage(
-							(message.text as string) || "Webview Error",
-						);
-					}
-				} catch (error: unknown) {
-					const e = toError(error);
-					vscode.window.showErrorMessage(`Action failed: ${e.message}`);
+			async (message) => {
+				if (message.command === "runWorkflow") {
+					await runWorkflowCommand(document.uri, message.parameters, {
+						keepBrowserOpen: message.keepBrowserOpen,
+					});
+				} else if (message.command === "saveWorkflow") {
+					await this.handleSaveWorkflow(document, message.data);
+				} else if (message.command === "openInStudio") {
+					await vscode.commands.executeCommand(
+						"automa.openInStudio",
+						document.uri,
+					);
 				}
 			},
 		);
@@ -87,7 +55,7 @@ export class WorkflowPreviewEditorProvider
 		]);
 
 		// Initial render
-		await updateWebview();
+		updateWebview();
 	}
 
 	private async sanitizeDocument(
@@ -123,14 +91,14 @@ export class WorkflowPreviewEditorProvider
 
 		for (const varName of implicitVars) {
 			let defaultVal = "";
-			if (isRecord(globalVariables)) {
+			if (globalVariables && typeof globalVariables === "object") {
 				const strippedName = varName.startsWith("$$")
 					? varName.slice(2)
 					: varName;
 				if (globalVariables[varName] !== undefined) {
-					defaultVal = String(globalVariables[varName]);
+					defaultVal = globalVariables[varName];
 				} else if (globalVariables[strippedName] !== undefined) {
-					defaultVal = String(globalVariables[strippedName]);
+					defaultVal = globalVariables[strippedName];
 				}
 			}
 			triggerParams.push({
@@ -154,14 +122,14 @@ export class WorkflowPreviewEditorProvider
 				const updatedAt = fs.statSync(uri.fsPath).mtimeMs;
 				return new Date(updatedAt).toLocaleString();
 			}
-		} catch (_err: unknown) {}
+		} catch (_err) {}
 		return "";
 	}
 
 	private async renderWebview(
 		document: vscode.TextDocument,
 		webviewPanel: vscode.WebviewPanel,
-	): Promise<boolean> {
+	) {
 		try {
 			const content = document.getText();
 			const json = JSON.parse(content);
@@ -173,7 +141,7 @@ export class WorkflowPreviewEditorProvider
 				Array.isArray(json)
 			) {
 				webviewPanel.webview.html = `<body><h2>Not an Automa workflow</h2><p>This JSON file does not appear to be an Automa workflow.</p></body>`;
-				return false;
+				return;
 			}
 
 			const triggerParams = await this.prepareTriggerParameters(
@@ -201,42 +169,9 @@ export class WorkflowPreviewEditorProvider
 				pkgOutputs,
 				pkgVars,
 			);
-			return true;
 		} catch (error: unknown) {
-			const e = toError(error);
+			const e = error instanceof Error ? error : new Error(String(error));
 			webviewPanel.webview.html = `<body><h2>Error reading workflow</h2><p>${e.message}</p></body>`;
-			return false;
-		}
-	}
-
-	private async postUpdateMessage(
-		document: vscode.TextDocument,
-		webviewPanel: vscode.WebviewPanel,
-	) {
-		try {
-			const content = document.getText();
-			const json = JSON.parse(content);
-
-			const triggerParams = await this.prepareTriggerParameters(
-				document,
-				json,
-				content,
-			);
-
-			const isPackage =
-				json.settings?.asBlock === true ||
-				Array.isArray(json.inputs) ||
-				Array.isArray(json.outputs);
-
-			await webviewPanel.webview.postMessage({
-				type: "update",
-				json: json,
-				triggerParams: triggerParams,
-				isPackage: isPackage,
-				text: content,
-			});
-		} catch (_error: unknown) {
-			// Ignore parse errors on external edits until fixed
 		}
 	}
 
@@ -256,45 +191,38 @@ export class WorkflowPreviewEditorProvider
 			if (updateData.extVersion !== undefined)
 				json.extVersion = updateData.extVersion;
 			if (updateData.icon !== undefined) json.icon = updateData.icon;
+			if (updateData.globalData !== undefined)
+				json.globalData = updateData.globalData;
 
 			// JSON parse for objects/arrays
-			if (updateData.globalData !== undefined) {
-				try {
-					const globalDataStr = String(updateData.globalData);
-					// globalData can be a string in Automa, but usually it's passed as a stringified JSON from UI
-					json.globalData =
-						globalDataStr.trim() === "" ? "" : JSON.parse(globalDataStr);
-				} catch (error: unknown) {
-					const e = toError(error);
-					throw new Error(`Invalid JSON in Global Data: ${e.message}`);
-				}
-			}
 			if (updateData.settings !== undefined) {
 				try {
-					const settingsStr = String(updateData.settings);
 					json.settings =
-						settingsStr.trim() === "" ? {} : JSON.parse(settingsStr);
+						updateData.settings.trim() === ""
+							? {}
+							: JSON.parse(updateData.settings);
 				} catch (error: unknown) {
-					const e = toError(error);
+					const e = error instanceof Error ? error : new Error(String(error));
 					throw new Error(`Invalid JSON in Settings: ${e.message}`);
 				}
 			}
 			if (updateData.table !== undefined) {
 				try {
-					const tableStr = String(updateData.table);
-					json.table = tableStr.trim() === "" ? [] : JSON.parse(tableStr);
+					json.table =
+						updateData.table.trim() === "" ? [] : JSON.parse(updateData.table);
 				} catch (error: unknown) {
-					const e = toError(error);
+					const e = error instanceof Error ? error : new Error(String(error));
 					throw new Error(`Invalid JSON in Table: ${e.message}`);
 				}
 			}
 			if (updateData.includedWorkflows !== undefined) {
 				try {
-					const workflowsStr = String(updateData.includedWorkflows);
 					json.includedWorkflows =
-						workflowsStr.trim() === "" ? {} : JSON.parse(workflowsStr);
+						updateData.includedWorkflows.trim() === ""
+							? {}
+							: JSON.parse(updateData.includedWorkflows);
 				} catch (error: unknown) {
-					const e = toError(error);
+					const e = error instanceof Error ? error : new Error(String(error));
 					throw new Error(`Invalid JSON in Included Workflows: ${e.message}`);
 				}
 			}
@@ -302,22 +230,19 @@ export class WorkflowPreviewEditorProvider
 			// Update Trigger Parameters Default Values
 			if (updateData.triggerParams && (json.drawflow || json.data)) {
 				let nodesList: Record<string, unknown>[] = [];
-				if (
-					hasObjectProp(json, "data") &&
-					Array.isArray(getProp<unknown>(json.data, "nodes"))
-				) {
-					nodesList = castRecordArray(getProp<unknown>(json.data, "nodes"));
-				} else if (hasObjectProp(json, "drawflow")) {
-					if (Array.isArray(getProp<unknown>(json.drawflow, "nodes"))) {
-						nodesList = castRecordArray(castRecord(json.drawflow).nodes);
+				if (json.data && Array.isArray(json.data.nodes)) {
+					nodesList = json.data.nodes;
+				} else if (json.drawflow) {
+					if (Array.isArray(json.drawflow.nodes)) {
+						nodesList = json.drawflow.nodes;
 					} else {
 						Object.keys(json.drawflow).forEach((tab) => {
-							const tabData = castRecord(castRecord(json.drawflow)[tab]);
-							const actualTabData = castRecord(tabData?.data);
-							if (actualTabData) {
-								Object.entries(actualTabData).forEach(([_key, node]) => {
-									nodesList.push(castRecord(node));
-								});
+							if (json.drawflow[tab]?.data) {
+								Object.entries(json.drawflow[tab].data).forEach(
+									([_key, node]: [string, Record<string, unknown>]) => {
+										nodesList.push(node);
+									},
+								);
 							}
 						});
 					}
@@ -329,29 +254,21 @@ export class WorkflowPreviewEditorProvider
 						n.name === "trigger" ||
 						n.type === "BlockTrigger",
 				);
-				if (
-					hasObjectProp(triggerNode, "data") &&
-					Array.isArray(getProp<unknown>(triggerNode.data, "parameters"))
-				) {
-					const triggerParamsData = castRecord(updateData.triggerParams);
-					for (const param of castRecordArray(
-						castRecord(triggerNode.data).parameters,
-					)) {
-						if (
-							triggerParamsData &&
-							triggerParamsData[param.name as string] !== undefined
-						) {
-							param.defaultValue = triggerParamsData[param.name as string];
+				if (triggerNode && Array.isArray(triggerNode.data?.parameters)) {
+					for (const param of triggerNode.data.parameters) {
+						if (updateData.triggerParams[param.name] !== undefined) {
+							param.defaultValue = updateData.triggerParams[param.name];
 						}
 					}
 				}
 			}
 
+			// Apply edits to document
 			await this.saveDocument(document, JSON.stringify(json, null, 4));
 
-			vscode.window.setStatusBarMessage("Workflow saved successfully!", 3000);
+			vscode.window.showInformationMessage("Workflow saved successfully!");
 		} catch (error: unknown) {
-			const e = toError(error);
+			const e = error instanceof Error ? error : new Error(String(error));
 			vscode.window.showErrorMessage(`Failed to save workflow: ${e.message}`);
 		}
 	}
@@ -384,61 +301,60 @@ export class WorkflowPreviewEditorProvider
 							.replace(/\\/g, "\\\\")
 							.replace(/`/g, "\\`")
 							.replace(/\$\{/g, "\\${")
-							.replace(/</g, "\\u003c")
+							.replace(/<\/script>/gi, "<\\/script>")
 					: "";
 
-			htmlContent = htmlContent.replace(/\{\{WORKFLOW_NAME\}\}/g, () =>
-				String(
-					json.name ||
-						(templateName.includes("package")
-							? "Untitled Package"
-							: "Untitled Workflow"),
-				),
-			);
 			htmlContent = htmlContent.replace(
-				/\{\{UPDATED_AT_HTML\}\}/g,
-				() => updatedAtHtml,
+				/\{\{WORKFLOW_NAME\}\}/g,
+				json.name ||
+					(templateName.includes("package")
+						? "Untitled Package"
+						: "Untitled Workflow"),
 			);
+			htmlContent = htmlContent.replace("{{UPDATED_AT_HTML}}", updatedAtHtml);
 			htmlContent = htmlContent.replace(
-				/\{\{JSON_ID\}\}/g,
-				() => safeString(json.id) || "N/A",
+				"{{JSON_ID}}",
+				safeString(json.id) || "N/A",
 			);
-			htmlContent = htmlContent.replace(/\{\{JSON_NAME\}\}/g, () =>
-				safeString(json.name),
-			);
-			htmlContent = htmlContent.replace(/\{\{JSON_DESCRIPTION\}\}/g, () =>
+			htmlContent = htmlContent.replace("{{JSON_NAME}}", safeString(json.name));
+			htmlContent = htmlContent.replace(
+				"{{JSON_DESCRIPTION}}",
 				safeString(json.description),
 			);
-			htmlContent = htmlContent.replace(/\{\{JSON_SETTINGS\}\}/g, () =>
+			htmlContent = htmlContent.replace(
+				"{{JSON_SETTINGS}}",
 				jsonStringifySafe(json.settings),
 			);
-			htmlContent = htmlContent.replace(/\{\{JSON_ICON\}\}/g, () =>
-				String(json.icon || "riGlobalLine"),
+			htmlContent = htmlContent.replace(
+				"{{JSON_ICON}}",
+				json.icon || "riGlobalLine",
 			);
 
 			// Additional fields common but maybe not in both, replacing won't hurt if they don't exist in template
-			htmlContent = htmlContent.replace(/\{\{JSON_VERSION\}\}/g, () =>
+			htmlContent = htmlContent.replace(
+				"{{JSON_VERSION}}",
 				safeString(json.version),
 			);
-			htmlContent = htmlContent.replace(/\{\{JSON_EXT_VERSION\}\}/g, () =>
+			htmlContent = htmlContent.replace(
+				"{{JSON_EXT_VERSION}}",
 				safeString(json.extVersion),
 			);
-			htmlContent = htmlContent.replace(/\{\{JSON_GLOBAL_DATA\}\}/g, () =>
-				isString(json.globalData)
-					? safeString(json.globalData)
-					: jsonStringifySafe(json.globalData),
+			htmlContent = htmlContent.replace(
+				"{{JSON_GLOBAL_DATA}}",
+				safeString(json.globalData),
 			);
-			htmlContent = htmlContent.replace(/\{\{JSON_TABLE\}\}/g, () =>
+			htmlContent = htmlContent.replace(
+				"{{JSON_TABLE}}",
 				jsonStringifySafe(json.table),
 			);
 			htmlContent = htmlContent.replace(
-				/\{\{JSON_INCLUDED_WORKFLOWS\}\}/g,
-				() => jsonStringifySafe(json.includedWorkflows),
+				"{{JSON_INCLUDED_WORKFLOWS}}",
+				jsonStringifySafe(json.includedWorkflows),
 			);
 
 			return htmlContent;
 		} catch (error: unknown) {
-			const e = toError(error);
+			const e = error instanceof Error ? error : new Error(String(error));
 			return `<body><h2>Error loading HTML template</h2><pre>${e.message}</pre></body>`;
 		}
 	}
@@ -465,9 +381,8 @@ export class WorkflowPreviewEditorProvider
 		);
 
 		htmlContent = htmlContent.replace(
-			/\{\{INJECT_PARAMS_DATA\}\}/g,
-			() =>
-				`const tParams = ${JSON.stringify(triggerParams).replace(/</g, "\\u003c")};\nconst defaultKeepBrowserOpen = ${defaultKeepBrowserOpen};`,
+			"{{INJECT_PARAMS_DATA}}",
+			`const tParams = ${JSON.stringify(triggerParams).replace(/</g, "\\u003c")};\nconst defaultKeepBrowserOpen = ${defaultKeepBrowserOpen};`,
 		);
 
 		return htmlContent;
@@ -492,14 +407,14 @@ export class WorkflowPreviewEditorProvider
 		if (htmlContent.startsWith("<body><h2>Error")) return htmlContent;
 
 		const injectPackageData = `
-				const pInputs = ${JSON.stringify(pkgInputs).replace(/</g, "\\u003c")};
-				const pOutputs = ${JSON.stringify(pkgOutputs).replace(/</g, "\\u003c")};
-				const pVars = ${JSON.stringify(pkgVars).replace(/</g, "\\u003c")};
-				const tParams = ${JSON.stringify(triggerParams).replace(/</g, "\\u003c")};
+				const pInputs = ${JSON.stringify(pkgInputs)};
+				const pOutputs = ${JSON.stringify(pkgOutputs)};
+				const pVars = ${JSON.stringify(pkgVars)};
+				const tParams = ${JSON.stringify(triggerParams)};
 			`;
 		htmlContent = htmlContent.replace(
-			/\{\{INJECT_PACKAGE_DATA\}\}/g,
-			() => injectPackageData,
+			"{{INJECT_PACKAGE_DATA}}",
+			injectPackageData,
 		);
 
 		return htmlContent;
@@ -520,7 +435,7 @@ export class WorkflowPreviewEditorProvider
 						.replace(/\\/g, "\\\\")
 						.replace(/`/g, "\\`")
 						.replace(/\$\{/g, "\\${")
-						.replace(/</g, "\\u003c")
+						.replace(/<\/script>/gi, "<\\/script>")
 				: "";
 
 		if (isPackage) {

@@ -34,7 +34,7 @@ export class ProviderManager {
 
 		// 2. Profiles Panel
 		const profilesProvider = new AutomaFilesProvider(
-			"**/*.{profile,bprofile}.json",
+			"**/*.profile.json",
 			"account",
 			"automa.browserProfiles",
 		);
@@ -42,7 +42,7 @@ export class ProviderManager {
 
 		// 3. Workflows Panel
 		const workflowsProvider = new AutomaFilesProvider(
-			"**/*.{workflow,package}.json",
+			"**/*.workflow.json",
 			"file-code",
 			"automa.workflows",
 			"workflow",
@@ -51,7 +51,7 @@ export class ProviderManager {
 
 		// 4. Packages Panel
 		const packagesProvider = new AutomaFilesProvider(
-			"**/*.{workflow,package}.json",
+			"**/*.package.json",
 			"package",
 			"automa.packages",
 			"package",
@@ -60,7 +60,7 @@ export class ProviderManager {
 
 		// 5. Fleets Panel
 		const fleetsProvider = new AutomaFilesProvider(
-			"**/*.{fleet,fleets}.json",
+			"**/*.fleet.json",
 			"rocket",
 			"automa.fleets",
 		);

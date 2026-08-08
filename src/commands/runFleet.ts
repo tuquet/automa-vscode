@@ -1,70 +1,34 @@
 import * as path from "node:path";
 import * as vscode from "vscode";
 import { TaskRunner } from "../core/TaskRunner";
-import { extractFsPath } from "../utils/typeGuards";
-
-function getWorkspaceRoot(): string | undefined {
-	if (
-		vscode.workspace.workspaceFolders &&
-		vscode.workspace.workspaceFolders.length > 0
-	) {
-		return vscode.workspace.workspaceFolders[0].uri.fsPath;
-	}
-	return undefined;
-}
 
 export async function runFleetCommand(
-	nodeOrUri?: unknown,
-	nodesOrUris?: unknown[],
+	nodeOrUri?: vscode.Uri | { fsPath: string },
 ) {
-	const targets: Array<{ targetPath: string; displayName: string }> = [];
+	let targetPath = "";
+	let displayName = "";
 
-	if (Array.isArray(nodesOrUris) && nodesOrUris.length > 0) {
-		for (const n of nodesOrUris) {
-			const pathFromNode = extractFsPath(n);
-			if (pathFromNode?.match(/\.(fleet|fleets)\.json$/)) {
-				const displayName = path.basename(pathFromNode);
-				targets.push({ targetPath: pathFromNode, displayName });
-			}
-		}
-	}
-
-	if (targets.length === 0) {
-		const pathFromNode = extractFsPath(nodeOrUri);
-		if (pathFromNode) {
-			if (pathFromNode.match(/\.(fleet|fleets)\.json$/)) {
-				const displayName = path.basename(pathFromNode);
-				targets.push({ targetPath: pathFromNode, displayName });
-			}
+	if (nodeOrUri?.fsPath) {
+		targetPath = nodeOrUri.fsPath;
+		displayName = path.basename(nodeOrUri.fsPath);
+	} else {
+		const activeEditor = vscode.window.activeTextEditor;
+		if (activeEditor?.document.uri.fsPath.endsWith(".fleets.json")) {
+			targetPath = activeEditor.document.uri.fsPath;
+			displayName = path.basename(targetPath);
 		} else {
-			const activeEditor = vscode.window.activeTextEditor;
-			if (activeEditor?.document.uri.fsPath.match(/\.(fleet|fleets)\.json$/)) {
-				const targetPath = activeEditor.document.uri.fsPath;
-				const displayName = path.basename(targetPath);
-				targets.push({ targetPath, displayName });
-			}
+			const uris = await vscode.window.showOpenDialog({
+				canSelectMany: false,
+				openLabel: "Select Fleet",
+				filters: {
+					"Fleet files": ["fleets.json"],
+				},
+			});
+			if (!uris || uris.length === 0) return;
+			targetPath = uris[0].fsPath;
+			displayName = path.basename(targetPath);
 		}
 	}
-
-	if (targets.length === 0) {
-		const uris = await vscode.window.showOpenDialog({
-			canSelectMany: true,
-			openLabel: "Select Fleet(s)",
-			filters: {
-				"Fleet files": ["fleet.json", "fleets.json"],
-			},
-		});
-		if (uris && uris.length > 0) {
-			for (const uri of uris) {
-				targets.push({
-					targetPath: uri.fsPath,
-					displayName: path.basename(uri.fsPath),
-				});
-			}
-		}
-	}
-
-	if (targets.length === 0) return;
 
 	const options = await vscode.window.showQuickPick(
 		[
@@ -78,39 +42,32 @@ export async function runFleetCommand(
 					"Start the fleet in background and wait for cron schedules",
 			},
 		],
-		{ placeHolder: "How do you want to run the selected fleet(s)?" },
+		{ placeHolder: "How do you want to run this fleet?" },
 	);
 
 	if (!options) return;
 	const isRunNow = options.label.includes("Run Now");
+
+	const args: string[] = ["fleet", "start", targetPath];
+
+	if (isRunNow) {
+		args.push("--run-now");
+	}
+
 	const config = vscode.workspace.getConfiguration("automa");
 	const gridSystem = config.get<boolean>("vault.run.fleetGridSystem", true);
-
-	for (const target of targets) {
-		const { targetPath, displayName } = target;
-		const args: string[] = ["fleet", "start", targetPath];
-
-		if (isRunNow) {
-			args.push("--run-now");
-		}
-		if (gridSystem) {
-			args.push("--grid");
-		}
-
-		const vaultPath = getWorkspaceRoot();
-		if (vaultPath) {
-			args.push("--vault-path", vaultPath);
-		}
-
-		await TaskRunner.runAutomaCli(args, {
-			id: `fleet-orchestrator-${Date.now()}-${Math.random().toString(36).substring(7)}`,
-			name: `Fleet: ${displayName}`,
-			source: "Automa",
-			startMessage: `Starting Fleet Orchestrator: ${displayName}`,
-			successMessage: `Fleet Orchestrator finished: ${displayName}`,
-			errorMessage: `Fleet Orchestrator exited with error`,
-			statusBarText: `Fleet Orchestrator: ${displayName}`,
-			useTelemetry: true,
-		});
+	if (gridSystem) {
+		args.push("--grid");
 	}
+
+	await TaskRunner.runAutomaCli(args, {
+		id: `fleet-orchestrator-${Date.now()}`,
+		name: `Fleet: ${displayName}`,
+		source: "Automa",
+		startMessage: `Starting Fleet Orchestrator: ${displayName}`,
+		successMessage: `Fleet Orchestrator finished: ${displayName}`,
+		errorMessage: `Fleet Orchestrator exited with error`,
+		statusBarText: `Fleet Orchestrator: ${displayName}`,
+		useTelemetry: true,
+	});
 }

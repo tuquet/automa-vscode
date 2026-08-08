@@ -1,14 +1,6 @@
 import * as fs from "node:fs";
-import * as path from "node:path";
 import * as vscode from "vscode";
 import { Logger } from "../core/Logger";
-import {
-	castRecord,
-	getErrorMessage,
-	isRecord,
-	isString,
-	toError,
-} from "../utils/typeGuards";
 
 export class StudioWebviewPanel {
 	public static currentPanel: StudioWebviewPanel | undefined;
@@ -24,83 +16,37 @@ export class StudioWebviewPanel {
 
 		// Handle messages from the webview (EnvironmentAdapter)
 		this._panel.webview.onDidReceiveMessage(
-			(message: Record<string, unknown>) => {
-				try {
-					switch (message.type) {
-						case "runtime-message":
-							this.handleRuntimeMessage(castRecord(message.data))
-								.then(async (result) => {
-									await this._panel.webview.postMessage({
-										type: "runtime-message-response",
-										id: message.id,
-										data: result,
-									});
-								})
-								.catch(async (e: unknown) => {
-									const err = getErrorMessage(e);
-									Logger.error(`Failed to handle runtime-message: ${err}`);
-									await this._panel.webview.postMessage({
-										type: "runtime-message-response",
-										id: message.id,
-										error: err,
-									});
-								});
-							break;
-						case "storage-get":
-							this.handleStorageGet(message.keys)
-								.then(async (data) => {
-									await this._panel.webview.postMessage({
-										type: "storage-get-response",
-										id: message.id,
-										data,
-									});
-								})
-								.catch(async (e: unknown) => {
-									const err = getErrorMessage(e);
-									Logger.error(`Failed to handle storage-get: ${err}`);
-									await this._panel.webview.postMessage({
-										type: "storage-get-response",
-										id: message.id,
-										error: err,
-									});
-								});
-							break;
-						case "storage-set":
-							this.handleStorageSet(castRecord(message.data))
-								.then(async () => {
-									await this._panel.webview.postMessage({
-										type: "storage-set-response",
-										id: message.id,
-									});
-								})
-								.catch(async (e: unknown) => {
-									const err = getErrorMessage(e);
-									Logger.error(`Failed to handle storage-set: ${err}`);
-									await this._panel.webview.postMessage({
-										type: "storage-set-response",
-										id: message.id,
-										error: err,
-									});
-								});
-							break;
-						case "error":
-							Logger.error(`WEBVIEW ERROR: ${message.data}`);
-							break;
-					}
-				} catch (err: unknown) {
-					const errorMsg = getErrorMessage(err);
-					Logger.error(`Failed to process webview message: ${errorMsg}`);
-					if (message.id && message.type) {
-						// we can't easily await inside the catch block if the parent is not async,
-						// but we can fire and catch locally to avoid unhandled rejections
-						this._panel.webview
-							.postMessage({
-								type: `${message.type}-response`,
+			(message) => {
+				switch (message.type) {
+					case "runtime-message":
+						this.handleRuntimeMessage(message.data).then((result) => {
+							this._panel.webview.postMessage({
+								type: "runtime-message-response",
 								id: message.id,
-								error: errorMsg,
-							})
-							.then(undefined, () => {});
-					}
+								data: result,
+							});
+						});
+						break;
+					case "storage-get":
+						this.handleStorageGet(message.keys).then((data) => {
+							this._panel.webview.postMessage({
+								type: "storage-get-response",
+								id: message.id,
+								data,
+							});
+						});
+						break;
+					case "storage-set":
+						this.handleStorageSet(message.data).then(() => {
+							this._panel.webview.postMessage({
+								type: "storage-set-response",
+								id: message.id,
+							});
+						});
+						break;
+					case "error":
+						Logger.error(`WEBVIEW ERROR: ${message.data}`);
+						break;
 				}
 			},
 			null,
@@ -138,33 +84,34 @@ export class StudioWebviewPanel {
 		StudioWebviewPanel.currentPanel._update();
 	}
 
-	private async handleRuntimeMessage(
-		message: Record<string, unknown>,
-	): Promise<unknown> {
-		if (!message?.name) return null;
+	private async handleRuntimeMessage(message: unknown): Promise<unknown> {
+		if (!message || typeof message !== "object" || !("name" in message))
+			return null;
+		const msgName = (message as { name: string }).name;
+		const msgData = (message as { data?: unknown }).data;
 
 		try {
-			switch (message.name) {
+			switch (msgName) {
 				case "background--fetch":
 				case "background--fetch:text": {
 					let url = "";
 					let options: Record<string, unknown> = {};
 
-					if (isString(message.data)) {
-						url = message.data;
-					} else if (castRecord(message.data)?.resource) {
-						const dataRecord = castRecord(message.data);
-						if (isString(dataRecord.resource)) {
-							url = dataRecord.resource;
-							options = dataRecord;
-						} else {
-							const res = castRecord(dataRecord.resource);
-							url = res.url as string;
-							options = {
-								...res,
-								...(isRecord(dataRecord.options) ? dataRecord.options : {}),
-							};
-						}
+					if (typeof msgData === "string") {
+						url = msgData;
+					} else if (
+						msgData &&
+						typeof msgData === "object" &&
+						"resource" in msgData
+					) {
+						const resource = (
+							msgData as { resource: Record<string, unknown> | string }
+						).resource;
+						url =
+							typeof resource === "string"
+								? resource
+								: String(resource.url || "");
+						options = resource;
 					}
 
 					if (!url) throw new Error("Fetch URL missing");
@@ -172,16 +119,19 @@ export class StudioWebviewPanel {
 					const res = await fetch(url, options);
 					if (!res.ok) throw new Error(`HTTP error ${res.status}`);
 
-					if (message.name === "background--fetch:text") {
+					if (msgName === "background--fetch:text") {
 						return await res.text();
 					}
 
-					const type = castRecord(message.data)?.type || "json";
-					if (type === "json") return await res.json();
-					if (type === "text") return await res.text();
+					const msgDataType =
+						msgData && typeof msgData === "object" && "type" in msgData
+							? (msgData as { type: string }).type
+							: "json";
+					if (msgDataType === "json") return await res.json();
+					if (msgDataType === "text") return await res.text();
 
 					// base64 handling for images
-					if (type === "base64") {
+					if (msgDataType === "base64") {
 						const buffer = await res.arrayBuffer();
 						return Buffer.from(buffer).toString("base64");
 					}
@@ -194,15 +144,23 @@ export class StudioWebviewPanel {
 					const daemon = DaemonManager.getInstance();
 
 					const workflowData =
-						castRecord(message.data)?.workflowData || message.data;
-					if (!castRecord(workflowData)?.id)
+						msgData && typeof msgData === "object" && "workflowData" in msgData
+							? (msgData as { workflowData: unknown }).workflowData
+							: msgData;
+					if (
+						!workflowData ||
+						typeof workflowData !== "object" ||
+						!("id" in workflowData)
+					)
 						return { success: false, error: "Missing workflow ID" };
 
-					const reqOptions =
-						castRecord(castRecord(message.data)?.options) || {};
 					try {
 						const port = daemon.getPort();
 						const executeUrl = `http://localhost:${port}/api/jobs/run`;
+						const reqOptions =
+							(msgData && typeof msgData === "object" && "options" in msgData
+								? (msgData as { options: Record<string, unknown> }).options
+								: {}) || {};
 						if (
 							!reqOptions.vaultPath &&
 							vscode.workspace.workspaceFolders?.length
@@ -221,99 +179,37 @@ export class StudioWebviewPanel {
 						});
 						if (!res.ok) throw new Error(`Daemon responded with ${res.status}`);
 						return await res.json();
-					} catch (error: unknown) {
-						const _e = toError(error);
-						// Fallback to CLI if Daemon isn't reachable
+					} catch (_error: unknown) {
 						try {
-							const os = require("node:os");
-							const path = require("node:path");
-							const fs = require("node:fs");
-							const tempFile = path.join(
-								os.tmpdir(),
-								`automa-run-${Date.now()}.json`,
-							);
-							fs.writeFileSync(tempFile, JSON.stringify(workflowData), "utf-8");
-							const args = ["run", tempFile];
-							if (reqOptions.vaultPath) {
-								args.push("--vault-path", reqOptions.vaultPath);
-							}
-							if (reqOptions.project) {
-								args.push("--project", reqOptions.project);
-							}
-							if (reqOptions.variables) {
-								args.push(
-									"--variables",
-									isString(reqOptions.variables)
-										? reqOptions.variables
-										: JSON.stringify(reqOptions.variables),
-								);
-							}
-							let result: unknown;
-							try {
-								result = await daemon.executeCliCommand(args);
-							} finally {
-								if (fs.existsSync(tempFile)) {
-									fs.unlinkSync(tempFile);
-								}
-							}
+							const result = await daemon.executeCliCommand([
+								"run",
+								(workflowData as { id: string }).id,
+							]);
 							return result;
 						} catch (cliErr: unknown) {
-							const ce = toError(cliErr);
-							Logger.error(`Workflow execution failed: ${ce.message}`);
-							return { success: false, error: ce.message };
+							const errMsg =
+								cliErr instanceof Error ? cliErr.message : String(cliErr);
+							Logger.error(`Workflow execution failed: ${errMsg}`);
+							return { success: false, error: errMsg };
 						}
 					}
 				}
 
 				case "background--open:dashboard": {
-					// For VS Code, we are already the dashboard. Just tell the webview to push route!
-					// This is slightly tricky. The webview Vue Router handles hash routing.
-					// We can return a specific command, but since this resolves a promise,
-					// the webview caller might not be able to navigate themselves if they expect us to.
-					// Let's just log it for now since they are in the dashboard.
-					Logger.info(`Open Dashboard requested: ${message.data}`);
+					Logger.info(`Open Dashboard requested: ${String(msgData)}`);
 					return true;
 				}
 
 				default:
-					Logger.info(`Unhandled runtime message: ${message.name}`);
+					Logger.info(`Unhandled runtime message: ${msgName}`);
 					return null;
 			}
-		} catch (error: unknown) {
-			const e = toError(error);
-			Logger.error(`Runtime Message Error [${message.name}]: ${e.message}`);
+		} catch (e: unknown) {
+			Logger.error(
+				`Runtime Message Error [${msgName}]: ${e instanceof Error ? e.message : String(e)}`,
+			);
 			return null;
 		}
-	}
-
-	private normalizeVaultData(
-		rawData: unknown[],
-		type: "variable" | "credential" | "table",
-	): Record<string, unknown>[] {
-		const normalized: Record<string, unknown>[] = [];
-		for (const data of rawData) {
-			if (Array.isArray(data)) {
-				normalized.push(...data);
-			} else if (isRecord(data)) {
-				for (const [key, val] of Object.entries(data)) {
-					let value: string;
-					if (type === "variable") {
-						value =
-							isRecord(val) || Array.isArray(val)
-								? JSON.stringify(val)
-								: String(val);
-					} else {
-						value = String(val);
-					}
-					normalized.push({
-						id: key,
-						name: key,
-						value: value,
-					});
-				}
-			}
-		}
-		return normalized;
 	}
 
 	private async handleStorageGet(
@@ -337,13 +233,16 @@ export class StudioWebviewPanel {
 				files: vscode.Uri[],
 				shouldSanitize = false,
 			) => {
+				const { DaemonManager } = require("../core/DaemonManager");
+				const daemon = DaemonManager.getInstance();
+				const port = daemon.getPort();
 				const contents = await Promise.all(
 					files.map(async (file) => {
 						try {
 							const bytes = await vscode.workspace.fs.readFile(file);
 							return JSON.parse(Buffer.from(bytes).toString("utf-8"));
 						} catch (e: unknown) {
-							const msg = getErrorMessage(e);
+							const msg = e instanceof Error ? e.message : String(e);
 							const path = require("node:path");
 							parseErrors.push(`${path.basename(file.fsPath)}: ${msg}`);
 							return null;
@@ -355,13 +254,25 @@ export class StudioWebviewPanel {
 
 				if (shouldSanitize && validParsed.length > 0) {
 					try {
-						const { WorkflowSanitizer } = await import("../core/Sanitizer");
-						validParsed = validParsed.map((wf) => {
-							WorkflowSanitizer.sanitize(wf);
-							return wf;
-						});
-					} catch (_e: unknown) {
-						// Fallback if sanitizer fails
+						const res = await fetch(
+							`http://localhost:${port}/api/sanitize/batch`,
+							{
+								method: "POST",
+								headers: { "Content-Type": "application/json" },
+								body: JSON.stringify({ workflows: validParsed }),
+							},
+						);
+						if (res.ok) {
+							const data = (await res.json()) as {
+								success: boolean;
+								data: Record<string, unknown>[];
+							};
+							if (data.success && data.data) {
+								validParsed = data.data;
+							}
+						}
+					} catch (_e) {
+						// Ignore fetch error, just use un-sanitized data
 					}
 				}
 
@@ -388,13 +299,14 @@ export class StudioWebviewPanel {
 			}
 
 			result.workflows = workflows;
-			result.variables = this.normalizeVaultData(rawVars, "variable");
-			result.credentials = this.normalizeVaultData(rawCreds, "credential");
-			result.tables = this.normalizeVaultData(rawTables, "table");
+			result.variables = rawVars.flat();
+			result.credentials = rawCreds.flat();
+			result.tables = rawTables.flat();
 			result.workflowStates = {}; // Initial state
-		} catch (error: unknown) {
-			const e = toError(error);
-			Logger.error(`Failed to fetch storage get: ${e.message}`);
+		} catch (e: unknown) {
+			Logger.error(
+				`Failed to fetch storage get: ${e instanceof Error ? e.message : String(e)}`,
+			);
 		}
 
 		return result;
@@ -418,7 +330,6 @@ export class StudioWebviewPanel {
 					EXCLUDE_PATTERN,
 				);
 
-				// Pre-read all workflow IDs in parallel to build lookup map
 				const idToUriMap = new Map<string, vscode.Uri>();
 				await Promise.all(
 					allFiles.map(async (file) => {
@@ -429,7 +340,7 @@ export class StudioWebviewPanel {
 								idToUriMap.set(data.id, file);
 							}
 						} catch (e: unknown) {
-							const msg = getErrorMessage(e);
+							const msg = e instanceof Error ? e.message : String(e);
 							const path = require("node:path");
 							parseErrors.push(`${path.basename(file.fsPath)}: ${msg}`);
 						}
@@ -437,26 +348,18 @@ export class StudioWebviewPanel {
 				);
 
 				for (const wf of items.workflows) {
-					if (!wf.id) continue;
+					if (!wf || typeof wf !== "object" || !("id" in wf)) continue;
+					const wfObj = wf as { id: string; name?: string };
+					if (!wfObj.id) continue;
 
-					let targetUri = idToUriMap.get(wf.id);
+					let targetUri = idToUriMap.get(wfObj.id);
 					if (!targetUri) {
-						const safeName = (wf.name || wf.id)
+						const safeName = (wfObj.name || wfObj.id)
 							.replace(/[^a-z0-9]/gi, "_")
 							.toLowerCase();
-
-						const workflowsDir = vscode.Uri.joinPath(
+						targetUri = vscode.Uri.joinPath(
 							workspaceRoot,
 							"workflows",
-						);
-						try {
-							await vscode.workspace.fs.createDirectory(workflowsDir);
-						} catch (_dirErr: unknown) {
-							// Ignore if exists
-						}
-
-						targetUri = vscode.Uri.joinPath(
-							workflowsDir,
 							`${safeName}.workflow.json`,
 						);
 					}
@@ -516,7 +419,7 @@ export class StudioWebviewPanel {
 				);
 			}
 		} catch (error: unknown) {
-			const e = getErrorMessage(error);
+			const e = error instanceof Error ? error.message : String(error);
 			Logger.error(`Failed to handle storage set: ${e}`);
 		}
 	}
@@ -536,76 +439,55 @@ export class StudioWebviewPanel {
 		);
 
 		const idToUriMap = new Map<string, vscode.Uri>();
-		const uriToDataMap = new Map<
-			string,
-			Record<string, unknown>[] | Record<string, unknown>
-		>();
+		const uriToItemsMap = new Map<string, Record<string, unknown>[]>();
 
 		for (const file of allFiles) {
 			try {
 				const content = await vscode.workspace.fs.readFile(file);
 				const data = JSON.parse(Buffer.from(content).toString("utf-8"));
-				uriToDataMap.set(file.toString(), data);
-				if (Array.isArray(data)) {
-					for (const item of data) {
-						if (item?.id || item?.key || item?.name) {
-							const id = item.id || item.key || item.name;
-							idToUriMap.set(id as string, file);
-						}
-					}
-				} else if (isRecord(data)) {
-					for (const key of Object.keys(data)) {
-						idToUriMap.set(key, file);
-					}
+				const arr = Array.isArray(data) ? data : [];
+				uriToItemsMap.set(file.toString(), arr);
+				for (const item of arr) {
+					if (item && typeof item === "object" && "id" in item)
+						idToUriMap.set(item.id as string, file);
 				}
 			} catch (e: unknown) {
-				const msg = getErrorMessage(e);
+				const msg = e instanceof Error ? e.message : String(e);
+				const path = require("node:path");
 				parseErrors.push(`${path.basename(file.fsPath)}: ${msg}`);
 			}
 		}
 
 		for (const rawItem of itemsList) {
-			const item = castRecord(rawItem);
-			const itemId = (item?.id || item?.key || item?.name) as
-				| string
-				| undefined;
-			if (!itemId) continue;
-			let targetUri = idToUriMap.get(itemId);
+			const item = rawItem as Record<string, unknown>;
+			if (!item?.id) continue;
+			let targetUri = idToUriMap.get(item.id as string);
 			if (!targetUri) {
-				const folderDir = vscode.Uri.joinPath(workspaceRoot, folderName);
-				try {
-					await vscode.workspace.fs.createDirectory(folderDir);
-				} catch (_dirErr: unknown) {
-					// Ignore if exists
-				}
-				targetUri = vscode.Uri.joinPath(folderDir, defaultFileName);
-			}
-
-			let dataInFile = uriToDataMap.get(targetUri.toString());
-			if (!dataInFile) {
-				dataInFile = []; // default to array for new files
-				uriToDataMap.set(targetUri.toString(), dataInFile);
-			}
-
-			if (Array.isArray(dataInFile)) {
-				const existingIdx = dataInFile.findIndex(
-					(x: Record<string, unknown>) =>
-						x.id === itemId || x.key === itemId || x.name === itemId,
+				targetUri = vscode.Uri.joinPath(
+					workspaceRoot,
+					folderName,
+					defaultFileName,
 				);
-				if (existingIdx !== -1) {
-					dataInFile[existingIdx] = item;
-				} else {
-					dataInFile.push(item);
-				}
-			} else if (isRecord(dataInFile)) {
-				dataInFile[itemId] = item.value !== undefined ? item.value : item;
+			}
+
+			let itemsInFile = uriToItemsMap.get(targetUri.toString());
+			if (!itemsInFile) {
+				itemsInFile = [];
+				uriToItemsMap.set(targetUri.toString(), itemsInFile);
+			}
+
+			const existingIdx = itemsInFile.findIndex((x) => x.id === item.id);
+			if (existingIdx !== -1) {
+				itemsInFile[existingIdx] = item;
+			} else {
+				itemsInFile.push(item);
 			}
 		}
 
-		for (const [uriStr, data] of uriToDataMap.entries()) {
+		for (const [uriStr, arr] of uriToItemsMap.entries()) {
 			await vscode.workspace.fs.writeFile(
 				vscode.Uri.parse(uriStr),
-				Buffer.from(JSON.stringify(data, null, 2), "utf-8"),
+				Buffer.from(JSON.stringify(arr, null, 2), "utf-8"),
 			);
 		}
 	}
@@ -647,7 +529,7 @@ export class StudioWebviewPanel {
             };
             window.addEventListener('unhandledrejection', function(event) {
                 window.vscodeApi.postMessage({ type: 'error', data: 'Unhandled Rejection: ' + (event.reason ? (event.reason.stack || event.reason.message || event.reason) : 'Unknown') });
-            });
+            };
             const originalError = console.error;
             console.error = function(...args) {
                 window.vscodeApi.postMessage({ type: 'error', data: args.join(' ') });

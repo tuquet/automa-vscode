@@ -1,7 +1,6 @@
 import * as crypto from "node:crypto";
 import * as fs from "node:fs";
 import * as vscode from "vscode";
-import { extractFsPath, isString, toError } from "../utils/typeGuards";
 
 function generateShortId(): string {
 	// Standard nanoid alphabet
@@ -16,7 +15,7 @@ function generateShortId(): string {
 }
 
 function isValidNanoId(id: unknown): boolean {
-	if (!id || !isString(id)) return false;
+	if (!id || typeof id !== "string") return false;
 	return /^[A-Za-z0-9_-]{21}$/.test(id);
 }
 
@@ -29,32 +28,29 @@ export async function fixWorkflowIdCommand(
 
 	if (nodesOrUris && Array.isArray(nodesOrUris) && nodesOrUris.length > 0) {
 		urisToProcess = nodesOrUris
-			.map((n) => {
-				const path = extractFsPath(n);
-				return path?.endsWith(".json") ? vscode.Uri.file(path) : null;
-			})
-			.filter((uri): uri is vscode.Uri => uri !== null);
-	} else {
-		const path = extractFsPath(nodeOrUri);
-		if (path?.endsWith(".json")) {
-			urisToProcess = [vscode.Uri.file(path)];
-		} else if (
-			vscode.window.activeTextEditor?.document.uri.fsPath.endsWith(".json")
-		) {
-			urisToProcess = [vscode.window.activeTextEditor.document.uri];
-		}
+			.map((n) =>
+				n instanceof vscode.Uri
+					? n
+					: typeof n === "object" && n !== null && "fsPath" in n
+						? vscode.Uri.file((n as Record<string, unknown>).fsPath as string)
+						: (n as vscode.Uri),
+			)
+			.filter(Boolean);
+	} else if (nodeOrUri instanceof vscode.Uri) {
+		urisToProcess = [nodeOrUri];
+	} else if (
+		nodeOrUri &&
+		typeof nodeOrUri === "object" &&
+		"fsPath" in nodeOrUri
+	) {
+		urisToProcess = [
+			vscode.Uri.file((nodeOrUri as Record<string, unknown>).fsPath as string),
+		];
 	}
 
 	if (urisToProcess.length === 0) {
-		const uris = await vscode.window.showOpenDialog({
-			canSelectMany: true,
-			openLabel: "Select Workflow(s) to Fix",
-			filters: {
-				"JSON files": ["json"],
-			},
-		});
-		if (!uris || uris.length === 0) return;
-		urisToProcess.push(...uris);
+		vscode.window.showErrorMessage("Vui lòng chọn ít nhất 1 file .json.");
+		return;
 	}
 
 	let fixedCount = 0;
@@ -81,7 +77,7 @@ export async function fixWorkflowIdCommand(
 				skippedCount++;
 			}
 		} catch (error: unknown) {
-			const e = toError(error);
+			const e = error instanceof Error ? error : new Error(String(error));
 			errorCount++;
 			console.error(`Error fixing ${uri.fsPath}: ${e.message}`);
 		}

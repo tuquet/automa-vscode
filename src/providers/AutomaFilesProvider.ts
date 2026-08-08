@@ -1,6 +1,5 @@
 import * as path from "node:path";
 import * as vscode from "vscode";
-import { getErrorMessage } from "../utils/typeGuards";
 
 export class AutomaFilesProvider implements vscode.TreeDataProvider<FileItem> {
 	private _onDidChangeTreeData: vscode.EventEmitter<
@@ -35,7 +34,6 @@ export class AutomaFilesProvider implements vscode.TreeDataProvider<FileItem> {
 	register(context: vscode.ExtensionContext, entityName: string) {
 		const treeView = vscode.window.createTreeView(this.viewId, {
 			treeDataProvider: this,
-			canSelectMany: true,
 		});
 		context.subscriptions.push(treeView);
 		treeView.onDidChangeVisibility((e) => {
@@ -121,7 +119,7 @@ export class AutomaFilesProvider implements vscode.TreeDataProvider<FileItem> {
 						if (this.filterType === "package") return isPackage;
 						if (this.filterType === "workflow") return !isPackage;
 					} catch (e: unknown) {
-						const msg = getErrorMessage(e);
+						const msg = e instanceof Error ? e.message : String(e);
 						parseErrors.push(`${path.basename(file.fsPath)}: ${msg}`);
 						// If parsing fails, consider it a normal workflow by default
 						return this.filterType === "workflow";
@@ -137,7 +135,7 @@ export class AutomaFilesProvider implements vscode.TreeDataProvider<FileItem> {
 					parseErrors.length > limit
 						? ` and ${parseErrors.length - limit} more`
 						: "";
-				console.warn(
+				vscode.window.showWarningMessage(
 					`Failed to parse ${parseErrors.length} file(s) for ${this.viewId}: ${displayErrors}${more}`,
 				);
 			}

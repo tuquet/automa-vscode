@@ -1,7 +1,6 @@
 import * as vscode from "vscode";
 import { DaemonManager } from "../core/DaemonManager";
 import { WelcomePanel } from "../panels/WelcomePanel";
-import { toError } from "../utils/typeGuards";
 
 export function welcomeCommand(context: vscode.ExtensionContext) {
 	return () => {
@@ -19,19 +18,14 @@ export function installBrowserCommand() {
 			},
 			async (_progress) => {
 				try {
-					const result = await DaemonManager.getInstance().executeRawCliCommand(
-						["install-browser"],
-					);
-					if (result.code !== 0) {
-						throw new Error(
-							`Command failed with exit code ${result.code}\n${result.stderr}`,
-						);
-					}
+					await DaemonManager.getInstance().executeRawCliCommand([
+						"install-browser",
+					]);
 					vscode.window.showInformationMessage(
 						"Browser installed successfully!",
 					);
 				} catch (err: unknown) {
-					const e = toError(err);
+					const e = err instanceof Error ? err : new Error(String(err));
 					vscode.window.showErrorMessage(
 						`Failed to install browser: ${e.message}`,
 					);
@@ -44,27 +38,11 @@ export function installBrowserCommand() {
 
 export function toggleDaemonCommand() {
 	return async () => {
-		try {
-			const daemon = DaemonManager.getInstance();
-			if (daemon.isRunning()) {
-				daemon.stop();
-				vscode.window.showInformationMessage("Automa CLI Daemon stopped.");
-			} else {
-				vscode.window.showInformationMessage("Starting Automa CLI Daemon...");
-				await daemon.start();
-				if (daemon.isRunning()) {
-					vscode.window.showInformationMessage(
-						"Automa CLI Daemon started successfully.",
-					);
-				} else {
-					vscode.window.showErrorMessage(
-						"Failed to start Automa CLI Daemon. Check logs for details.",
-					);
-				}
-			}
-		} catch (error: unknown) {
-			const e = toError(error);
-			vscode.window.showErrorMessage(`Failed to toggle daemon: ${e.message}`);
+		const daemon = DaemonManager.getInstance();
+		if (daemon.isRunning()) {
+			daemon.stop();
+		} else {
+			await daemon.start();
 		}
 	};
 }

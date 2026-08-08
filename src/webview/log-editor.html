@@ -99,10 +99,10 @@
         <!-- Header -->
         <div class="flex items-center px-6 py-4 border-b border-vsc-border">
             <div>
-                <h1 class="text-2xl font-semibold text-vsc-fg truncate max-w-lg" :title="jobRef.name || 'Unknown Job'">{{ jobRef.name || 'Unknown Job' }}</h1>
+                <h1 class="text-2xl font-semibold text-vsc-fg truncate max-w-lg" title="{{JOB_NAME}}">{{JOB_NAME}}</h1>
                 <p class="text-sm text-vsc-muted mt-1 flex items-center gap-2">
-                    Status: <span :class="['uppercase text-xs font-bold px-2 py-0.5 rounded border border-vsc-borderLight bg-vsc-widget', getJobStatusColor(jobRef.status)]">{{ jobRef.status || 'Unknown' }}</span> 
-                    | {{ formatTimeStr(jobRef.created_at) }}
+                    Status: <span class="uppercase text-xs font-bold px-2 py-0.5 rounded border border-vsc-borderLight bg-vsc-widget {{JOB_STATUS_COLOR}}">{{JOB_STATUS}}</span> 
+                    | {{JOB_CREATED_AT}}
                 </p>
             </div>
         </div>
@@ -307,12 +307,9 @@
                 ];
                 
                 // Data
-                const logsRef = ref(typeof logsData !== 'undefined' ? logsData : []);
-                const jobRef = ref(typeof jobData !== 'undefined' ? jobData : {});
-                
-                const results = computed(() => jobRef.value.results || { table: [], variables: {} });
-                const jobTable = computed(() => results.value.table || []);
-                const jobVars = computed(() => results.value.variables || {});
+                const results = jobData.results || { table: [], variables: {} };
+                const jobTable = ref(results.table || []);
+                const jobVars = ref(results.variables || {});
                 
                 // --- Logs Tab ---
                 const activeLogId = ref(null);
@@ -335,7 +332,7 @@
 
                 function getIconAndColor(status, type) {
                     const state = status || type || 'success';
-                    if (state === 'error' || state === 'failed') {
+                    if (state === 'error') {
                         return { icon: 'ri-error-warning-line', color: 'text-vsc-error' };
                     }
                     if (state === 'stop' || state === 'stopped') {
@@ -344,25 +341,8 @@
                     return { icon: 'ri-check-line', color: 'text-vsc-success' };
                 }
 
-                function getJobStatusColor(status) {
-                    if (status === 'error' || status === 'failed') return 'text-vsc-error';
-                    if (status === 'success') return 'text-vsc-success';
-                    if (status === 'stopped' || status === 'stop') return 'text-vsc-warning';
-                    return 'text-vsc-fg';
-                }
-
-                function formatTimeStr(dateString) {
-                    if (!dateString) return "Unknown";
-                    try {
-                        const date = new Date(dateString);
-                        return date.toLocaleString();
-                    } catch {
-                        return "Unknown";
-                    }
-                }
-
                 const parsedLogs = computed(() => {
-                    return logsRef.value.map((log, index) => {
+                    return logsData.map((log, index) => {
                         const msg = log; // Flat format
                         const timestamp = msg.timestamp || log.created_at;
                         const { icon, color } = getIconAndColor(msg.status, msg.type);
@@ -407,21 +387,14 @@
 
                 const selectLog = (index) => {
                     activeLogId.value = index;
-                };
-
-                watch(activeLog, (newVal) => {
                     nextTick(() => {
-                        if (jsonViewer.value) {
-                            if (newVal) {
-                                jsonViewer.value.textContent = JSON.stringify(newVal.ctxData, null, 2);
-                                jsonViewer.value.removeAttribute('data-highlighted');
-                                hljs.highlightElement(jsonViewer.value);
-                            } else {
-                                jsonViewer.value.textContent = '';
-                            }
+                        if (jsonViewer.value && activeLog.value) {
+                            jsonViewer.value.textContent = JSON.stringify(activeLog.value.ctxData, null, 2);
+                            jsonViewer.value.removeAttribute('data-highlighted');
+                            hljs.highlightElement(jsonViewer.value);
                         }
                     });
-                }, { deep: true });
+                };
 
                 // --- Table Tab ---
                 const tableTab = ref('grid');
@@ -479,26 +452,9 @@
                     }
                 });
 
-                    onMounted(() => {
-                        window.addEventListener('message', event => {
-                            const message = event.data;
-                            if (message.type === 'update') {
-                                if (message.logs) {
-                                    logsRef.value = message.logs;
-                                }
-                                if (message.job) {
-                                    jobRef.value = message.job;
-                                }
-                            }
-                        });
-                    });
-
                 return {
                     mainTab,
                     mainTabs,
-                    jobRef,
-                    getJobStatusColor,
-                    formatTimeStr,
                     jobTable,
                     jobVars,
                     

@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as vscode from "vscode";
-import { getErrorMessage } from "../utils/typeGuards";
+import { TaskRunner } from "../core/TaskRunner";
 import { BaseCustomEditorProvider } from "./BaseCustomEditorProvider";
 
 export class FleetPreviewEditorProvider
@@ -39,90 +39,59 @@ export class FleetPreviewEditorProvider
 			],
 		};
 
-		let isRendered = false;
-		let hasError = false;
-
-		const renderWebview = () => {
-			try {
-				const content = document.getText();
-				const json = JSON.parse(content || "{}");
-				webviewPanel.title = `Fleet: ${json.name || json.fleet_id || path.basename(document.uri.fsPath)}`;
-				webviewPanel.webview.html = this.getHtmlForWebview(
-					webviewPanel.webview,
-				);
-				return true;
-			} catch (error: unknown) {
-				const e = getErrorMessage(error);
-				webviewPanel.webview.html = `<body><h2>Error reading fleet</h2><p>${e}</p></body>`;
-				return false;
-			}
-		};
+		webviewPanel.webview.html = this.getHtmlForWebview(webviewPanel.webview);
 
 		const updateWebview = async () => {
-			if (!isRendered || hasError) {
-				const success = renderWebview();
-				hasError = !success;
-				isRendered = true;
-			} else {
-				try {
-					await webviewPanel.webview.postMessage({
-						type: "update",
-						text: document.getText(),
-					});
-				} catch (_e: unknown) {
-					// Ignore parse errors on external edits until fixed
-				}
-			}
+			const workflows = await this.getWorkflowDictionary();
+			const profiles = await this.getProfileDictionary();
+			webviewPanel.webview.postMessage({
+				type: "update",
+				text: document.getText(),
+				workflows: workflows,
+				profiles: profiles,
+			});
 		};
 
+		// Listen to telemetry
+		const telemetryListener = (telemetry: unknown) => {
+			webviewPanel.webview.postMessage({
+				type: "telemetry",
+				data: telemetry,
+			});
+		};
+
+		TaskRunner.telemetryEmitter.on("telemetry", telemetryListener);
+
 		// Listen to messages from webview
-		webviewPanel.webview.onDidReceiveMessage(
-			async (e: Record<string, unknown>) => {
-				try {
-					switch (e.type) {
-						case "ready": {
-							const workflows = await this.getWorkflowDictionary();
-							const profiles = await this.getProfileDictionary();
-							await webviewPanel.webview.postMessage({
-								type: "update",
-								text: document.getText(),
-								workflows: workflows,
-								profiles: profiles,
-							});
-							break;
-						}
-						case "run-fleet":
-							await vscode.commands.executeCommand(
-								"automa.runFleet",
-								document.uri,
-							);
-							break;
-						case "stop-fleet":
-							await vscode.commands.executeCommand(
-								"automa.stopFleet",
-								document.uri,
-							);
-							break;
-						case "save-fleet":
-							await this.saveDocument(document, e.data as string);
-							break;
-					}
-					if (e.command === "error" || e.type === "error") {
-						vscode.window.showErrorMessage(
-							(e.text as string) || "Webview Error",
-						);
-					}
-				} catch (error: unknown) {
-					const err = getErrorMessage(error);
-					vscode.window.showErrorMessage(`Fleet preview action failed: ${err}`);
-				}
+		webviewPanel.webview.onDidReceiveMessage(async (e) => {
+			switch (e.type) {
+				case "ready":
+					updateWebview();
+					break;
+				case "run-fleet":
+					await vscode.commands.executeCommand("automa.runFleet", document.uri);
+					break;
+				case "stop-fleet":
+					await vscode.commands.executeCommand(
+						"automa.stopFleet",
+						document.uri,
+					);
+					break;
+				case "save-fleet":
+					await this.saveDocument(document, e.data);
+					break;
+			}
+			if (e.command === "error" || e.type === "error") {
+				vscode.window.showErrorMessage(e.text || "Webview Error");
+			}
+		});
+
+		this.setupWebviewPanel(document, webviewPanel, updateWebview, [
+			{
+				dispose: () =>
+					TaskRunner.telemetryEmitter.off("telemetry", telemetryListener),
 			},
-		);
-
-		this.setupWebviewPanel(document, webviewPanel, updateWebview);
-
-		// Initial render
-		await updateWebview();
+		]);
 	}
 
 	private async buildDictionaryFromFiles(
@@ -150,7 +119,7 @@ export class FleetPreviewEditorProvider
 							dict[item.id] = item.name;
 						}
 					} catch (e: unknown) {
-						const msg = getErrorMessage(e);
+						const msg = e instanceof Error ? e.message : String(e);
 						parseErrors.push(`${path.basename(file.fsPath)}: ${msg}`);
 					}
 				}),
@@ -177,9 +146,10 @@ export class FleetPreviewEditorProvider
 		return this.buildDictionaryFromFiles(
 			"**/*.workflow.json",
 			(json) => {
-				return json.id
-					? { id: String(json.id), name: String(json.name) }
-					: undefined;
+				if (json.id && json.name) {
+					return { id: json.id, name: json.name };
+				}
+				return undefined;
 			},
 			"workflows",
 		);
@@ -189,14 +159,9 @@ export class FleetPreviewEditorProvider
 		return this.buildDictionaryFromFiles(
 			"**/*.{profile,bprofile}.json",
 			(json, filePath) => {
-				return {
-					id: String(
-						json.id || path.basename(filePath, path.extname(filePath)),
-					),
-					name: String(
-						json.name || path.basename(filePath, path.extname(filePath)),
-					),
-				};
+				const id = json.id || path.basename(filePath, path.extname(filePath));
+				const name = json.name || id;
+				return { id, name };
 			},
 			"profiles",
 		);

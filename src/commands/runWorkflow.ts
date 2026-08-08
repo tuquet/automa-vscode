@@ -2,99 +2,62 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as vscode from "vscode";
 import { TaskRunner } from "../core/TaskRunner";
-import {
-	castRecord,
-	extractFsPath,
-	hasStringProp,
-	isRecord,
-	isString,
-	toError,
-} from "../utils/typeGuards";
 
 let _automaOutputChannel: vscode.OutputChannel;
 
-function getWorkspaceRoot(): string | undefined {
-	if (
-		vscode.workspace.workspaceFolders &&
-		vscode.workspace.workspaceFolders.length > 0
-	) {
-		return vscode.workspace.workspaceFolders[0].uri.fsPath;
-	}
-	return undefined;
-}
-
-async function resolveTargets(
+async function resolveTarget(
 	nodeOrUri?: unknown,
-	nodesOrUris?: unknown[],
-): Promise<Array<{ targetPath: string; displayName: string }>> {
-	const targets: Array<{ targetPath: string; displayName: string }> = [];
+): Promise<{ targetPath: string; displayName: string } | null> {
+	let targetPath = "";
+	let displayName = "";
 
-	if (Array.isArray(nodesOrUris) && nodesOrUris.length > 0) {
-		for (const n of nodesOrUris) {
-			const pathFromNode = extractFsPath(n);
-			if (pathFromNode?.endsWith(".json")) {
-				const displayName = hasStringProp(n, "label")
-					? n.label
-					: path.basename(pathFromNode);
-				targets.push({ targetPath: pathFromNode, displayName });
-			}
+	if (nodeOrUri instanceof vscode.Uri) {
+		targetPath = nodeOrUri.fsPath;
+		displayName = path.basename(nodeOrUri.fsPath);
+	} else if (nodeOrUri && typeof nodeOrUri === "object") {
+		const node = nodeOrUri as Record<string, unknown>;
+		if ("fsPath" in node && typeof node.fsPath === "string") {
+			targetPath = node.fsPath;
+			displayName = path.basename(node.fsPath);
+		} else if ("fullPath" in node && typeof node.fullPath === "string") {
+			targetPath = node.fullPath;
+			displayName =
+				typeof node.label === "string" ? node.label : path.basename(targetPath);
 		}
 	}
 
-	if (targets.length === 0) {
-		const pathFromNode = extractFsPath(nodeOrUri);
-		if (pathFromNode) {
-			if (pathFromNode.endsWith(".json")) {
-				const displayName = hasStringProp(nodeOrUri, "label")
-					? nodeOrUri.label
-					: path.basename(pathFromNode);
-				targets.push({ targetPath: pathFromNode, displayName });
-			}
-		} else {
-			const activeEditor = vscode.window.activeTextEditor;
-			if (activeEditor?.document.uri.fsPath.endsWith(".json")) {
-				const targetPath = activeEditor.document.uri.fsPath;
-				const displayName = path.basename(targetPath);
-				targets.push({ targetPath, displayName });
-			}
-		}
-	}
-
-	if (targets.length === 0) {
+	if (!targetPath) {
 		const uris = await vscode.window.showOpenDialog({
-			canSelectMany: true,
-			openLabel: "Select Workflow(s)",
+			canSelectMany: false,
+			openLabel: "Select Workflow",
 			filters: {
 				"JSON files": ["json"],
 			},
 		});
-		if (uris && uris.length > 0) {
-			for (const uri of uris) {
-				targets.push({
-					targetPath: uri.fsPath,
-					displayName: path.basename(uri.fsPath),
-				});
-			}
-		}
+		if (!uris || uris.length === 0) return null;
+
+		targetPath = uris[0].fsPath;
+		displayName = path.basename(targetPath);
 	}
 
-	if (targets.length === 0) {
-		return [];
+	if (!targetPath.endsWith(".json")) {
+		vscode.window.showErrorMessage(
+			"Invalid file type. Only local JSON workflows (.json) are supported.",
+		);
+		return null;
 	}
 
-	const validTargets: Array<{ targetPath: string; displayName: string }> = [];
-	for (const t of targets) {
-		try {
-			fs.accessSync(t.targetPath, fs.constants.R_OK);
-			validTargets.push(t);
-		} catch (e: unknown) {
-			vscode.window.showErrorMessage(
-				`Failed to access workflow file: ${toError(e).message}`,
-			);
-		}
+	try {
+		// Just to validate it's readable
+		fs.accessSync(targetPath, fs.constants.R_OK);
+	} catch (e: unknown) {
+		vscode.window.showErrorMessage(
+			`Failed to access workflow file: ${(e as Error).message}`,
+		);
+		return null;
 	}
 
-	return validTargets;
+	return { targetPath, displayName };
 }
 
 function buildBaseArgs(
@@ -120,7 +83,7 @@ function buildBaseArgs(
 			args.push(mapping.flag);
 		} else if (
 			mapping.type === "string" &&
-			isString(val) &&
+			typeof val === "string" &&
 			val.trim() !== ""
 		) {
 			args.push(mapping.flag, val);
@@ -131,78 +94,55 @@ function buildBaseArgs(
 		args.push("--keep-browser-open");
 	}
 
-	const vaultPath = getWorkspaceRoot();
-	if (vaultPath) {
-		args.push("--vault-path", vaultPath);
-	}
-
 	return args;
 }
 
 export async function runWorkflowCommand(
 	nodeOrUri?: unknown,
-	params?: unknown | Record<string, unknown> | unknown[],
+	params?: Record<string, unknown>,
 	runOptions?: { keepBrowserOpen?: boolean },
 ) {
-	let nodesOrUris: unknown[] | undefined;
-	let parsedParams: Record<string, unknown> | undefined;
-
-	if (Array.isArray(params)) {
-		nodesOrUris = params;
-	} else if (isRecord(params)) {
-		parsedParams = castRecord(params);
-	}
-
-	const targets = await resolveTargets(nodeOrUri, nodesOrUris);
-	if (targets.length === 0) return;
+	const target = await resolveTarget(nodeOrUri);
+	if (!target) return;
+	const { targetPath, displayName } = target;
 
 	const config = vscode.workspace.getConfiguration("automa");
 	const keepBrowserOpen =
 		runOptions?.keepBrowserOpen ??
 		!config.get<boolean>("vault.run.closeBrowserOnFinish", true);
 
+	const args = buildBaseArgs(targetPath, config, keepBrowserOpen);
+
 	const globalVariables = config.get<Record<string, string>>(
 		"vault.run.globalVariables",
 		{},
 	);
-	const mergedVariables = { ...globalVariables, ...(parsedParams || {}) };
-	const hasMergedVariables = Object.keys(mergedVariables).length > 0;
-	const useDefaultParameters = config.get<boolean>(
-		"run.useDefaultParameters",
-		false,
-	);
+	const mergedVariables = { ...globalVariables, ...(params || {}) };
 
-	for (const target of targets) {
-		const { targetPath, displayName } = target;
-		const args = buildBaseArgs(targetPath, config, keepBrowserOpen);
-
-		if (hasMergedVariables) {
-			args.push("--variables", JSON.stringify(mergedVariables));
-		}
-
-		if (useDefaultParameters) {
-			args.push("--use-default-parameters");
-		}
-
-		await TaskRunner.runAutomaCli(args, {
-			id: `workflow-${Date.now()}-${Math.random().toString(36).substring(7)}`,
-			name: `Workflow: ${displayName}`,
-			source: "Automa",
-			startMessage: `Running Workflow: ${displayName}`,
-			successMessage: `Workflow finished: ${displayName}`,
-			errorMessage: `Workflow failed: ${displayName}`,
-			statusBarText: `Running: ${displayName}`,
-			useTelemetry: false,
-		});
+	if (Object.keys(mergedVariables).length > 0) {
+		args.push("--variables", JSON.stringify(mergedVariables));
 	}
+
+	if (config.get<boolean>("run.useDefaultParameters", false)) {
+		args.push("--use-default-parameters");
+	}
+
+	await TaskRunner.runAutomaCli(args, {
+		id: `workflow-${Date.now()}`,
+		name: `Workflow: ${displayName}`,
+		source: "Automa",
+		startMessage: `Running Workflow: ${displayName}`,
+		successMessage: `Workflow finished: ${displayName}`,
+		errorMessage: `Workflow failed: ${displayName}`,
+		statusBarText: `Running: ${displayName}`,
+		useTelemetry: false,
+	});
 }
 
-export async function runWorkflowWithParamsCommand(
-	nodeOrUri?: unknown,
-	nodesOrUris?: unknown[],
-) {
-	const targets = await resolveTargets(nodeOrUri, nodesOrUris);
-	if (targets.length === 0) return;
+export async function runWorkflowWithParamsCommand(nodeOrUri?: unknown) {
+	const target = await resolveTarget(nodeOrUri);
+	if (!target) return;
+	const { targetPath, displayName } = target;
 
 	// Bỏ qua logic tự parse params bằng showInputBox vì CLI đã có wizard (prompts) rất tốt.
 	// Chúng ta sẽ gọi thẳng CLI và KHÔNG truyền --use-default-parameters để ép nó hiện wizard trong Terminal.
@@ -211,29 +151,25 @@ export async function runWorkflowWithParamsCommand(
 		"vault.run.closeBrowserOnFinish",
 		true,
 	);
+
+	const args = buildBaseArgs(targetPath, config, keepBrowserOpen);
+
 	const globalVariables = config.get<Record<string, string>>(
 		"vault.run.globalVariables",
 		{},
 	);
-	const hasGlobalVariables = Object.keys(globalVariables).length > 0;
-
-	for (const target of targets) {
-		const { targetPath, displayName } = target;
-		const args = buildBaseArgs(targetPath, config, keepBrowserOpen);
-
-		if (hasGlobalVariables) {
-			args.push("--variables", JSON.stringify(globalVariables));
-		}
-
-		await TaskRunner.runAutomaCli(args, {
-			id: `workflow-${Date.now()}-${Math.random().toString(36).substring(7)}`,
-			name: `Workflow (Params): ${displayName}`,
-			source: "Automa",
-			startMessage: `Running Workflow with Params: ${displayName}`,
-			successMessage: `Workflow finished: ${displayName}`,
-			errorMessage: `Workflow failed: ${displayName}`,
-			statusBarText: `Running (Params): ${displayName}`,
-			useTelemetry: false,
-		});
+	if (Object.keys(globalVariables).length > 0) {
+		args.push("--variables", JSON.stringify(globalVariables));
 	}
+
+	await TaskRunner.runAutomaCli(args, {
+		id: `workflow-${Date.now()}`,
+		name: `Workflow (Params): ${displayName}`,
+		source: "Automa",
+		startMessage: `Running Workflow with Params: ${displayName}`,
+		successMessage: `Workflow finished: ${displayName}`,
+		errorMessage: `Workflow failed: ${displayName}`,
+		statusBarText: `Running (Params): ${displayName}`,
+		useTelemetry: false,
+	});
 }

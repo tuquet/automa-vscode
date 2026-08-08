@@ -1,11 +1,5 @@
-import {
-	castRecord,
-	castRecordArray,
-	hasObjectProp,
-	isRecord,
-} from "../utils/typeGuards";
-export const WorkflowParser = {
-	extractImplicitVariables(content: string): Set<string> {
+export class WorkflowParser {
+	public static extractImplicitVariables(content: string): Set<string> {
 		const implicitVars = new Set<string>();
 
 		// 1. Scan for {{variables.xyz}}
@@ -22,28 +16,39 @@ export const WorkflowParser = {
 		}
 
 		return implicitVars;
-	},
+	}
 
-	extractTriggerParameters(
+	public static extractTriggerParameters(
 		jsonObj: unknown,
 		implicitVars: Set<string>,
 	): Record<string, unknown>[] {
 		const triggerParams: Record<string, unknown>[] = [];
 		let nodesList: Record<string, unknown>[] = [];
 
-		const json = castRecord(jsonObj || {});
+		const json = (jsonObj || {}) as Record<string, unknown>;
 
-		if (hasObjectProp(json, "data") && Array.isArray(json.data.nodes)) {
-			nodesList = castRecordArray(json.data.nodes);
-		} else if (hasObjectProp(json, "drawflow")) {
-			if (Array.isArray(json.drawflow.nodes)) {
-				nodesList = castRecordArray(json.drawflow.nodes);
+		if (
+			json.data &&
+			typeof json.data === "object" &&
+			Array.isArray((json.data as Record<string, unknown>).nodes)
+		) {
+			nodesList = (json.data as Record<string, unknown>).nodes as Record<
+				string,
+				unknown
+			>[];
+		} else if (json.drawflow && typeof json.drawflow === "object") {
+			const drawflow = json.drawflow as Record<string, unknown>;
+			if (Array.isArray(drawflow.nodes)) {
+				nodesList = drawflow.nodes as Record<string, unknown>[];
 			} else {
-				Object.values(json.drawflow).forEach((tabData) => {
-					if (isRecord(tabData) && isRecord(tabData.data)) {
-						Object.values(tabData.data).forEach((node) => {
-							nodesList.push(castRecord(node));
-						});
+				Object.keys(drawflow).forEach((tab) => {
+					const tabData = drawflow[tab] as Record<string, unknown>;
+					if (tabData?.data) {
+						Object.entries(tabData.data as Record<string, unknown>).forEach(
+							([_key, node]: [string, unknown]) => {
+								nodesList.push(node as Record<string, unknown>);
+							},
+						);
 					}
 				});
 			}
@@ -55,10 +60,12 @@ export const WorkflowParser = {
 					(node.label === "trigger" ||
 						node.name === "trigger" ||
 						node.type === "BlockTrigger") &&
-					hasObjectProp(node, "data") &&
-					Array.isArray(node.data.parameters)
+					node.data &&
+					typeof node.data === "object" &&
+					Array.isArray((node.data as Record<string, unknown>).parameters)
 				) {
-					for (const param of castRecordArray(node.data.parameters)) {
+					for (const param of (node.data as Record<string, unknown>)
+						.parameters as Record<string, unknown>[]) {
 						if (
 							param.name &&
 							!triggerParams.some((p) => p.name === param.name)
@@ -74,5 +81,5 @@ export const WorkflowParser = {
 			}
 		}
 		return triggerParams;
-	},
-};
+	}
+}

@@ -2,7 +2,6 @@ import * as fsSync from "node:fs";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as vscode from "vscode";
-import { isString, toError } from "../utils/typeGuards";
 import { BaseCustomEditorProvider } from "./BaseCustomEditorProvider";
 
 interface AutomaJobLog {
@@ -65,9 +64,13 @@ export class LogCustomEditorProvider
 			);
 			if (!res.ok) throw new Error("Daemon not ready");
 			return (await res.json()) as ParsedLogResponse;
-		} catch (_err: unknown) {
-			const result = await daemon.executeCliCommand(["log", jobId, "--json"]);
-			return result as ParsedLogResponse;
+		} catch (_err) {
+			const { stdout } = await daemon.executeRawCliCommand([
+				"log",
+				jobId,
+				"--json",
+			]);
+			return JSON.parse(stdout) as ParsedLogResponse;
 		}
 	}
 
@@ -111,7 +114,7 @@ export class LogCustomEditorProvider
 			const provider = new LogCustomEditorProvider(context);
 			panel.webview.html = provider.getWebviewContent(job, logs);
 		} catch (error: unknown) {
-			const e = toError(error);
+			const e = error instanceof Error ? error : new Error(String(error));
 			panel.webview.html = `<body><h2>Failed to load log</h2><pre>${e.message}</pre></body>`;
 		}
 	}
@@ -121,9 +124,10 @@ export class LogCustomEditorProvider
 		webviewPanel: vscode.WebviewPanel,
 		_token: vscode.CancellationToken,
 	): Promise<void> {
-		let isRendered = false;
-		let hasError = false;
+		let isFirstLoad = true;
 		const updateWebview = async () => {
+			const isInitial = isFirstLoad;
+			isFirstLoad = false;
 			try {
 				const content = await fs.readFile(document.uri.fsPath, "utf-8");
 				const parsed = JSON.parse(content);
@@ -137,20 +141,10 @@ export class LogCustomEditorProvider
 				const results = parsed.results || { table: [], variables: {} };
 
 				job.results = results;
-				if (!isRendered || hasError) {
-					webviewPanel.webview.html = this.getWebviewContent(job, logs);
-					isRendered = true;
-					hasError = false;
-				} else {
-					await webviewPanel.webview.postMessage({
-						type: "update",
-						job,
-						logs,
-					});
-				}
+				webviewPanel.webview.html = this.getWebviewContent(job, logs);
 			} catch (error: unknown) {
-				if (!isRendered || hasError) {
-					const e = toError(error);
+				if (isInitial) {
+					const e = error instanceof Error ? error : new Error(String(error));
 					webviewPanel.webview.html = `
 						<!DOCTYPE html>
 						<html>
@@ -161,17 +155,12 @@ export class LogCustomEditorProvider
 							</body>
 						</html>
 					`;
-					isRendered = true;
-					hasError = true;
 				}
 				// If not initial, ignore parse errors (might be mid-write)
 			}
 		};
 
 		this.setupWebviewPanel(document, webviewPanel, updateWebview);
-
-		// Initial render
-		await updateWebview();
 	}
 	private formatDate(dateString: string): string {
 		if (!dateString) return "Unknown";
@@ -217,50 +206,36 @@ export class LogCustomEditorProvider
 		);
 		let htmlContent = fsSync.readFileSync(htmlPath, "utf-8");
 
-		const escapeHtml = (unsafe: unknown) => {
-			if (!isString(unsafe)) return String(unsafe);
-			return unsafe
-				.replace(/&/g, "&amp;")
-				.replace(/</g, "&lt;")
-				.replace(/>/g, "&gt;")
-				.replace(/"/g, "&quot;")
-				.replace(/'/g, "&#039;");
-		};
-
 		const jobName = job.name || "Unknown Job";
-		htmlContent = htmlContent.replace(/\{\{JOB_NAME\}\}/g, () =>
-			escapeHtml(jobName),
-		);
-		htmlContent = htmlContent.replace(/\{\{JOB_STATUS_COLOR\}\}/g, () =>
+		htmlContent = htmlContent.replace("{{JOB_NAME}}", jobName);
+		htmlContent = htmlContent.replace("{{JOB_NAME}}", jobName); // for title
+		htmlContent = htmlContent.replace(
+			"{{JOB_STATUS_COLOR}}",
 			this.getStatusColor(job.status),
 		);
-		htmlContent = htmlContent.replace(/\{\{JOB_STATUS\}\}/g, () =>
-			escapeHtml(job.status || "Unknown"),
+		htmlContent = htmlContent.replace(
+			"{{JOB_STATUS}}",
+			job.status || "Unknown",
 		);
-		htmlContent = htmlContent.replace(/\{\{JOB_CREATED_AT\}\}/g, () =>
-			escapeHtml(this.formatDate(job.created_at)),
+		htmlContent = htmlContent.replace(
+			"{{JOB_CREATED_AT}}",
+			this.formatDate(job.created_at),
 		);
-		htmlContent = htmlContent.replace(/\{\{JOB_ID\}\}/g, () =>
-			escapeHtml(job.id || "N/A"),
+		htmlContent = htmlContent.replace("{{JOB_ID}}", job.id || "N/A");
+		htmlContent = htmlContent.replace(
+			"{{WORKFLOW_ID}}",
+			job.workflow_id || job.id || "N/A",
 		);
-		htmlContent = htmlContent.replace(/\{\{WORKFLOW_ID\}\}/g, () =>
-			escapeHtml(job.workflow_id || job.id || "N/A"),
-		);
-		htmlContent = htmlContent.replace(/\{\{JOB_DURATION\}\}/g, () =>
-			escapeHtml(this.formatDuration(job.duration)),
+		htmlContent = htmlContent.replace(
+			"{{JOB_DURATION}}",
+			this.formatDuration(job.duration),
 		);
 
 		const injectLogs = `const logsData = ${logsJson};`;
 		const injectJob = `const jobData = ${jobJson};`;
 
-		htmlContent = htmlContent.replace(
-			/\{\{INJECT_LOGS_DATA\}\}/g,
-			() => injectLogs,
-		);
-		htmlContent = htmlContent.replace(
-			/\{\{INJECT_JOB_DATA\}\}/g,
-			() => injectJob,
-		);
+		htmlContent = htmlContent.replace("{{INJECT_LOGS_DATA}}", injectLogs);
+		htmlContent = htmlContent.replace("{{INJECT_JOB_DATA}}", injectJob);
 
 		return htmlContent;
 	}
@@ -275,7 +250,7 @@ export class LogCustomEditorProvider
 		try {
 			return this.renderHtmlTemplate(job, logsJson, jobJson);
 		} catch (error: unknown) {
-			const e = toError(error);
+			const e = error instanceof Error ? error : new Error(String(error));
 			return `<body><h2>Error loading HTML template</h2><pre>${e.message}</pre></body>`;
 		}
 	}

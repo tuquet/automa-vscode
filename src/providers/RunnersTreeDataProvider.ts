@@ -44,7 +44,6 @@ export class RunnersTreeDataProvider
 
 		const treeView = vscode.window.createTreeView("automa.activeRunners", {
 			treeDataProvider: this,
-			canSelectMany: true,
 		});
 		this.setTreeView(treeView);
 
