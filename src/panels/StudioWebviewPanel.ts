@@ -149,9 +149,18 @@ export class StudioWebviewPanel {
 					if (isString(message.data)) {
 						url = message.data;
 					} else if (castRecord(message.data)?.resource) {
-						const res = castRecord(castRecord(message.data).resource);
-						url = (res.url as string) || (res as unknown as string);
-						options = res;
+						const dataRecord = castRecord(message.data);
+						if (isString(dataRecord.resource)) {
+							url = dataRecord.resource;
+							options = dataRecord;
+						} else {
+							const res = castRecord(dataRecord.resource);
+							url = res.url as string;
+							options = {
+								...res,
+								...(isRecord(dataRecord.options) ? dataRecord.options : {}),
+							};
+						}
 					}
 
 					if (!url) throw new Error("Fetch URL missing");
