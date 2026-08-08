@@ -4,7 +4,7 @@ import * as net from "node:net";
 import * as path from "node:path";
 import { promisify } from "node:util";
 import * as vscode from "vscode";
-import { toError } from "../utils/typeGuards";
+import { isString, toError } from "../utils/typeGuards";
 import { Logger } from "./Logger";
 
 const _execAsync = promisify(exec);
@@ -49,7 +49,7 @@ export class DaemonManager {
 				if (res.ok) return await res.json();
 			} else if (cmd === "run" && args[1]) {
 				const filePath = args[1];
-				if (typeof filePath === "string" && fs.existsSync(filePath)) {
+				if (isString(filePath) && fs.existsSync(filePath)) {
 					const workflowData = JSON.parse(fs.readFileSync(filePath, "utf-8"));
 					const options: Record<string, unknown> = {};
 					const vaultIdx = args.indexOf("--vault-path");
@@ -61,7 +61,7 @@ export class DaemonManager {
 						const vars = args[varIdx + 1];
 						try {
 							options.variables =
-								typeof vars === "string" && vars.startsWith("{")
+								isString(vars) && vars.startsWith("{")
 									? JSON.parse(vars)
 									: vars;
 						} catch (_e: unknown) {
