@@ -193,14 +193,14 @@ export class DaemonManager {
 				}
 			}
 
-			// Fallback: Check the last few lines for a single-line complete JSON
-			const lines = trimmed.split("\n");
-			for (
-				let i = lines.length - 1;
-				i >= Math.max(0, lines.length - 100);
-				i--
-			) {
-				const line = lines[i].trim();
+			// Fallback: Check the last few lines for a single-line complete JSON without O(N) split allocation
+			let currentEnd = trimmed.length;
+			for (let i = 0; i < 100; i++) {
+				if (currentEnd <= 0) break;
+				const prevNewline = trimmed.lastIndexOf("\n", currentEnd - 1);
+				const startIndex = prevNewline === -1 ? 0 : prevNewline + 1;
+				const line = trimmed.substring(startIndex, currentEnd).trim();
+
 				if (line.startsWith("{") || line.startsWith("[")) {
 					try {
 						return JSON.parse(line);
@@ -209,6 +209,9 @@ export class DaemonManager {
 						Logger.debug(`[Daemon IPC] Line parse attempt failed: ${errMsg}`);
 					}
 				}
+
+				if (prevNewline === -1) break;
+				currentEnd = prevNewline;
 			}
 
 			throw new Error("No valid JSON found in output");
