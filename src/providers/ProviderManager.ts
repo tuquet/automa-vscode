@@ -34,7 +34,7 @@ export class ProviderManager {
 
 		// 2. Profiles Panel
 		const profilesProvider = new AutomaFilesProvider(
-			"**/*.profile.json",
+			"**/*.{profile,bprofile}.json",
 			"account",
 			"automa.browserProfiles",
 		);

@@ -377,12 +377,14 @@
 				"extensions": [
 					".workflow.json",
 					".package.json",
-					".automa-var.json",
-					".automa-table.json",
-					".automa-rows.json",
-					".automa-cred.json",
-					".automa-folder.json",
-					".fleets.json"
+					".profile.json",
+					".bprofile.json",
+					".variable.json",
+					".credential.json",
+					".table.json",
+					".fleet.json",
+					".fleets.json",
+					".automa-log.json"
 				]
 			}
 		],
