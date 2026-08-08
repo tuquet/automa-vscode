@@ -341,62 +341,58 @@ export class WorkflowPreviewEditorProvider
 
 			const safeString = (str: unknown) =>
 				str
-					? String(str)
-							.replace(/\\/g, "\\\\")
-							.replace(/`/g, "\\`")
-							.replace(/\$\{/g, "\\${")
-							.replace(/<\/script>/gi, "<\\/script>")
-					: "";
+					? serialize(String(str), { isJSON: true })
+					: '""';
 
 			htmlContent = htmlContent.replace(
 				/\{\{WORKFLOW_NAME\}\}/g,
-				((json as Record<string, unknown>).name as string) ||
+				() => ((json as Record<string, unknown>).name as string) ||
 					(templateName.includes("package")
 						? "Untitled Package"
 						: "Untitled Workflow"),
 			);
-			htmlContent = htmlContent.replace("{{UPDATED_AT_HTML}}", updatedAtHtml);
+			htmlContent = htmlContent.replace("{{UPDATED_AT_HTML}}", () => updatedAtHtml);
 			htmlContent = htmlContent.replace(
 				"{{JSON_ID}}",
-				safeString((json as Record<string, unknown>).id) || "N/A",
+				() => safeString((json as Record<string, unknown>).id) || '"N/A"',
 			);
 			htmlContent = htmlContent.replace(
 				"{{JSON_NAME}}",
-				safeString((json as Record<string, unknown>).name as string),
+				() => safeString((json as Record<string, unknown>).name as string),
 			);
 			htmlContent = htmlContent.replace(
 				"{{JSON_DESCRIPTION}}",
-				safeString((json as Record<string, unknown>).description),
+				() => safeString((json as Record<string, unknown>).description),
 			);
 			htmlContent = htmlContent.replace(
 				"{{JSON_SETTINGS}}",
-				jsonStringifySafe((json as Record<string, unknown>).settings),
+				() => jsonStringifySafe((json as Record<string, unknown>).settings),
 			);
 			htmlContent = htmlContent.replace(
 				"{{JSON_ICON}}",
-				((json as Record<string, unknown>).icon as string) || "riGlobalLine",
+				() => ((json as Record<string, unknown>).icon as string) || "riGlobalLine",
 			);
 
 			// Additional fields common but maybe not in both, replacing won't hurt if they don't exist in template
 			htmlContent = htmlContent.replace(
 				"{{JSON_VERSION}}",
-				safeString((json as Record<string, unknown>).version),
+				() => safeString((json as Record<string, unknown>).version),
 			);
 			htmlContent = htmlContent.replace(
 				"{{JSON_EXT_VERSION}}",
-				safeString((json as Record<string, unknown>).extVersion),
+				() => safeString((json as Record<string, unknown>).extVersion),
 			);
 			htmlContent = htmlContent.replace(
 				"{{JSON_GLOBAL_DATA}}",
-				safeString((json as Record<string, unknown>).globalData),
+				() => safeString((json as Record<string, unknown>).globalData),
 			);
 			htmlContent = htmlContent.replace(
 				"{{JSON_TABLE}}",
-				jsonStringifySafe((json as Record<string, unknown>).table),
+				() => jsonStringifySafe((json as Record<string, unknown>).table),
 			);
 			htmlContent = htmlContent.replace(
 				"{{JSON_INCLUDED_WORKFLOWS}}",
-				jsonStringifySafe((json as Record<string, unknown>).includedWorkflows),
+				() => jsonStringifySafe((json as Record<string, unknown>).includedWorkflows),
 			);
 
 			return htmlContent;
@@ -429,7 +425,7 @@ export class WorkflowPreviewEditorProvider
 
 		htmlContent = htmlContent.replace(
 			"{{INJECT_PARAMS_DATA}}",
-			`const tParams = ${serialize(triggerParams)};\nconst defaultKeepBrowserOpen = ${defaultKeepBrowserOpen};`,
+			() => `const tParams = ${serialize(triggerParams)};\nconst defaultKeepBrowserOpen = ${defaultKeepBrowserOpen};`,
 		);
 
 		return htmlContent;
@@ -461,7 +457,7 @@ export class WorkflowPreviewEditorProvider
 			`;
 		htmlContent = htmlContent.replace(
 			"{{INJECT_PACKAGE_DATA}}",
-			injectPackageData,
+			() => injectPackageData,
 		);
 
 		return htmlContent;
@@ -478,12 +474,8 @@ export class WorkflowPreviewEditorProvider
 	): string {
 		const jsonStringifySafe = (obj: unknown) =>
 			obj
-				? JSON.stringify(obj, null, 2)
-						.replace(/\\/g, "\\\\")
-						.replace(/`/g, "\\`")
-						.replace(/\$\{/g, "\\${")
-						.replace(/<\/script>/gi, "<\\/script>")
-				: "";
+				? serialize(obj, { isJSON: true, space: 2 })
+				: '""';
 
 		if (isPackage) {
 			return this.getPackageHtml(

@@ -3,14 +3,14 @@ export class WorkflowParser {
 		const implicitVars = new Set<string>();
 
 		// 1. Scan for {{variables.xyz}}
-		const varRegex1 = /\{\{\s*variables\.([a-zA-Z0-9_$]+)\s*\}\}/g;
+		const varRegex1 = /\{\{\s*variables\.([a-zA-Z0-9_$.-]+)\s*\}\}/g;
 		for (const match of content.matchAll(varRegex1)) {
 			implicitVars.add(match[1]);
 		}
 
 		// 2. Scan for automaRefData('variables', 'xyz')
 		const varRegex2 =
-			/automaRefData\(\s*['"]variables['"]\s*,\s*['"]([a-zA-Z0-9_$]+)['"]\s*\)/g;
+			/automaRefData\(\s*['"]variables['"]\s*,\s*['"]([a-zA-Z0-9_$.-]+)['"]\s*\)/g;
 		for (const match of content.matchAll(varRegex2)) {
 			implicitVars.add(match[1]);
 		}
