@@ -376,7 +376,7 @@
                     version: `{{JSON_VERSION}}`,
                     extVersion: `{{JSON_EXT_VERSION}}`,
                     icon: `{{JSON_ICON}}` || 'riGlobalLine',
-                    globalData: typeof `{{JSON_GLOBAL_DATA}}` === 'string' && `{{JSON_GLOBAL_DATA}}` !== '' ? `{{JSON_GLOBAL_DATA}}` : normalizeJsonStr(`{{JSON_GLOBAL_DATA}}`),
+                    globalData: normalizeJsonStr(`{{JSON_GLOBAL_DATA}}`),
                     table: normalizeJsonStr(`{{JSON_TABLE}}`.trim() === "" ? "[]" : `{{JSON_TABLE}}`),
                     settings: normalizeJsonStr(`{{JSON_SETTINGS}}`.trim() === "" ? "{}" : `{{JSON_SETTINGS}}`),
                     includedWorkflows: normalizeJsonStr(`{{JSON_INCLUDED_WORKFLOWS}}`.trim() === "" ? "{}" : `{{JSON_INCLUDED_WORKFLOWS}}`)

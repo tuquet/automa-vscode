@@ -423,7 +423,9 @@ export class WorkflowPreviewEditorProvider
 				safeString(json.extVersion),
 			);
 			htmlContent = htmlContent.replace(/\{\{JSON_GLOBAL_DATA\}\}/g, () =>
-				safeString(json.globalData),
+				typeof json.globalData === "string"
+					? safeString(json.globalData)
+					: jsonStringifySafe(json.globalData),
 			);
 			htmlContent = htmlContent.replace(/\{\{JSON_TABLE\}\}/g, () =>
 				jsonStringifySafe(json.table),
