@@ -327,17 +327,19 @@ export class DaemonManager {
 						}
 					}
 
+					let parseSuccess = false;
 					if (endIndex !== -1) {
 						const possibleJson = text.substring(startIndex, endIndex + 1);
 						try {
 							const parsed = JSON.parse(possibleJson);
 							lastValidJson = { data: parsed, index: endIndex };
+							parseSuccess = true;
 						} catch (_e: unknown) {
 							// Invalid JSON
 						}
 					}
 
-					if (endIndex !== -1) {
+					if (parseSuccess) {
 						startIndex = text.indexOf(startChar, endIndex + 1);
 					} else {
 						startIndex = text.indexOf(startChar, startIndex + 1);
@@ -434,6 +436,7 @@ export class DaemonManager {
 		try {
 			const res = await fetch(`http://localhost:${port}/api/health`, {
 				method: "GET",
+				signal: AbortSignal.timeout(500),
 			});
 			if (res.ok) {
 				const data = (await res.json()) as { status?: string };
