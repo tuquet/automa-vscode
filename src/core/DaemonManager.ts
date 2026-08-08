@@ -320,6 +320,20 @@ export class DaemonManager {
 				return JSON.parse(str);
 			} catch (_e: unknown) {}
 
+			// Optimize for single-line JSON typically emitted by CLI at the end of output
+			const lines = str.split("\n");
+			for (let i = lines.length - 1; i >= 0; i--) {
+				const line = lines[i].trim();
+				if (
+					(line.startsWith("{") && line.endsWith("}")) ||
+					(line.startsWith("[") && line.endsWith("]"))
+				) {
+					try {
+						return JSON.parse(line);
+					} catch (_e: unknown) {}
+				}
+			}
+
 			const findValidJson = (
 				text: string,
 				startChar: string,
@@ -376,27 +390,22 @@ export class DaemonManager {
 						}
 					}
 
-					let parseSuccess = false;
 					if (endIndex !== -1) {
 						// Optimize: Check if brackets actually match before creating substring
 						const possibleJson = text.substring(startIndex, endIndex + 1);
 						try {
 							const parsed = JSON.parse(possibleJson);
 							lastValidJson = { data: parsed, index: endIndex };
-							parseSuccess = true;
+							// Safe to jump forward completely since we found a valid boundary
+							startIndex = text.indexOf(startChar, endIndex + 1);
+							continue;
 						} catch (_e: unknown) {
 							// Invalid JSON
 						}
 					}
 
-					if (parseSuccess) {
-						// Bảo vệ bước nhảy không gian O(N)
-						startIndex = text.indexOf(startChar, endIndex + 1);
-					} else {
-						// Tối ưu hóa an toàn: Nếu parse fail (e.g. outer object invalid),
-						// phải tìm startChar tiếp theo bên trong, thay vì nhảy vọt qua endIndex.
-						startIndex = text.indexOf(startChar, startIndex + 1);
-					}
+					// If we failed to parse or find endIndex, move to next start char inside
+					startIndex = text.indexOf(startChar, startIndex + 1);
 				}
 				return lastValidJson;
 			};
