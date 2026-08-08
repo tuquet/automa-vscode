@@ -43,9 +43,9 @@ export class WelcomePanel {
 					case "installBrowser":
 						try {
 							await vscode.commands.executeCommand("automa.installBrowser");
-							this._panel.webview.postMessage({ command: "installBrowserSuccess" });
+							this._panel.webview.postMessage({ id: message.id, data: { success: true } });
 						} catch (err) {
-							this._panel.webview.postMessage({ command: "installBrowserError", error: String(err) });
+							this._panel.webview.postMessage({ type: "error", id: message.id, data: String(err) });
 						}
 						return;
 				}

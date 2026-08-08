@@ -63,7 +63,7 @@ export class WorkflowPreviewEditorProvider
 		json: Record<string, unknown>,
 	): Promise<void> {
 		const { WorkflowSanitizer } = await import("../core/Sanitizer");
-		const isModified = WorkflowSanitizer.sanitize(json);
+		const isModified = WorkflowSanitizer.sanitize(json, document.uri);
 
 		if (isModified) {
 			await this.saveDocument(document, JSON.stringify(json, null, 4));

@@ -1,5 +1,7 @@
 import * as crypto from "node:crypto";
 import { z } from "zod";
+import * as vscode from "vscode";
+import { diagnosticCollection } from "../commands/lintCheck";
 
 function generateShortId(): string {
 	const chars =
@@ -30,16 +32,12 @@ const validTypes = [
 
 const NodeTypeSchema = z
 	.string()
-	.refine((val) => validTypes.includes(val), { message: "Unsupported node type" })
-	.default("BlockBasic")
-	.catch((ctx) => {
-		console.warn(`[Sanitizer] Node type validation failed: ${ctx.error.issues[0]?.message}. Falling back to BlockBasic.`);
-		return "BlockBasic";
-	});
+	.refine((val) => validTypes.includes(val), { message: "Unsupported node type" });
 
 export class WorkflowSanitizer {
-	static sanitize(json: Record<string, unknown>): boolean {
+	static sanitize(json: Record<string, unknown>, documentUri?: vscode.Uri): boolean {
 		let isModified = false;
+		const warnings: vscode.Diagnostic[] = [];
 
 		// 1. Ensure Root properties
 		if (!(json as Record<string, unknown>).id) {
@@ -172,9 +170,13 @@ export class WorkflowSanitizer {
 					isModified = true;
 				}
 
-				const parsedType = NodeTypeSchema.parse((node as Record<string, unknown>).type);
-				if ((node as Record<string, unknown>).type !== parsedType) {
-					((node as Record<string, unknown>).type as string) = parsedType;
+				const parsedType = NodeTypeSchema.safeParse((node as Record<string, unknown>).type);
+				if (!parsedType.success) {
+					((node as Record<string, unknown>).type as string) = "BlockBasic";
+					warnings.push(new vscode.Diagnostic(new vscode.Range(0,0,0,0), `Node ID '${originalId}': ${parsedType.error.errors[0].message}. Defaulting to BlockBasic.`, vscode.DiagnosticSeverity.Warning));
+					isModified = true;
+				} else if ((node as Record<string, unknown>).type !== parsedType.data) {
+					((node as Record<string, unknown>).type as string) = parsedType.data;
 					isModified = true;
 				}
 
@@ -274,6 +276,11 @@ export class WorkflowSanitizer {
 		};
 
 		sanitizeNodesAndEdges(nodes, edges);
+
+		if (documentUri && diagnosticCollection) {
+			const existing = diagnosticCollection.get(documentUri) || [];
+			diagnosticCollection.set(documentUri, [...existing, ...warnings]);
+		}
 
 		return isModified;
 	}

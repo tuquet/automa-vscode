@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { DaemonManager } from "../core/DaemonManager";
 
-let diagnosticCollection: vscode.DiagnosticCollection;
+export let diagnosticCollection: vscode.DiagnosticCollection;
 
 export function activateLintDiagnostics(context: vscode.ExtensionContext) {
 	diagnosticCollection =

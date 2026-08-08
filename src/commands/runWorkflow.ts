@@ -37,17 +37,21 @@ async function resolveTarget(
 	}
 
 	if (!targetPath) {
-		const uris = await vscode.window.showOpenDialog({
-			canSelectMany: false,
-			openLabel: "Select Workflow",
-			filters: {
-				"JSON files": ["json"],
-			},
-		});
-		if (!uris || uris.length === 0) return null;
-
-		targetPath = uris[0].fsPath;
-		displayName = path.basename(targetPath);
+		if (vscode.window.activeTextEditor?.document.uri.fsPath.endsWith(".json")) {
+			targetPath = vscode.window.activeTextEditor.document.uri.fsPath;
+			displayName = path.basename(targetPath);
+		} else {
+			const files = await vscode.workspace.findFiles("**/*.workflow.json", "**/{node_modules,.git,dist,out,.gemini,tmp,build}/**");
+			if (files.length === 0) {
+				vscode.window.showErrorMessage("No workflows found in workspace");
+				return null;
+			}
+			const items = files.map(f => ({ label: path.basename(f.fsPath), description: vscode.workspace.asRelativePath(f), fsPath: f.fsPath }));
+			const selected = await vscode.window.showQuickPick(items, { placeHolder: "Select a workflow to run" });
+			if (!selected) return null;
+			targetPath = selected.fsPath;
+			displayName = selected.label;
+		}
 	}
 
 	if (!targetPath.endsWith(".json")) {
