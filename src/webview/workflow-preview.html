@@ -382,8 +382,23 @@
                     includedWorkflows: normalizeJsonStr(`{{JSON_INCLUDED_WORKFLOWS}}`.trim() === "" ? "{}" : `{{JSON_INCLUDED_WORKFLOWS}}`)
                 };
 
+                const isStateEqual = (stateA, stateB) => {
+                    if (!stateA || !stateB) return false;
+                    const keys = ['name', 'description', 'version', 'extVersion', 'icon', 'globalData', 'table', 'settings', 'includedWorkflows'];
+                    for (const key of keys) {
+                        const valA = stateA[key];
+                        const valB = stateB[key];
+                        if (key === 'globalData' || key === 'table' || key === 'settings' || key === 'includedWorkflows') {
+                            if (normalizeJsonStr(valA) !== normalizeJsonStr(valB)) return false;
+                        } else {
+                            if (valA !== valB) return false;
+                        }
+                    }
+                    return true;
+                };
+
                 let workflowData = currentDocState;
-                if (previousState.lastDocState && JSON.stringify(previousState.lastDocState) === JSON.stringify(currentDocState)) {
+                if (previousState.lastDocState && isStateEqual(previousState.lastDocState, currentDocState)) {
                     if (previousState.workflow) {
                         workflowData = previousState.workflow;
                     }
@@ -485,7 +500,13 @@
                     const explicitParamsData = {};
                     triggerParams.value.forEach(p => {
                         if (!p.isImplicit) {
-                            explicitParamsData[p.name] = paramValues[p.name];
+                            let val = paramValues[p.name];
+                            if (p.type === 'number' && val !== '' && !isNaN(val)) {
+                                val = Number(val);
+                            } else if (p.type === 'boolean') {
+                                val = (val === 'true' || val === true);
+                            }
+                            explicitParamsData[p.name] = val;
                         }
                     });
                     dataToSave.triggerParams = explicitParamsData;
@@ -523,10 +544,14 @@
                     }
                     
                     const params = {};
-
-                    
                     triggerParams.value.forEach(p => {
-                        params[p.name] = paramValues[p.name];
+                        let val = paramValues[p.name];
+                        if (p.type === 'number' && val !== '' && !isNaN(val)) {
+                            val = Number(val);
+                        } else if (p.type === 'boolean') {
+                            val = (val === 'true' || val === true);
+                        }
+                        params[p.name] = val;
                     });
 
                     vscode.postMessage({

@@ -257,8 +257,23 @@
                     settings: normalizeJsonStr(`{{JSON_SETTINGS}}`.trim() === "" ? "{}" : `{{JSON_SETTINGS}}`)
                 };
 
+                const isStateEqual = (stateA, stateB) => {
+                    if (!stateA || !stateB) return false;
+                    const keys = ['name', 'description', 'icon', 'settings'];
+                    for (const key of keys) {
+                        const valA = stateA[key];
+                        const valB = stateB[key];
+                        if (key === 'settings') {
+                            if (normalizeJsonStr(valA) !== normalizeJsonStr(valB)) return false;
+                        } else {
+                            if (valA !== valB) return false;
+                        }
+                    }
+                    return true;
+                };
+
                 let workflowData = currentDocState;
-                if (previousState.lastDocState && JSON.stringify(previousState.lastDocState) === JSON.stringify(currentDocState)) {
+                if (previousState.lastDocState && isStateEqual(previousState.lastDocState, currentDocState)) {
                     if (previousState.workflow) {
                         workflowData = previousState.workflow;
                     }
