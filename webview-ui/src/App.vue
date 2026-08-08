@@ -1,11 +1,4 @@
 <script setup lang="ts">
-import { vscode } from "./vscode";
-
-function installBrowser() {
-	vscode.postMessage({
-		command: "installBrowser",
-	});
-}
 </script>
 
 <template>
@@ -25,9 +18,6 @@ function installBrowser() {
       <div class="action-card">
         <h3>🚀 First Step: Setup Runtime</h3>
         <p>Automa runs your workflows in an isolated Chromium browser to avoid detection and ensure stability. You need to install it before running any fleets.</p>
-        <button @click="installBrowser" class="primary-button">
-          Install Isolated Chromium
-        </button>
       </div>
     </main>
   </div>
