@@ -68,6 +68,7 @@ export class VaultTreeDataProvider
 	public register(context: vscode.ExtensionContext) {
 		const treeView = vscode.window.createTreeView("automa.globalVault", {
 			treeDataProvider: this,
+			canSelectMany: true,
 		});
 		context.subscriptions.push(treeView);
 

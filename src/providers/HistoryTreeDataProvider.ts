@@ -33,6 +33,7 @@ export class HistoryTreeDataProvider
 	public register(context: vscode.ExtensionContext) {
 		const treeView = vscode.window.createTreeView("automa.executionHistory", {
 			treeDataProvider: this,
+			canSelectMany: true,
 		});
 		context.subscriptions.push(treeView);
 

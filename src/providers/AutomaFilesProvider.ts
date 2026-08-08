@@ -35,6 +35,7 @@ export class AutomaFilesProvider implements vscode.TreeDataProvider<FileItem> {
 	register(context: vscode.ExtensionContext, entityName: string) {
 		const treeView = vscode.window.createTreeView(this.viewId, {
 			treeDataProvider: this,
+			canSelectMany: true,
 		});
 		context.subscriptions.push(treeView);
 		treeView.onDidChangeVisibility((e) => {
