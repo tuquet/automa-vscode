@@ -293,9 +293,6 @@ export class StudioWebviewPanel {
 				files: vscode.Uri[],
 				shouldSanitize = false,
 			) => {
-				const { DaemonManager } = require("../core/DaemonManager");
-				const daemon = DaemonManager.getInstance();
-				const port = daemon.getPort();
 				const contents = await Promise.all(
 					files.map(async (file) => {
 						try {
@@ -314,25 +311,13 @@ export class StudioWebviewPanel {
 
 				if (shouldSanitize && validParsed.length > 0) {
 					try {
-						const res = await fetch(
-							`http://localhost:${port}/api/sanitize/batch`,
-							{
-								method: "POST",
-								headers: { "Content-Type": "application/json" },
-								body: JSON.stringify({ workflows: validParsed }),
-							},
-						);
-						if (res.ok) {
-							const data = (await res.json()) as {
-								success: boolean;
-								data: Record<string, unknown>[];
-							};
-							if (data.success && data.data) {
-								validParsed = data.data;
-							}
-						}
+						const { WorkflowSanitizer } = await import("../core/Sanitizer");
+						validParsed = validParsed.map((wf) => {
+							WorkflowSanitizer.sanitize(wf);
+							return wf;
+						});
 					} catch (_e: unknown) {
-						// Ignore fetch error, just use un-sanitized data
+						// Fallback if sanitizer fails
 					}
 				}
 
