@@ -65,7 +65,7 @@ export class FleetPreviewEditorProvider
 				isRendered = true;
 			} else {
 				try {
-					webviewPanel.webview.postMessage({
+					await webviewPanel.webview.postMessage({
 						type: "update",
 						text: document.getText(),
 					});
@@ -83,7 +83,7 @@ export class FleetPreviewEditorProvider
 						case "ready": {
 							const workflows = await this.getWorkflowDictionary();
 							const profiles = await this.getProfileDictionary();
-							webviewPanel.webview.postMessage({
+							await webviewPanel.webview.postMessage({
 								type: "update",
 								text: document.getText(),
 								workflows: workflows,

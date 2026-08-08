@@ -29,17 +29,17 @@ export class StudioWebviewPanel {
 					switch (message.type) {
 						case "runtime-message":
 							this.handleRuntimeMessage(castRecord(message.data))
-								.then((result) => {
-									this._panel.webview.postMessage({
+								.then(async (result) => {
+									await this._panel.webview.postMessage({
 										type: "runtime-message-response",
 										id: message.id,
 										data: result,
 									});
 								})
-								.catch((e: unknown) => {
+								.catch(async (e: unknown) => {
 									const err = getErrorMessage(e);
 									Logger.error(`Failed to handle runtime-message: ${err}`);
-									this._panel.webview.postMessage({
+									await this._panel.webview.postMessage({
 										type: "runtime-message-response",
 										id: message.id,
 										error: err,
@@ -48,17 +48,17 @@ export class StudioWebviewPanel {
 							break;
 						case "storage-get":
 							this.handleStorageGet(message.keys)
-								.then((data) => {
-									this._panel.webview.postMessage({
+								.then(async (data) => {
+									await this._panel.webview.postMessage({
 										type: "storage-get-response",
 										id: message.id,
 										data,
 									});
 								})
-								.catch((e: unknown) => {
+								.catch(async (e: unknown) => {
 									const err = getErrorMessage(e);
 									Logger.error(`Failed to handle storage-get: ${err}`);
-									this._panel.webview.postMessage({
+									await this._panel.webview.postMessage({
 										type: "storage-get-response",
 										id: message.id,
 										error: err,
@@ -67,16 +67,16 @@ export class StudioWebviewPanel {
 							break;
 						case "storage-set":
 							this.handleStorageSet(castRecord(message.data))
-								.then(() => {
-									this._panel.webview.postMessage({
+								.then(async () => {
+									await this._panel.webview.postMessage({
 										type: "storage-set-response",
 										id: message.id,
 									});
 								})
-								.catch((e: unknown) => {
+								.catch(async (e: unknown) => {
 									const err = getErrorMessage(e);
 									Logger.error(`Failed to handle storage-set: ${err}`);
-									this._panel.webview.postMessage({
+									await this._panel.webview.postMessage({
 										type: "storage-set-response",
 										id: message.id,
 										error: err,
@@ -91,11 +91,15 @@ export class StudioWebviewPanel {
 					const errorMsg = getErrorMessage(err);
 					Logger.error(`Failed to process webview message: ${errorMsg}`);
 					if (message.id && message.type) {
-						this._panel.webview.postMessage({
-							type: `${message.type}-response`,
-							id: message.id,
-							error: errorMsg,
-						});
+						// we can't easily await inside the catch block if the parent is not async,
+						// but we can fire and catch locally to avoid unhandled rejections
+						this._panel.webview
+							.postMessage({
+								type: `${message.type}-response`,
+								id: message.id,
+								error: errorMsg,
+							})
+							.then(undefined, () => {});
 					}
 				}
 			},

@@ -32,7 +32,7 @@ export class BrowserProfileEditorProvider
 	): Promise<void> {
 		let isRendered = false;
 		let hasError = false;
-		const updateWebview = () => {
+		const updateWebview = async () => {
 			if (!isRendered || hasError) {
 				const success = this.renderWebview(document, webviewPanel);
 				hasError = !success;
@@ -40,7 +40,7 @@ export class BrowserProfileEditorProvider
 			} else {
 				try {
 					const content = document.getText();
-					webviewPanel.webview.postMessage({
+					await webviewPanel.webview.postMessage({
 						type: "update",
 						text: content,
 					});
@@ -72,7 +72,7 @@ export class BrowserProfileEditorProvider
 			messageDisposable,
 		]);
 
-		updateWebview();
+		await updateWebview();
 	}
 
 	private renderWebview(

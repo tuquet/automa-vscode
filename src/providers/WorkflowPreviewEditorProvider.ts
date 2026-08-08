@@ -228,7 +228,7 @@ export class WorkflowPreviewEditorProvider
 				Array.isArray(json.inputs) ||
 				Array.isArray(json.outputs);
 
-			webviewPanel.webview.postMessage({
+			await webviewPanel.webview.postMessage({
 				type: "update",
 				json: json,
 				triggerParams: triggerParams,

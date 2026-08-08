@@ -142,7 +142,7 @@ export class LogCustomEditorProvider
 					isRendered = true;
 					hasError = false;
 				} else {
-					webviewPanel.webview.postMessage({
+					await webviewPanel.webview.postMessage({
 						type: "update",
 						job,
 						logs,
