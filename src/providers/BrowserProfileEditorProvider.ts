@@ -8,7 +8,7 @@ export class BrowserProfileEditorProvider
 	extends BaseCustomEditorProvider
 	implements vscode.CustomTextEditorProvider
 {
-	public static readonly viewType = "automa.browserProfileEditor";
+	public static readonly viewType = "automa.bprofileEditor";
 
 	public static register(context: vscode.ExtensionContext) {
 		context.subscriptions.push(
