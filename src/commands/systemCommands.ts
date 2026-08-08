@@ -25,11 +25,11 @@ export function installBrowserCommand() {
 						"Browser installed successfully!",
 					);
 				} catch (err: unknown) {
-					const e = err instanceof Error ? err : new Error(String(err));
+					const errMsg = err instanceof Error ? err.message : String(err);
 					vscode.window.showErrorMessage(
-						`Failed to install browser: ${e.message}`,
+						`Failed to install browser: ${errMsg}`,
 					);
-					throw e;
+					throw err;
 				}
 			},
 		);
@@ -37,12 +37,12 @@ export function installBrowserCommand() {
 }
 
 export function toggleDaemonCommand() {
-	return async () => {
-		const daemon = DaemonManager.getInstance();
-		if (daemon.isRunning()) {
+	return () => {
+		const daemon = (DaemonManager as any).getInstance();
+		if (daemon.daemonProcess) {
 			daemon.stop();
 		} else {
-			await daemon.start();
+			daemon.start();
 		}
 	};
 }

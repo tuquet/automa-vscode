@@ -84,34 +84,21 @@ export class StudioWebviewPanel {
 		StudioWebviewPanel.currentPanel._update();
 	}
 
-	private async handleRuntimeMessage(message: unknown): Promise<unknown> {
-		if (!message || typeof message !== "object" || !("name" in message))
-			return null;
-		const msgName = (message as { name: string }).name;
-		const msgData = (message as { data?: unknown }).data;
+	private async handleRuntimeMessage(message: any): Promise<any> {
+		if (!message || !message.name) return null;
 
 		try {
-			switch (msgName) {
+			switch (message.name) {
 				case "background--fetch":
 				case "background--fetch:text": {
 					let url = "";
-					let options: Record<string, unknown> = {};
+					let options: any = {};
 
-					if (typeof msgData === "string") {
-						url = msgData;
-					} else if (
-						msgData &&
-						typeof msgData === "object" &&
-						"resource" in msgData
-					) {
-						const resource = (
-							msgData as { resource: Record<string, unknown> | string }
-						).resource;
-						url =
-							typeof resource === "string"
-								? resource
-								: String(resource.url || "");
-						options = resource as Record<string, unknown>;
+					if (typeof message.data === "string") {
+						url = message.data;
+					} else if (message.data && message.data.resource) {
+						url = message.data.resource.url || message.data.resource;
+						options = message.data.resource;
 					}
 
 					if (!url) throw new Error("Fetch URL missing");
@@ -119,19 +106,16 @@ export class StudioWebviewPanel {
 					const res = await fetch(url, options);
 					if (!res.ok) throw new Error(`HTTP error ${res.status}`);
 
-					if (msgName === "background--fetch:text") {
+					if (message.name === "background--fetch:text") {
 						return await res.text();
 					}
 
-					const msgDataType =
-						msgData && typeof msgData === "object" && "type" in msgData
-							? (msgData as { type: string }).type
-							: "json";
-					if (msgDataType === "json") return await res.json();
-					if (msgDataType === "text") return await res.text();
+					const type = message.data?.type || "json";
+					if (type === "json") return await res.json();
+					if (type === "text") return await res.text();
 
 					// base64 handling for images
-					if (msgDataType === "base64") {
+					if (type === "base64") {
 						const buffer = await res.arrayBuffer();
 						return Buffer.from(buffer).toString("base64");
 					}
@@ -143,61 +127,49 @@ export class StudioWebviewPanel {
 					const { DaemonManager } = require("../core/DaemonManager");
 					const daemon = DaemonManager.getInstance();
 
-					const workflowData =
-						msgData && typeof msgData === "object" && "workflowData" in msgData
-							? (msgData as { workflowData: unknown }).workflowData
-							: msgData;
-					if (
-						!workflowData ||
-						typeof workflowData !== "object" ||
-						!("id" in workflowData)
-					)
+					const workflowData = message.data?.workflowData || message.data;
+					if (!workflowData || !workflowData.id)
 						return { success: false, error: "Missing workflow ID" };
 
 					try {
 						const port = daemon.getPort();
 						const executeUrl = `http://localhost:${port}/api/jobs/run`;
-						const reqOptions =
-							(msgData && typeof msgData === "object" && "options" in msgData
-								? (msgData as { options: Record<string, unknown> }).options
-								: {}) || {};
-						if (
-							!reqOptions.vaultPath &&
-							vscode.workspace.workspaceFolders?.length
-						) {
-							reqOptions.vaultPath =
-								vscode.workspace.workspaceFolders[0].uri.fsPath;
-						}
-
 						const res = await fetch(executeUrl, {
 							method: "POST",
 							headers: { "Content-Type": "application/json" },
 							body: JSON.stringify({
 								workflowData,
-								options: reqOptions,
+								options: message.data?.options || {},
 							}),
 						});
-
-						if (!res.ok) {
-							const errBody = await res.json().catch(() => ({}));
-							const errMsg =
-								(errBody as { error?: string }).error ||
-								`Daemon responded with ${res.status}`;
-							return { success: false, error: errMsg };
-						}
-
+						if (!res.ok) throw new Error(`Daemon responded with ${res.status}`);
 						return await res.json();
-					} catch (_error: unknown) {
-						// Daemon unreachable, fallback to CLI
+					} catch (e: unknown) {
+						// Fallback to CLI if Daemon isn't reachable
 						try {
+							// Find the workflow file path
+							let targetPath = workflowData.id; // default
+							if (vscode.workspace.workspaceFolders) {
+								const EXCLUDE_PATTERN = "**/{node_modules,.git,dist,out,.gemini,tmp,build}/**";
+								const files = await vscode.workspace.findFiles("**/*.workflow.json", EXCLUDE_PATTERN);
+								for (const file of files) {
+									try {
+										const content = await vscode.workspace.fs.readFile(file);
+										const data = JSON.parse(Buffer.from(content).toString("utf-8"));
+										if (data.id === workflowData.id) {
+											targetPath = file.fsPath;
+											break;
+										}
+									} catch (_e) {}
+								}
+							}
 							const result = await daemon.executeCliCommand([
 								"run",
-								(workflowData as { id: string }).id,
+								targetPath,
 							]);
 							return result;
 						} catch (cliErr: unknown) {
-							const errMsg =
-								cliErr instanceof Error ? cliErr.message : String(cliErr);
+							const errMsg = cliErr instanceof Error ? cliErr.message : String(cliErr);
 							Logger.error(`Workflow execution failed: ${errMsg}`);
 							return { success: false, error: errMsg };
 						}
@@ -205,26 +177,27 @@ export class StudioWebviewPanel {
 				}
 
 				case "background--open:dashboard": {
-					Logger.info(`Open Dashboard requested: ${String(msgData)}`);
+					// For VS Code, we are already the dashboard. Just tell the webview to push route!
+					// This is slightly tricky. The webview Vue Router handles hash routing.
+					// We can return a specific command, but since this resolves a promise,
+					// the webview caller might not be able to navigate themselves if they expect us to.
+					// Let's just log it for now since they are in the dashboard.
+					Logger.info("Open Dashboard requested: " + message.data);
 					return true;
 				}
 
 				default:
-					Logger.info(`Unhandled runtime message: ${msgName}`);
+					Logger.info(`Unhandled runtime message: ${message.name}`);
 					return null;
 			}
-		} catch (e: unknown) {
-			Logger.error(
-				`Runtime Message Error [${msgName}]: ${e instanceof Error ? e.message : String(e)}`,
-			);
+		} catch (e: any) {
+			Logger.error(`Runtime Message Error [${message.name}]: ${e.message}`);
 			return null;
 		}
 	}
 
-	private async handleStorageGet(
-		_keys: unknown,
-	): Promise<Record<string, unknown>> {
-		const result: Record<string, unknown> = {};
+	private async handleStorageGet(_keys: any): Promise<any> {
+		const result: any = {};
 		const EXCLUDE_PATTERN =
 			"**/{node_modules,.git,dist,out,.gemini,tmp,build}/**";
 
@@ -237,91 +210,40 @@ export class StudioWebviewPanel {
 					vscode.workspace.findFiles("**/*.table.json", EXCLUDE_PATTERN),
 				]);
 
-			const parseErrors: string[] = [];
-			const readJsonFiles = async (
-				files: vscode.Uri[],
-				shouldSanitize = false,
-			) => {
-				const { DaemonManager } = require("../core/DaemonManager");
-				const daemon = DaemonManager.getInstance();
-				const port = daemon.getPort();
+			const readJsonFiles = async (files: vscode.Uri[]) => {
 				const contents = await Promise.all(
 					files.map(async (file) => {
 						try {
 							const bytes = await vscode.workspace.fs.readFile(file);
 							return JSON.parse(Buffer.from(bytes).toString("utf-8"));
-						} catch (e: unknown) {
-							const msg = e instanceof Error ? e.message : String(e);
-							const path = require("node:path");
-							parseErrors.push(`${path.basename(file.fsPath)}: ${msg}`);
+						} catch (_e) {
 							return null;
 						}
 					}),
 				);
-
-				let validParsed = contents.filter((item) => item !== null);
-
-				if (shouldSanitize && validParsed.length > 0) {
-					try {
-						const res = await fetch(
-							`http://localhost:${port}/api/sanitize/batch`,
-							{
-								method: "POST",
-								headers: { "Content-Type": "application/json" },
-								body: JSON.stringify({ workflows: validParsed }),
-							},
-						);
-						if (res.ok) {
-							const data = (await res.json()) as {
-								success: boolean;
-								data: Record<string, unknown>[];
-							};
-							if (data.success && data.data) {
-								validParsed = data.data;
-							}
-						}
-					} catch (_e: unknown) {
-						// Ignore fetch error, just use un-sanitized data
-					}
-				}
-
-				return validParsed;
+				return contents.filter((item) => item !== null);
 			};
 
 			const [workflows, rawVars, rawCreds, rawTables] = await Promise.all([
-				readJsonFiles(workflowFiles, true),
+				readJsonFiles(workflowFiles),
 				readJsonFiles(variableFiles),
 				readJsonFiles(credentialFiles),
 				readJsonFiles(tableFiles),
 			]);
-
-			if (parseErrors.length > 0) {
-				const limit = 3;
-				const displayErrors = parseErrors.slice(0, limit).join(", ");
-				const more =
-					parseErrors.length > limit
-						? ` and ${parseErrors.length - limit} more`
-						: "";
-				vscode.window.showWarningMessage(
-					`Studio Webview failed to parse ${parseErrors.length} file(s): ${displayErrors}${more}`,
-				);
-			}
 
 			result.workflows = workflows;
 			result.variables = rawVars.flat();
 			result.credentials = rawCreds.flat();
 			result.tables = rawTables.flat();
 			result.workflowStates = {}; // Initial state
-		} catch (e: unknown) {
-			Logger.error(
-				`Failed to fetch storage get: ${e instanceof Error ? e.message : String(e)}`,
-			);
+		} catch (e: any) {
+			Logger.error(`Failed to fetch storage get: ${e.message}`);
 		}
 
 		return result;
 	}
 
-	private async handleStorageSet(items: Record<string, unknown>) {
+	private async handleStorageSet(items: any) {
 		if (
 			!vscode.workspace.workspaceFolders ||
 			vscode.workspace.workspaceFolders.length === 0
@@ -330,7 +252,6 @@ export class StudioWebviewPanel {
 		const workspaceRoot = vscode.workspace.workspaceFolders[0].uri;
 		const EXCLUDE_PATTERN =
 			"**/{node_modules,.git,dist,out,.gemini,tmp,build}/**";
-		const parseErrors: string[] = [];
 
 		try {
 			if (items.workflows && Array.isArray(items.workflows)) {
@@ -339,6 +260,7 @@ export class StudioWebviewPanel {
 					EXCLUDE_PATTERN,
 				);
 
+				// Pre-read all workflow IDs in parallel to build lookup map
 				const idToUriMap = new Map<string, vscode.Uri>();
 				await Promise.all(
 					allFiles.map(async (file) => {
@@ -348,22 +270,16 @@ export class StudioWebviewPanel {
 							if (data.id) {
 								idToUriMap.set(data.id, file);
 							}
-						} catch (e: unknown) {
-							const msg = e instanceof Error ? e.message : String(e);
-							const path = require("node:path");
-							parseErrors.push(`${path.basename(file.fsPath)}: ${msg}`);
-						}
+						} catch (_e) {}
 					}),
 				);
 
 				for (const wf of items.workflows) {
-					if (!wf || typeof wf !== "object" || !("id" in wf)) continue;
-					const wfObj = wf as { id: string; name?: string };
-					if (!wfObj.id) continue;
+					if (!wf.id) continue;
 
-					let targetUri = idToUriMap.get(wfObj.id);
+					let targetUri = idToUriMap.get(wf.id);
 					if (!targetUri) {
-						const safeName = (wfObj.name || wfObj.id)
+						const safeName = (wf.name || wf.id)
 							.replace(/[^a-z0-9]/gi, "_")
 							.toLowerCase();
 						targetUri = vscode.Uri.joinPath(
@@ -379,125 +295,8 @@ export class StudioWebviewPanel {
 					);
 				}
 			}
-
-			if (items.variables && Array.isArray(items.variables)) {
-				await this.saveGroupedData(
-					workspaceRoot,
-					items.variables,
-					"**/*.variable.json",
-					"studio.variable.json",
-					"variables",
-					EXCLUDE_PATTERN,
-					parseErrors,
-				);
-			}
-
-			if (items.credentials && Array.isArray(items.credentials)) {
-				await this.saveGroupedData(
-					workspaceRoot,
-					items.credentials,
-					"**/*.credential.json",
-					"studio.credential.json",
-					"credentials",
-					EXCLUDE_PATTERN,
-					parseErrors,
-				);
-			}
-
-			if (items.tables && Array.isArray(items.tables)) {
-				await this.saveGroupedData(
-					workspaceRoot,
-					items.tables,
-					"**/*.table.json",
-					"studio.table.json",
-					"tables",
-					EXCLUDE_PATTERN,
-					parseErrors,
-				);
-			}
-
-			if (parseErrors.length > 0) {
-				const limit = 3;
-				const displayErrors = parseErrors.slice(0, limit).join(", ");
-				const more =
-					parseErrors.length > limit
-						? ` and ${parseErrors.length - limit} more`
-						: "";
-				vscode.window.showWarningMessage(
-					`Studio Webview failed to parse ${parseErrors.length} file(s) during save: ${displayErrors}${more}`,
-				);
-			}
-		} catch (error: unknown) {
-			const e = error instanceof Error ? error.message : String(error);
-			Logger.error(`Failed to handle storage set: ${e}`);
-		}
-	}
-
-	private async saveGroupedData(
-		workspaceRoot: vscode.Uri,
-		itemsList: unknown[],
-		globPattern: string,
-		defaultFileName: string,
-		folderName: string,
-		excludePattern: string,
-		parseErrors: string[],
-	) {
-		const allFiles = await vscode.workspace.findFiles(
-			globPattern,
-			excludePattern,
-		);
-
-		const idToUriMap = new Map<string, vscode.Uri>();
-		const uriToItemsMap = new Map<string, Record<string, unknown>[]>();
-
-		for (const file of allFiles) {
-			try {
-				const content = await vscode.workspace.fs.readFile(file);
-				const data = JSON.parse(Buffer.from(content).toString("utf-8"));
-				const arr = Array.isArray(data) ? data : [];
-				uriToItemsMap.set(file.toString(), arr);
-				for (const item of arr) {
-					if (item && typeof item === "object" && "id" in item)
-						idToUriMap.set(item.id as string, file);
-				}
-			} catch (e: unknown) {
-				const msg = e instanceof Error ? e.message : String(e);
-				const path = require("node:path");
-				parseErrors.push(`${path.basename(file.fsPath)}: ${msg}`);
-			}
-		}
-
-		for (const rawItem of itemsList) {
-			const item = rawItem as Record<string, unknown>;
-			if (!item?.id) continue;
-			let targetUri = idToUriMap.get(item.id as string);
-			if (!targetUri) {
-				targetUri = vscode.Uri.joinPath(
-					workspaceRoot,
-					folderName,
-					defaultFileName,
-				);
-			}
-
-			let itemsInFile = uriToItemsMap.get(targetUri.toString());
-			if (!itemsInFile) {
-				itemsInFile = [];
-				uriToItemsMap.set(targetUri.toString(), itemsInFile);
-			}
-
-			const existingIdx = itemsInFile.findIndex((x) => x.id === item.id);
-			if (existingIdx !== -1) {
-				itemsInFile[existingIdx] = item;
-			} else {
-				itemsInFile.push(item);
-			}
-		}
-
-		for (const [uriStr, arr] of uriToItemsMap.entries()) {
-			await vscode.workspace.fs.writeFile(
-				vscode.Uri.parse(uriStr),
-				Buffer.from(JSON.stringify(arr, null, 2), "utf-8"),
-			);
+		} catch (e: any) {
+			Logger.error(`Failed to handle storage set: ${e.message}`);
 		}
 	}
 
@@ -520,12 +319,12 @@ export class StudioWebviewPanel {
 		);
 
 		// Inject VSCode Webview URIs for static assets
-		html = html.replace(/src="([^"]+\.js)"/g, (_match, p1) => {
-			return `src="${distUri}/${p1}"`;
-		});
-
-		html = html.replace(/href="([^"]+\.css)"/g, (_match, p1) => {
-			return `href="${distUri}/${p1}"`;
+		html = html.replace(/(src|href)="([^"]+\.(?:js|css|png|svg|ico|jpe?g|gif|webp))"/g, (_match, attr, p1) => {
+			if (p1.startsWith('http://') || p1.startsWith('https://') || p1.startsWith('data:')) {
+				return _match;
+			}
+			const path = p1.startsWith('/') ? p1.slice(1) : p1;
+			return `${attr}="${distUri}/${path}"`;
 		});
 
 		// Inject error capturing script, asset base url, and VSCode API initialization
@@ -538,7 +337,7 @@ export class StudioWebviewPanel {
             };
             window.addEventListener('unhandledrejection', function(event) {
                 window.vscodeApi.postMessage({ type: 'error', data: 'Unhandled Rejection: ' + (event.reason ? (event.reason.stack || event.reason.message || event.reason) : 'Unknown') });
-            };
+            });
             const originalError = console.error;
             console.error = function(...args) {
                 window.vscodeApi.postMessage({ type: 'error', data: args.join(' ') });
