@@ -72,6 +72,10 @@ class VSCodeAPIWrapper {
 		});
 
 		return pTimeout(promise, { milliseconds: timeoutMs, message: `Message timeout for type ${type}` })
+			.catch((err) => {
+				this.emitter.emit("broadcast", { type: "error", data: err.message });
+				throw err;
+			})
 			.finally(() => {
 				this.emitter.off(`response:${id}`);
 				this.emitter.off(`error:${id}`);
