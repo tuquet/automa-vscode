@@ -184,6 +184,10 @@
                     </div>
                 </div>
             </form>
+        <!-- Error Banner overlay -->
+        <div v-if="jsonError" class="absolute bottom-4 left-4 right-4 p-3 border border-red-900 bg-red-900/90 text-red-200 rounded text-sm font-mono flex items-start gap-2 shadow-lg z-10 backdrop-blur-sm">
+            <svg xmlns="http://www.w3.org/2000/svg" class="mt-0.5" width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM11 15V17H13V15H11ZM11 7V13H13V7H11Z"></path></svg>
+            <div>{{ jsonError }}</div>
         </div>
     </div>
 
@@ -196,6 +200,7 @@
             setup() {
                 const previousState = vscode.getState() || {};
                 const currentTab = ref(previousState.currentTab || 'params');
+                const jsonError = ref(null);
                 const tabs = [
                     { id: 'params', label: 'Package Interface' },
                     { id: 'settings', label: 'Settings' },
@@ -249,7 +254,7 @@
                     name: `{{JSON_NAME}}`,
                     description: `{{JSON_DESCRIPTION}}`,
                     icon: `{{JSON_ICON}}` || 'riGlobalLine',
-                    settings: normalizeJsonStr(`{{JSON_SETTINGS}}`)
+                    settings: normalizeJsonStr(`{{JSON_SETTINGS}}`.trim() === "" ? "{}" : `{{JSON_SETTINGS}}`)
                 };
 
                 let workflowData = currentDocState;
@@ -269,7 +274,7 @@
                                 name: message.json.name || '',
                                 description: message.json.description || '',
                                 icon: message.json.icon || 'riGlobalLine',
-                                settings: normalizeJsonStr(JSON.stringify(message.json.settings))
+                                settings: message.json.settings ? normalizeJsonStr(JSON.stringify(message.json.settings)) : "{}"
                             };
 
                             workflow.name = currentDocState.name;
@@ -321,13 +326,17 @@
                             try {
                                 JSON.parse(workflow[field]);
                             } catch (e) {
-                                vscode.postMessage({ command: 'error', text: `Cannot save: Invalid JSON in ${field}` });
+                                jsonError.value = `Cannot save: Invalid JSON in ${field}`;
+                                setTimeout(() => { jsonError.value = null; }, 5000);
                                 return;
                             }
                         }
                     }
 
+                    jsonError.value = null;
                     const dataToSave = JSON.parse(JSON.stringify(workflow));
+                    
+                    dataToSave.settings = dataToSave.settings.trim() === "" ? "{}" : dataToSave.settings;
 
                     const state = vscode.getState() || {};
                     const newDocState = {
@@ -360,7 +369,8 @@
                     iconsList,
                     iconClass,
                     saveWorkflow,
-                    openStudio
+                    openStudio,
+                    jsonError
                 };
             }
         }).mount('#app');

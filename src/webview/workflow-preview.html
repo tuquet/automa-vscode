@@ -258,6 +258,10 @@
                     </div>
                 </div>
             </form>
+        <!-- Error Banner overlay -->
+        <div v-if="jsonError" class="absolute bottom-4 left-4 right-4 p-3 border border-red-900 bg-red-900/90 text-red-200 rounded text-sm font-mono flex items-start gap-2 shadow-lg z-10 backdrop-blur-sm">
+            <svg xmlns="http://www.w3.org/2000/svg" class="mt-0.5" width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM11 15V17H13V15H11ZM11 7V13H13V7H11Z"></path></svg>
+            <div>{{ jsonError }}</div>
         </div>
     </div>
 
@@ -326,6 +330,7 @@
             setup() {
                 const previousState = vscode.getState() || {};
                 const currentTab = ref(previousState.currentTab || 'params');
+                const jsonError = ref(null);
                 const tabs = [
                     { id: 'params', label: 'Trigger Parameters' },
                     { id: 'global-data', label: 'Global Data' },
@@ -371,10 +376,10 @@
                     version: `{{JSON_VERSION}}`,
                     extVersion: `{{JSON_EXT_VERSION}}`,
                     icon: `{{JSON_ICON}}` || 'riGlobalLine',
-                    globalData: `{{JSON_GLOBAL_DATA}}`,
-                    table: normalizeJsonStr(`{{JSON_TABLE}}`),
-                    settings: normalizeJsonStr(`{{JSON_SETTINGS}}`),
-                    includedWorkflows: normalizeJsonStr(`{{JSON_INCLUDED_WORKFLOWS}}`)
+                    globalData: typeof `{{JSON_GLOBAL_DATA}}` === 'string' && `{{JSON_GLOBAL_DATA}}` !== '' ? `{{JSON_GLOBAL_DATA}}` : normalizeJsonStr(`{{JSON_GLOBAL_DATA}}`),
+                    table: normalizeJsonStr(`{{JSON_TABLE}}`.trim() === "" ? "[]" : `{{JSON_TABLE}}`),
+                    settings: normalizeJsonStr(`{{JSON_SETTINGS}}`.trim() === "" ? "{}" : `{{JSON_SETTINGS}}`),
+                    includedWorkflows: normalizeJsonStr(`{{JSON_INCLUDED_WORKFLOWS}}`.trim() === "" ? "{}" : `{{JSON_INCLUDED_WORKFLOWS}}`)
                 };
 
                 let workflowData = currentDocState;
@@ -396,10 +401,10 @@
                                 version: message.json.version || '',
                                 extVersion: message.json.extVersion || '',
                                 icon: message.json.icon || 'riGlobalLine',
-                                globalData: typeof message.json.globalData === 'string' ? message.json.globalData : normalizeJsonStr(JSON.stringify(message.json.globalData)),
-                                table: normalizeJsonStr(JSON.stringify(message.json.table)),
-                                settings: normalizeJsonStr(JSON.stringify(message.json.settings)),
-                                includedWorkflows: normalizeJsonStr(JSON.stringify(message.json.includedWorkflows))
+                                globalData: typeof message.json.globalData === 'string' ? message.json.globalData : (message.json.globalData ? normalizeJsonStr(JSON.stringify(message.json.globalData)) : ''),
+                                table: message.json.table ? normalizeJsonStr(JSON.stringify(message.json.table)) : "[]",
+                                settings: message.json.settings ? normalizeJsonStr(JSON.stringify(message.json.settings)) : "{}",
+                                includedWorkflows: message.json.includedWorkflows ? normalizeJsonStr(JSON.stringify(message.json.includedWorkflows)) : "{}"
                             };
 
                             // Update workflow reactive object
@@ -462,13 +467,19 @@
                             try {
                                 JSON.parse(workflow[field]);
                             } catch (e) {
-                                vscode.postMessage({ command: 'error', text: `Cannot save: Invalid JSON in ${field}` });
+                                jsonError.value = `Cannot save: Invalid JSON in ${field}`;
+                                setTimeout(() => { jsonError.value = null; }, 5000);
                                 return;
                             }
                         }
                     }
-
+                    
+                    jsonError.value = null;
                     const dataToSave = JSON.parse(JSON.stringify(workflow));
+                    
+                    dataToSave.table = dataToSave.table.trim() === "" ? "[]" : dataToSave.table;
+                    dataToSave.settings = dataToSave.settings.trim() === "" ? "{}" : dataToSave.settings;
+                    dataToSave.includedWorkflows = dataToSave.includedWorkflows.trim() === "" ? "{}" : dataToSave.includedWorkflows;
                     
                     // Allow saving current explicit parameter values as defaultValue in workflow
                     const explicitParamsData = {};
@@ -539,7 +550,8 @@
                     runWorkflow,
                     explicitParams,
                     implicitParams,
-                    paramsForm
+                    paramsForm,
+                    jsonError
                 };
             }
         });
