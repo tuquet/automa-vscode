@@ -54,10 +54,17 @@ export class DaemonManager {
 					const options: Record<string, unknown> = {};
 					for (let i = 2; i < args.length; i++) {
 						const arg = args[i];
-						if (arg === "--vault-path") options.vaultPath = args[++i];
-						else if (arg === "--project" || arg === "-p")
+						if (arg === "--vault-path" && i + 1 < args.length)
+							options.vaultPath = args[++i];
+						else if (
+							(arg === "--project" || arg === "-p") &&
+							i + 1 < args.length
+						)
 							options.project = args[++i];
-						else if (arg === "--variables" || arg === "-v") {
+						else if (
+							(arg === "--variables" || arg === "-v") &&
+							i + 1 < args.length
+						) {
 							const vars = args[++i];
 							try {
 								options.variables =
@@ -67,11 +74,17 @@ export class DaemonManager {
 							} catch (_e: unknown) {
 								options.variables = vars;
 							}
-						} else if (arg === "--timeout" || arg === "-t")
+						} else if (
+							(arg === "--timeout" || arg === "-t") &&
+							i + 1 < args.length
+						)
 							options.timeout = args[++i];
-						else if (arg === "--extensions" || arg === "-e")
+						else if (
+							(arg === "--extensions" || arg === "-e") &&
+							i + 1 < args.length
+						)
 							options.extensions = args[++i];
-						else if (arg === "--default-browser")
+						else if (arg === "--default-browser" && i + 1 < args.length)
 							options.defaultBrowser = args[++i];
 						else if (arg === "--headless") options.headless = true;
 						else if (arg === "--keep-browser-open")
@@ -94,9 +107,11 @@ export class DaemonManager {
 					if (res.ok) {
 						const { jobId } = (await res.json()) as { jobId: string };
 						if (jobId) {
-							// Poll status (Reduced polling frequency to fix bottleneck)
-							for (let i = 0; i < 1200; i++) {
-								await new Promise((r) => setTimeout(r, 500));
+							// Poll status (Using exponential backoff to fix bottleneck)
+							let delay = 500;
+							for (let i = 0; i < 600; i++) {
+								await new Promise((r) => setTimeout(r, delay));
+								if (delay < 3000) delay += 500;
 								const statusRes = await fetch(
 									`http://localhost:${this.port}/api/jobs/${jobId}/status`,
 								);
