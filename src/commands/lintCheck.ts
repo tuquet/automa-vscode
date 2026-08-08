@@ -27,7 +27,7 @@ function resolveUrisToProcess(
 		return [vscode.Uri.file(path)];
 	}
 	const activeEditor = vscode.window.activeTextEditor;
-	if (activeEditor) {
+	if (activeEditor?.document.uri.fsPath.endsWith(".json")) {
 		return [activeEditor.document.uri];
 	}
 	return [];

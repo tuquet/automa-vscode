@@ -38,7 +38,9 @@ export async function fixWorkflowIdCommand(
 		const path = extractFsPath(nodeOrUri);
 		if (path) {
 			urisToProcess = [vscode.Uri.file(path)];
-		} else if (vscode.window.activeTextEditor) {
+		} else if (
+			vscode.window.activeTextEditor?.document.uri.fsPath.endsWith(".json")
+		) {
 			urisToProcess = [vscode.window.activeTextEditor.document.uri];
 		}
 	}

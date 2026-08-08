@@ -8,7 +8,7 @@ export async function openInStudioCommand(nodeOrUri: unknown) {
 
 	if (!targetPath) {
 		const activeEditor = vscode.window.activeTextEditor;
-		if (activeEditor?.document.uri.fsPath.endsWith(".workflow.json")) {
+		if (activeEditor?.document.uri.fsPath.endsWith(".json")) {
 			targetPath = activeEditor.document.uri.fsPath;
 		} else {
 			const uris = await vscode.window.showOpenDialog({
