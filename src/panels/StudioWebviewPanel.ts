@@ -553,8 +553,10 @@ export class StudioWebviewPanel {
 
 		for (const rawItem of itemsList) {
 			const item = castRecord(rawItem);
-			if (!item?.id) continue;
-			const itemId = item.id as string;
+			const itemId = (item?.id || item?.key || item?.name) as
+				| string
+				| undefined;
+			if (!itemId) continue;
 			let targetUri = idToUriMap.get(itemId);
 			if (!targetUri) {
 				const folderDir = vscode.Uri.joinPath(workspaceRoot, folderName);
