@@ -5,12 +5,12 @@
 import { type Ref, ref, watch } from "vue";
 import { cloneDeep, merge } from "lodash-es";
 import mitt from "mitt";
+import pTimeout from "p-timeout";
 
 class VSCodeAPIWrapper {
 	private readonly vsCodeApi: unknown;
 	private messageId = 0;
 	private emitter = mitt();
-	private listeners = new Set<(message: unknown) => void>();
 
 	constructor() {
 		// @ts-expect-error
@@ -32,25 +32,19 @@ class VSCodeAPIWrapper {
 					this.emitter.emit(`response:${message.id}`, message.data);
 				}
 			} else {
-				for (const listener of this.listeners) {
-					listener(message);
-				}
+				this.emitter.emit("broadcast", message);
 			}
 		});
 	}
 
 	public onMessage(callback: (message: unknown) => void): () => void {
-		this.listeners.add(callback);
-		return () => this.listeners.delete(callback);
-	}
-
-	private safeClone(data: unknown): unknown {
-		return cloneDeep(data);
+		this.emitter.on("broadcast", callback);
+		return () => this.emitter.off("broadcast", callback);
 	}
 
 	public postMessage(message: unknown) {
 		if (this.vsCodeApi) {
-			const safeMessage = this.safeClone(message);
+			const safeMessage = cloneDeep(message);
 			(this.vsCodeApi as { postMessage: (msg: unknown) => void }).postMessage(
 				safeMessage,
 			);
@@ -65,32 +59,23 @@ class VSCodeAPIWrapper {
 		keys?: unknown,
 		timeoutMs = 30000,
 	): Promise<unknown> {
-		return new Promise((resolve, reject) => {
-			const id = ++this.messageId;
+		const id = ++this.messageId;
 
-			const onResponse = (val: unknown) => {
-				clearTimeout(timeout);
-				this.emitter.off(`error:${id}`, onError);
-				resolve(val);
-			};
-
-			const onError = (err: unknown) => {
-				clearTimeout(timeout);
-				this.emitter.off(`response:${id}`, onResponse);
-				reject(err);
-			};
-
-			const timeout = setTimeout(() => {
-				this.emitter.off(`response:${id}`, onResponse);
-				this.emitter.off(`error:${id}`, onError);
-				reject(new Error(`Message timeout for type ${type}`));
-			}, timeoutMs);
+		const promise = new Promise((resolve, reject) => {
+			const onResponse = (val: unknown) => resolve(val);
+			const onError = (err: unknown) => reject(err);
 
 			this.emitter.on(`response:${id}`, onResponse);
 			this.emitter.on(`error:${id}`, onError);
 
 			this.postMessage({ type, id, data, keys });
 		});
+
+		return pTimeout(promise, { milliseconds: timeoutMs, message: `Message timeout for type ${type}` })
+			.finally(() => {
+				this.emitter.off(`response:${id}`);
+				this.emitter.off(`error:${id}`);
+			});
 	}
 
 	public getState(): unknown {
@@ -102,7 +87,7 @@ class VSCodeAPIWrapper {
 
 	public setState(newState: unknown) {
 		if (this.vsCodeApi) {
-			const safeState = this.safeClone(newState);
+			const safeState = cloneDeep(newState);
 			(this.vsCodeApi as { setState: (state: unknown) => void }).setState(
 				safeState,
 			);

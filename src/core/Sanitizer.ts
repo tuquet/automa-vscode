@@ -31,6 +31,7 @@ const validTypes = [
 const NodeTypeSchema = z
 	.string()
 	.refine((val) => validTypes.includes(val), { message: "Unsupported node type" })
+	.default("BlockBasic")
 	.catch((ctx) => {
 		console.warn(`[Sanitizer] Node type validation failed: ${ctx.error.issues[0]?.message}. Falling back to BlockBasic.`);
 		return "BlockBasic";
