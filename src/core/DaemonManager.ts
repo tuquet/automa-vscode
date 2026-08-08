@@ -242,6 +242,8 @@ export class DaemonManager {
 		if (extensionPaths) {
 			env.EXTENSION_PATHS = extensionPaths;
 		}
+		env.npm_config_loglevel = "error";
+		env.npm_config_update_notifier = "false";
 
 		const cmdParts = cmd.split(" ");
 		const executable = cmdParts[0];
@@ -363,11 +365,9 @@ export class DaemonManager {
 						// Bảo vệ bước nhảy không gian O(N)
 						startIndex = text.indexOf(startChar, endIndex + 1);
 					} else {
-						// Tối ưu hóa: Bỏ qua chuỗi không hợp lệ thay vì chỉ nhảy 1 ký tự
-						startIndex = text.indexOf(
-							startChar,
-							endIndex !== -1 ? endIndex + 1 : startIndex + 1,
-						);
+						// Tối ưu hóa an toàn: Nếu parse fail (e.g. outer object invalid),
+						// phải tìm startChar tiếp theo bên trong, thay vì nhảy vọt qua endIndex.
+						startIndex = text.indexOf(startChar, startIndex + 1);
 					}
 				}
 				return lastValidJson;
@@ -579,6 +579,8 @@ export class DaemonManager {
 		if (extensionPaths) {
 			env.EXTENSION_PATHS = extensionPaths;
 		}
+		env.npm_config_loglevel = "error";
+		env.npm_config_update_notifier = "false";
 
 		const cmdParts = cmd.split(" ");
 		const executable = cmdParts[0];
