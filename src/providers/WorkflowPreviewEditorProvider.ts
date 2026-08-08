@@ -255,10 +255,19 @@ export class WorkflowPreviewEditorProvider
 			if (updateData.extVersion !== undefined)
 				json.extVersion = updateData.extVersion;
 			if (updateData.icon !== undefined) json.icon = updateData.icon;
-			if (updateData.globalData !== undefined)
-				json.globalData = updateData.globalData;
 
 			// JSON parse for objects/arrays
+			if (updateData.globalData !== undefined) {
+				try {
+					const globalDataStr = String(updateData.globalData);
+					// globalData can be a string in Automa, but usually it's passed as a stringified JSON from UI
+					json.globalData =
+						globalDataStr.trim() === "" ? "" : JSON.parse(globalDataStr);
+				} catch (error: unknown) {
+					const e = toError(error);
+					throw new Error(`Invalid JSON in Global Data: ${e.message}`);
+				}
+			}
 			if (updateData.settings !== undefined) {
 				try {
 					const settingsStr = String(updateData.settings);

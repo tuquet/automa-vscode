@@ -24,48 +24,78 @@ export class StudioWebviewPanel {
 		// Handle messages from the webview (EnvironmentAdapter)
 		this._panel.webview.onDidReceiveMessage(
 			(message: Record<string, unknown>) => {
-				switch (message.type) {
-					case "runtime-message":
-						this.handleRuntimeMessage(castRecord(message.data))
-							.then((result) => {
-								this._panel.webview.postMessage({
-									type: "runtime-message-response",
-									id: message.id,
-									data: result,
+				try {
+					switch (message.type) {
+						case "runtime-message":
+							this.handleRuntimeMessage(castRecord(message.data))
+								.then((result) => {
+									this._panel.webview.postMessage({
+										type: "runtime-message-response",
+										id: message.id,
+										data: result,
+									});
+								})
+								.catch((e: unknown) => {
+									const err = getErrorMessage(e);
+									Logger.error(`Failed to handle runtime-message: ${err}`);
+									this._panel.webview.postMessage({
+										type: "runtime-message-response",
+										id: message.id,
+										error: err,
+									});
 								});
-							})
-							.catch((e: unknown) =>
-								Logger.error(`Failed to post runtime-message-response: ${e}`),
-							);
-						break;
-					case "storage-get":
-						this.handleStorageGet(message.keys)
-							.then((data) => {
-								this._panel.webview.postMessage({
-									type: "storage-get-response",
-									id: message.id,
-									data,
+							break;
+						case "storage-get":
+							this.handleStorageGet(message.keys)
+								.then((data) => {
+									this._panel.webview.postMessage({
+										type: "storage-get-response",
+										id: message.id,
+										data,
+									});
+								})
+								.catch((e: unknown) => {
+									const err = getErrorMessage(e);
+									Logger.error(`Failed to handle storage-get: ${err}`);
+									this._panel.webview.postMessage({
+										type: "storage-get-response",
+										id: message.id,
+										error: err,
+									});
 								});
-							})
-							.catch((e: unknown) =>
-								Logger.error(`Failed to post storage-get-response: ${e}`),
-							);
-						break;
-					case "storage-set":
-						this.handleStorageSet(message.data)
-							.then(() => {
-								this._panel.webview.postMessage({
-									type: "storage-set-response",
-									id: message.id,
+							break;
+						case "storage-set":
+							this.handleStorageSet(message.data)
+								.then(() => {
+									this._panel.webview.postMessage({
+										type: "storage-set-response",
+										id: message.id,
+									});
+								})
+								.catch((e: unknown) => {
+									const err = getErrorMessage(e);
+									Logger.error(`Failed to handle storage-set: ${err}`);
+									this._panel.webview.postMessage({
+										type: "storage-set-response",
+										id: message.id,
+										error: err,
+									});
 								});
-							})
-							.catch((e: unknown) =>
-								Logger.error(`Failed to post storage-set-response: ${e}`),
-							);
-						break;
-					case "error":
-						Logger.error(`WEBVIEW ERROR: ${message.data}`);
-						break;
+							break;
+						case "error":
+							Logger.error(`WEBVIEW ERROR: ${message.data}`);
+							break;
+					}
+				} catch (err: unknown) {
+					const errorMsg = getErrorMessage(err);
+					Logger.error(`Failed to process webview message: ${errorMsg}`);
+					if (message.id && message.type) {
+						this._panel.webview.postMessage({
+							type: `${message.type}-response`,
+							id: message.id,
+							error: errorMsg,
+						});
+					}
 				}
 			},
 			null,
