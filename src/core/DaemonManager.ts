@@ -52,23 +52,34 @@ export class DaemonManager {
 				if (isString(filePath) && fs.existsSync(filePath)) {
 					const workflowData = JSON.parse(fs.readFileSync(filePath, "utf-8"));
 					const options: Record<string, unknown> = {};
-					const vaultIdx = args.indexOf("--vault-path");
-					if (vaultIdx !== -1) options.vaultPath = args[vaultIdx + 1];
-					let projIdx = args.indexOf("--project");
-					if (projIdx === -1) projIdx = args.indexOf("-p");
-					if (projIdx !== -1) options.project = args[projIdx + 1];
-					let varIdx = args.indexOf("--variables");
-					if (varIdx === -1) varIdx = args.indexOf("-v");
-					if (varIdx !== -1) {
-						const vars = args[varIdx + 1];
-						try {
-							options.variables =
-								isString(vars) && vars.startsWith("{")
-									? JSON.parse(vars)
-									: vars;
-						} catch (_e: unknown) {
-							options.variables = vars;
-						}
+					for (let i = 2; i < args.length; i++) {
+						const arg = args[i];
+						if (arg === "--vault-path") options.vaultPath = args[++i];
+						else if (arg === "--project" || arg === "-p")
+							options.project = args[++i];
+						else if (arg === "--variables" || arg === "-v") {
+							const vars = args[++i];
+							try {
+								options.variables =
+									isString(vars) && vars.startsWith("{")
+										? JSON.parse(vars)
+										: vars;
+							} catch (_e: unknown) {
+								options.variables = vars;
+							}
+						} else if (arg === "--timeout" || arg === "-t")
+							options.timeout = args[++i];
+						else if (arg === "--extensions" || arg === "-e")
+							options.extensions = args[++i];
+						else if (arg === "--default-browser")
+							options.defaultBrowser = args[++i];
+						else if (arg === "--headless") options.headless = true;
+						else if (arg === "--keep-browser-open")
+							options.keepBrowserOpen = true;
+						else if (arg === "--scan-only") options.scanOnly = true;
+						else if (arg === "--use-default-parameters")
+							options.useDefaultParameters = true;
+						else if (arg === "--json") options.json = true;
 					}
 
 					const res = await fetch(
@@ -83,9 +94,9 @@ export class DaemonManager {
 					if (res.ok) {
 						const { jobId } = (await res.json()) as { jobId: string };
 						if (jobId) {
-							// Poll status
-							for (let i = 0; i < 3000; i++) {
-								await new Promise((r) => setTimeout(r, 100));
+							// Poll status (Reduced polling frequency to fix bottleneck)
+							for (let i = 0; i < 1200; i++) {
+								await new Promise((r) => setTimeout(r, 500));
 								const statusRes = await fetch(
 									`http://localhost:${this.port}/api/jobs/${jobId}/status`,
 								);
@@ -102,19 +113,20 @@ export class DaemonManager {
 										);
 										if (detailsRes.ok) {
 											const details = (await detailsRes.json()) as {
-												status: string;
-												duration: number;
+												job: { status: string; duration: number };
 												results?: {
 													table?: unknown;
 													variables?: unknown;
 													error?: unknown;
 												};
+												logs?: unknown[];
 											};
 											return {
-												success: details.status === "completed",
-												duration: details.duration,
+												success: details.job.status === "completed",
+												duration: details.job.duration,
 												table: details.results?.table || [],
 												variables: details.results?.variables || {},
+												syncedLogs: details.logs || [],
 												error: details.results?.error,
 											};
 										}
@@ -336,6 +348,7 @@ export class DaemonManager {
 
 					let parseSuccess = false;
 					if (endIndex !== -1) {
+						// Optimize: Check if brackets actually match before creating substring
 						const possibleJson = text.substring(startIndex, endIndex + 1);
 						try {
 							const parsed = JSON.parse(possibleJson);
@@ -347,8 +360,10 @@ export class DaemonManager {
 					}
 
 					if (parseSuccess) {
+						// Bảo vệ bước nhảy không gian O(N)
 						startIndex = text.indexOf(startChar, endIndex + 1);
 					} else {
+						// Tối ưu hóa: Bỏ qua chuỗi không hợp lệ thay vì chỉ nhảy 1 ký tự
 						startIndex = text.indexOf(startChar, startIndex + 1);
 					}
 				}

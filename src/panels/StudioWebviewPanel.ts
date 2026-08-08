@@ -65,7 +65,7 @@ export class StudioWebviewPanel {
 								});
 							break;
 						case "storage-set":
-							this.handleStorageSet(message.data)
+							this.handleStorageSet(message.data as Record<string, unknown>)
 								.then(() => {
 									this._panel.webview.postMessage({
 										type: "storage-set-response",
