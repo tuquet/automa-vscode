@@ -30,7 +30,7 @@ export function hasStringProp<K extends string>(
 	value: unknown,
 	key: K,
 ): value is Record<K, string> {
-	return hasProp(value, key) && typeof value[key] === "string";
+	return hasProp(value, key) && isString(value[key]);
 }
 
 export function hasObjectProp<K extends string>(
@@ -118,7 +118,7 @@ export function assertIsRecord(
 	value: unknown,
 	message?: string,
 ): asserts value is Record<string, unknown> {
-	if (typeof value !== "object" || value === null || Array.isArray(value)) {
+	if (!isRecord(value)) {
 		throw new Error(message || "Value is not a record");
 	}
 }

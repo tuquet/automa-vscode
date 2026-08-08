@@ -8,6 +8,7 @@ import {
 	getProp,
 	hasObjectProp,
 	isRecord,
+	isString,
 	toError,
 } from "../utils/typeGuards";
 import { BaseCustomEditorProvider } from "./BaseCustomEditorProvider";
@@ -423,7 +424,7 @@ export class WorkflowPreviewEditorProvider
 				safeString(json.extVersion),
 			);
 			htmlContent = htmlContent.replace(/\{\{JSON_GLOBAL_DATA\}\}/g, () =>
-				typeof json.globalData === "string"
+				isString(json.globalData)
 					? safeString(json.globalData)
 					: jsonStringifySafe(json.globalData),
 			);
