@@ -5,6 +5,7 @@ import {
 	hasNodesAndEdges,
 	hasObjectProp,
 	isBoolean,
+	isString,
 } from "../utils/typeGuards";
 
 function generateShortId(): string {
@@ -87,15 +88,19 @@ export const WorkflowSanitizer = {
 		) => {
 			// Sanitize Nodes
 			nList.forEach((node: Record<string, unknown>) => {
-				const originalId = node.id;
-				if (!node.id || !idRegex.test(String(node.id))) {
+				const originalId = isString(node.id) ? node.id : "";
+				if (!node.id || !isString(node.id) || !idRegex.test(node.id)) {
 					const newId = generateShortId();
 					node.id = newId;
-					if (originalId) idMap.set(String(originalId), newId);
+					if (originalId) idMap.set(originalId, newId);
 					isModified = true;
 				}
 
-				if (!node.type || !validTypes.includes(String(node.type))) {
+				if (
+					!node.type ||
+					!isString(node.type) ||
+					!validTypes.includes(node.type)
+				) {
 					node.type = "BlockBasic";
 					isModified = true;
 				}
@@ -117,17 +122,16 @@ export const WorkflowSanitizer = {
 
 			// Sanitize Edges
 			eList.forEach((edge: Record<string, unknown>) => {
-				if (!edge.id || !idRegex.test(String(edge.id))) {
+				if (!edge.id || !isString(edge.id) || !idRegex.test(edge.id)) {
 					edge.id = generateShortId();
 					isModified = true;
 				}
 
-				if (edge.source && idMap.has(edge.source as string)) {
-					const newSource =
-						idMap.get(edge.source as string) || (edge.source as string);
-					if (edge.sourceHandle) {
+				if (edge.source && isString(edge.source) && idMap.has(edge.source)) {
+					const newSource = idMap.get(edge.source) || edge.source;
+					if (edge.sourceHandle && isString(edge.sourceHandle)) {
 						edge.sourceHandle = String(edge.sourceHandle).replace(
-							String(edge.source),
+							edge.source,
 							newSource,
 						);
 					}
@@ -135,12 +139,11 @@ export const WorkflowSanitizer = {
 					isModified = true;
 				}
 
-				if (edge.target && idMap.has(edge.target as string)) {
-					const newTarget =
-						idMap.get(edge.target as string) || (edge.target as string);
-					if (edge.targetHandle) {
+				if (edge.target && isString(edge.target) && idMap.has(edge.target)) {
+					const newTarget = idMap.get(edge.target) || edge.target;
+					if (edge.targetHandle && isString(edge.targetHandle)) {
 						edge.targetHandle = String(edge.targetHandle).replace(
-							String(edge.target),
+							edge.target,
 							newTarget,
 						);
 					}
